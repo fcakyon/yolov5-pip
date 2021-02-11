@@ -2,7 +2,6 @@ from pathlib import Path
 
 from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import Model
-from yolov5.utils.torch_utils import select_device
 
 
 class OptFactory:
@@ -30,7 +29,7 @@ class YOLOv5:
             self.model = None
 
     def load_model(self):
-        self.model = load_model(model_path, device)
+        self.model = load_model(self.model_path, self.device)
 
     def predict(image_list, size=640, augment=False):
         assert len(self.model) == 1, "before predict, you need to call .load_model()"
