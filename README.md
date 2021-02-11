@@ -1,4 +1,4 @@
-# Packaged Yolov5 Object Detector
+# Packaged YOLOv5 Object Detector
 
 You can finally install [YOLOv5 object detector](https://github.com/ultralytics/yolov5) using [pip](https://pypi.org/project/yolov5/) and integrate into your project easily.
 
