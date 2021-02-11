@@ -18,30 +18,21 @@ from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from tqdm import tqdm
 
-from models.experimental import attempt_load
-from models.yolo import Model
-from utils.autoanchor import check_anchors
-from utils.datasets import create_dataloader
-from utils.general import (
-    check_dataset,
-    check_img_size,
-    fitness,
-    init_seeds,
-    labels_to_class_weights,
-    labels_to_image_weights,
-    one_cycle,
-    strip_optimizer,
-)
-from utils.google_utils import attempt_download
-from utils.loss import compute_loss
-from utils.plots import plot_evolution, plot_images, plot_labels, plot_results
-from utils.torch_utils import (
-    ModelEMA,
-    intersect_dicts,
-    select_device,
-    torch_distributed_zero_first,
-)
 from yolov5 import test  # import test.py to get mAP after each epoch
+from yolov5.models.experimental import attempt_load
+from yolov5.models.yolo import Model
+from yolov5.utils.autoanchor import check_anchors
+from yolov5.utils.datasets import create_dataloader
+from yolov5.utils.general import (check_dataset, check_img_size, fitness,
+                                  init_seeds, labels_to_class_weights,
+                                  labels_to_image_weights, one_cycle,
+                                  strip_optimizer)
+from yolov5.utils.google_utils import attempt_download
+from yolov5.utils.loss import compute_loss
+from yolov5.utils.plots import (plot_evolution, plot_images, plot_labels,
+                                plot_results)
+from yolov5.utils.torch_utils import (ModelEMA, intersect_dicts, select_device,
+                                      torch_distributed_zero_first)
 
 logger = logging.getLogger(__name__)
 
