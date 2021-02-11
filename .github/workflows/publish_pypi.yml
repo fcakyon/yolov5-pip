@@ -28,14 +28,14 @@ jobs:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       if: matrix.python-version == 3.6
-        run: |
-        python setup36.py sdist bdist_wheel
-        twine upload --verbose --skip-existing dist/*
+      run: |
+      python setup36.py sdist bdist_wheel
+      twine upload --verbose --skip-existing dist/*
     - name: Build and publish for Python >= 3.7
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       if: matrix.python-version >= 3.7
-        run: |
-        python setup.py sdist bdist_wheel
-        twine upload --verbose --skip-existing dist/*
+      run: |
+      python setup.py sdist bdist_wheel
+      twine upload --verbose --skip-existing dist/*
