@@ -44,10 +44,6 @@ jobs:
         restore-keys: ${{ matrix.os }}-${{ matrix.python-version }}-
     - name: Update pip
       run: python -m pip install --upgrade pip
-    - name: Install Numpy for Python 3.6
-      if: matrix.python-version == 3.6
-      run: >
-        pip install numpy==1.19.4
     - name: Install latest YOLOv5 package
       run: >
         pip install -U yolov5

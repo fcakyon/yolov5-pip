@@ -3,7 +3,7 @@
 # base ----------------------------------------
 Cython
 matplotlib>=3.2.2
-numpy<=1.19.4
+numpy>=1.18.5,<1.20
 opencv-python>=4.1.2
 Pillow
 PyYAML>=5.3
