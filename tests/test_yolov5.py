@@ -58,14 +58,13 @@ class TestYolov5(unittest.TestCase):
         # prepare image
         image_path = TestConstants.BUS_IMAGE_PATH
         image = Image.open(image_path)
-        image_path = "/home/fatihakyon/dev/obss/sahi/tests/data/small-vehicles1.jpeg"
         # perform inference
         results = yolov5.predict(image, size=1280, augment=False)
 
         # compare
         self.assertEqual(results.n, 1)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 26)
+        self.assertEqual(len(results.pred[0]), 6)
 
         # init yolov5s model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
@@ -85,7 +84,7 @@ class TestYolov5(unittest.TestCase):
         self.assertEqual(results.n, 2)
         self.assertEqual(len(results.names), 80)
         self.assertEqual(len(results.pred[0]), 5)
-        self.assertEqual(len(results.pred[1]), 5)
+        self.assertEqual(len(results.pred[1]), 8)
         
 
 
