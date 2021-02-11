@@ -7,4 +7,4 @@ from yolov5.train import train
 from yolov5.utils import *
 from yolov5.weights import *
 
-__version__ = "0.3"
+__version__ = "0.4"
