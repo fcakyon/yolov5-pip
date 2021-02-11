@@ -11,15 +11,10 @@ from yolov5.models.common import *
 from yolov5.models.experimental import CrossConv, MixConv2d
 from yolov5.utils.autoanchor import check_anchor_order
 from yolov5.utils.general import check_file, make_divisible, set_logging
-from yolov5.utils.torch_utils import (
-    copy_attr,
-    fuse_conv_and_bn,
-    initialize_weights,
-    model_info,
-    scale_img,
-    select_device,
-    time_synchronized,
-)
+from yolov5.utils.torch_utils import (copy_attr, fuse_conv_and_bn,
+                                      initialize_weights, model_info,
+                                      scale_img, select_device,
+                                      time_synchronized)
 
 try:
     import thop  # for FLOPS computation
@@ -84,7 +79,7 @@ class Detect(nn.Module):
 
 class Model(nn.Module):
     def __init__(
-        self, cfg="yolov5s.yaml", ch=3, nc=None
+        self, cfg="yolov5s.yaml", ch=3, nc=None, verbose=1
     ):  # model, input channels, number of classes
         super(Model, self).__init__()
         if isinstance(cfg, dict):
@@ -104,7 +99,7 @@ class Model(nn.Module):
             )
             self.yaml["nc"] = nc  # override yaml value
         self.model, self.save = parse_model(
-            deepcopy(self.yaml), ch=[ch]
+            deepcopy(self.yaml), ch=[ch], verbose=verbose
         )  # model, savelist
         self.names = [str(i) for i in range(self.yaml["nc"])]  # default names
         # print([x.shape for x in self.forward(torch.zeros(1, ch, 64, 64))])
@@ -124,7 +119,8 @@ class Model(nn.Module):
 
         # Init weights, biases
         initialize_weights(self)
-        self.info()
+        if verbose:
+            self.info()
         logger.info("")
 
     def forward(self, x, augment=False, profile=False):
@@ -244,11 +240,12 @@ class Model(nn.Module):
         model_info(self, verbose, img_size)
 
 
-def parse_model(d, ch):  # model_dict, input_channels(3)
-    logger.info(
-        "\n%3s%18s%3s%10s  %-40s%-30s"
-        % ("", "from", "n", "params", "module", "arguments")
-    )
+def parse_model(d, ch, verbose=1):  # model_dict, input_channels(3)
+    if verbose:
+        logger.info(
+            "\n%3s%18s%3s%10s  %-40s%-30s"
+            % ("", "from", "n", "params", "module", "arguments")
+        )
     anchors, nc, gd, gw = (
         d["anchors"],
         d["nc"],
@@ -333,7 +330,8 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
             t,
             np,
         )  # attach index, 'from' index, type, number params
-        logger.info("%3s%18s%3s%10.0f  %-40s%-30s" % (i, f, n, np, t, args))  # print
+        if verbose:
+            logger.info("%3s%18s%3s%10.0f  %-40s%-30s" % (i, f, n, np, t, args))  # print
         save.extend(
             x % i for x in ([f] if isinstance(f, int) else f) if x != -1
         )  # append to savelist
