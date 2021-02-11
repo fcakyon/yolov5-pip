@@ -36,6 +36,7 @@ setuptools.setup(
     python_requires=">=3.7",
     install_requires=get_requirements(),
     extras_require={"tests": ["pytest"]},
+    options={'bdist_wheel':{'python_tag':'py37.py38'}},
     classifiers=[
         "License :: OSI Approved :: GNU General Public License (GPL)",
         "Operating System :: OS Independent",
