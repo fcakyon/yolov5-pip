@@ -1,5 +1,7 @@
 # Packaged YOLOv5 Object Detector
 
+![CI CPU Testing](https://github.com/fcakyon/yolov5-python/workflows/CI%20CPU%20Testing/badge.svg)
+
 You can finally install [YOLOv5 object detector](https://github.com/ultralytics/yolov5) using [pip](https://pypi.org/project/yolov5/) and integrate into your project easily.
 
 ## Overview
@@ -10,13 +12,13 @@ This package is up-to-date with the latest release of [ultralytics/yolov5](https
 
 ## Installation
 
-- Install yolov5 using pip (for Python >=3.7):
+- Install yolov5 using pip `(for Python >=3.7)`:
 
 ```console
 pip install yolov5
 ```
 
-- Install yolov5 using pip (for Python 3.6):
+- Install yolov5 using pip `(for Python 3.6)`:
 
 ```console
 pip install "numpy>=1.18.5,<1.20"
@@ -57,3 +59,7 @@ results = yolov5.predict([image1, image2], size=1280, augment=True)
 
 * [Train Custom Data](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data)
 * [Transfer Learning with Frozen Layers](https://github.com/ultralytics/yolov5/issues/1314)
+
+## Tests
+
+Builds for the latest commit for `Windows/Linux/MacOS` with `Python3.6/3.7/3.8`: ![CI CPU Testing](https://github.com/fcakyon/yolov5-python/workflows/CI%20CPU%20Testing/badge.svg)
