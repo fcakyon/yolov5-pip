@@ -33,10 +33,10 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/fcakyon/yolov5-python",
     packages=setuptools.find_packages(exclude=["tests"]),
-    python_requires=">=3.7",
+    python_requires=">=3.6",
     install_requires=get_requirements(),
     extras_require={"tests": ["pytest"]},
-    options={'bdist_wheel':{'python_tag':'py37.py38'}},
+    options={'bdist_wheel':{'python_tag':'py36.py37.py38'}},
     classifiers=[
         "License :: OSI Approved :: GNU General Public License (GPL)",
         "Operating System :: OS Independent",

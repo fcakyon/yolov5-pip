@@ -10,9 +10,16 @@ This package is up-to-date with the latest release of [ultralytics/yolov5](https
 
 ## Installation
 
-- Install yolov5 using pip:
+- Install yolov5 using pip (for Python >=3.7):
 
 ```console
+pip install yolov5
+```
+
+- Install yolov5 using pip (for Python 3.6):
+
+```console
+pip install "numpy>=1.18.5,<1.20"
 pip install yolov5
 ```
 

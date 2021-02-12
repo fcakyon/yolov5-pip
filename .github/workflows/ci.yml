@@ -46,15 +46,13 @@ jobs:
         restore-keys: ${{ matrix.os }}-${{ matrix.python-version }}-
     - name: Update pip
       run: python -m pip install --upgrade pip
-    - name: Install dependencies for Python 3.6
+    - name: Install numpy for Python 3.6
       if: matrix.python-version == 3.6
       run: >
-        pip install -r requirements36.txt
-    - name: Install dependencies for Python 3.7&3.8
-      if: matrix.python-version >= 3.7
+        pip install "numpy>=1.18.5,<1.20"
+    - name: Install dependencies
       run: >
         pip install -r requirements.txt
     - name: Test with unittest
       run: |
-        pip install pytest
         python -m unittest
