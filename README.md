@@ -1,5 +1,6 @@
 # Packaged YOLOv5 Object Detector
 
+[![Downloads](https://pepy.tech/badge/yolov5/week)](https://pepy.tech/project/yolov5)
 ![CI CPU Testing](https://github.com/fcakyon/yolov5-python/workflows/CI%20CPU%20Testing/badge.svg)
 
 You can finally install [YOLOv5 object detector](https://github.com/ultralytics/yolov5) using [pip](https://pypi.org/project/yolov5/) and integrate into your project easily.
