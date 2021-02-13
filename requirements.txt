@@ -27,4 +27,4 @@ pandas
 
 # extras --------------------------------------
 thop  # FLOPS computation
-pycocotools-fix>=2.0  # COCO mAP
+mmpycocotools==12.0.3  # COCO mAP
