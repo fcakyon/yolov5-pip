@@ -38,7 +38,7 @@ setuptools.setup(
     extras_require={"tests": ["pytest"]},
     options={'bdist_wheel':{'python_tag':'py36.py37.py38'}},
     classifiers=[
-        "Development Status :: 5 - Production/Stable".
+        "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: GNU General Public License (GPL)",
         "Operating System :: OS Independent",
         "Intended Audience :: Developers",
