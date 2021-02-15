@@ -8,4 +8,4 @@ include LICENSE
 include setup.py
 
 # Include the data files
-recursive-include data *
+recursive-include yolov5/data *
