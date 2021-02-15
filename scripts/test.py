@@ -5,9 +5,9 @@ from pathlib import Path
 
 import numpy as np
 import yaml
-from utils.plots import plot_study_txt
 from yolov5 import test
 from yolov5.utils.general import check_file
+from yolov5.utils.plots import plot_study_txt
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="test.py")
