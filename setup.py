@@ -38,6 +38,7 @@ setuptools.setup(
     extras_require={"tests": ["pytest"]},
     options={'bdist_wheel':{'python_tag':'py36.py37.py38'}},
     classifiers=[
+        "Development Status :: 5 - Production/Stable".
         "License :: OSI Approved :: GNU General Public License (GPL)",
         "Operating System :: OS Independent",
         "Intended Audience :: Developers",
@@ -48,5 +49,10 @@ setuptools.setup(
         "Programming Language :: Python :: 3.8",
         "Topic :: Software Development :: Libraries",
         "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: Education",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Scientific/Engineering :: Image Recognition",
     ],
+    keywords="machine-learning, deep-learning, ml, pytorch, YOLO, object-detection, vision, YOLOv3, YOLOv4, YOLOv5",
 )
