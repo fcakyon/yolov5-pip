@@ -2,6 +2,7 @@
 
 [![Downloads](https://pepy.tech/badge/yolov5/week)](https://pepy.tech/project/yolov5)
 ![CI CPU Testing](https://github.com/fcakyon/yolov5-python/workflows/CI%20CPU%20Testing/badge.svg)
+![Package CPU Testing](https://github.com/fcakyon/yolov5-python/workflows/Package%20CPU%20Testing/badge.svg)
 
 You can finally install [YOLOv5 object detector](https://github.com/ultralytics/yolov5) using [pip](https://pypi.org/project/yolov5/) and integrate into your project easily.
 
@@ -61,6 +62,42 @@ results = yolov5.predict([image1, image2], size=1280, augment=True)
 * [Train Custom Data](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data)
 * [Transfer Learning with Frozen Layers](https://github.com/ultralytics/yolov5/issues/1314)
 
-## Tests
+## Scripts
+
+You can download and use [train.py](scripts/train.py), [detect.py](scripts/detect.py) and [test.py](scripts/test.py) scripts after installing the package via `pip`:
+
+### Training
+
+Run commands below to reproduce results on [COCO](https://github.com/ultralytics/yolov5/blob/master/data/scripts/get_coco.sh) dataset (dataset auto-downloads on first use). Training times for YOLOv5s/m/l/x are 2/4/6/8 days on a single V100 (multi-GPU times faster). Use the largest `--batch-size` your GPU allows (batch sizes shown for 16 GB devices).
+```bash
+$ python train.py --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 64
+                                         yolov5m                                40
+                                         yolov5l                                24
+                                         yolov5x                                16
+```
+
+### Inference
+
+[detect.py](scripts/detect.py) runs inference on a variety of sources, downloading models automatically from the [latest YOLOv5 release](https://github.com/ultralytics/yolov5/releases) and saving results to `runs/detect`.
+```bash
+$ python detect.py --source 0  # webcam
+                            file.jpg  # image 
+                            file.mp4  # video
+                            path/  # directory
+                            path/*.jpg  # glob
+                            rtsp://170.93.143.139/rtplive/470011e600ef003a004ee33696235daa  # rtsp stream
+                            rtmp://192.168.1.105/live/test  # rtmp stream
+                            http://112.50.243.8/PLTV/88888888/224/3221225900/1.m3u8  # http stream
+```
+
+To run inference on example images in `data/images`:
+```bash
+$ python detect.py --source data/images --weights yolov5s.pt --conf 0.25
+```
+
+
+## Status
 
 Builds for the latest commit for `Windows/Linux/MacOS` with `Python3.6/3.7/3.8`: ![CI CPU Testing](https://github.com/fcakyon/yolov5-python/workflows/CI%20CPU%20Testing/badge.svg)
+
+Status for the train/detect/test scripts: ![Package CPU Testing](https://github.com/fcakyon/yolov5-python/workflows/Package%20CPU%20Testing/badge.svg)
