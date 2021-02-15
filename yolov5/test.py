@@ -25,7 +25,7 @@ from yolov5.utils.torch_utils import select_device, time_synchronized
 
 def test(
     weights=None,
-    data="data/coco128.yaml",
+    data="yolov5/data/coco128.yaml",
     batch_size=32,
     image_size=640,
     conf_thres=0.001,

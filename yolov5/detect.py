@@ -20,7 +20,7 @@ from yolov5.utils.torch_utils import (load_classifier, select_device,
 
 def detect(
     weights="yolov5s.pt",
-    source="data/images",
+    source="yolov5/data/images",
     img_size=640,
     conf_thres=0.25,
     iou_thres=0.45,

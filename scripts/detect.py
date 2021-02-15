@@ -1,8 +1,8 @@
 import argparse
 
 import torch
-from utils.general import strip_optimizer
 from yolov5 import detect
+from yolov5.utils.general import strip_optimizer
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -10,7 +10,7 @@ if __name__ == "__main__":
         "--weights", nargs="+", type=str, default="yolov5s.pt", help="model.pt path(s)"
     )
     parser.add_argument(
-        "--source", type=str, default="data/images", help="source"
+        "--source", type=str, default="yolov5/data/images", help="source"
     )  # file/folder, 0 for webcam
     parser.add_argument(
         "--img-size", type=int, default=640, help="inference size (pixels)"

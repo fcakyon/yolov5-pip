@@ -5,9 +5,9 @@ from pathlib import Path
 
 import numpy as np
 import yaml
-from utils.general import check_file
 from utils.plots import plot_study_txt
 from yolov5 import test
+from yolov5.utils.general import check_file
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="test.py")
@@ -15,7 +15,7 @@ if __name__ == "__main__":
         "--weights", nargs="+", type=str, default="yolov5s.pt", help="model.pt path(s)"
     )
     parser.add_argument(
-        "--data", type=str, default="data/coco128.yaml", help="*.data path"
+        "--data", type=str, default="yolov5/data/coco128.yaml", help="*.data path"
     )
     parser.add_argument(
         "--batch-size", type=int, default=32, help="size of each image batch"
