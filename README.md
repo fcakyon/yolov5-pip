@@ -1,6 +1,6 @@
 # Packaged YOLOv5 Object Detector
 
-[![Downloads](https://pepy.tech/badge/yolov5/week)](https://pepy.tech/project/yolov5)
+[![Downloads](https://pepy.tech/badge/yolov5/month)](https://pepy.tech/project/yolov5)
 ![CI CPU Testing](https://github.com/fcakyon/yolov5-python/workflows/CI%20CPU%20Testing/badge.svg)
 ![Package CPU Testing](https://github.com/fcakyon/yolov5-python/workflows/Package%20CPU%20Testing/badge.svg)
 
