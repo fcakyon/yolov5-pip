@@ -1,0 +1,11 @@
+# Include the README
+include *.md
+
+# Include the license file
+include LICENSE
+
+# Include setup.py
+include setup.py
+
+# Include the data files
+recursive-include data *
