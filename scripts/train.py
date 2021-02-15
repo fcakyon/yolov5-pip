@@ -11,7 +11,7 @@ import torch
 import torch.distributed as dist
 import yaml
 from torch.utils.tensorboard import SummaryWriter
-from utils.general import (
+from yolov5.utils.general import (
     check_file,
     check_git_status,
     fitness,
@@ -20,8 +20,8 @@ from utils.general import (
     print_mutation,
     set_logging,
 )
-from utils.plots import plot_evolution
-from utils.torch_utils import select_device
+from yolov5.utils.plots import plot_evolution
+from yolov5.utils.torch_utils import select_device
 from yolov5 import train
 
 logger = logging.getLogger(__name__)

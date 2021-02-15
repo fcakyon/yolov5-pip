@@ -494,10 +494,10 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 )
             final_epoch = epoch + 1 == epochs
             if not opt.notest or final_epoch:  # Calculate mAP
-                results, maps, times = test.test(
-                    opt.data,
+                results, maps, times = test(
+                    data=opt.data,
                     batch_size=total_batch_size,
-                    imgsz=imgsz_test,
+                    image_size=imgsz_test,
                     model=ema.ema,
                     single_cls=opt.single_cls,
                     dataloader=testloader,
@@ -609,10 +609,10 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 [0.25, 0.45, False],
                 [0.001, 0.65, True],
             ):  # speed, mAP tests
-                results, _, _ = test.test(
-                    opt.data,
+                results, _, _ = test(
+                    data=opt.data,
                     batch_size=total_batch_size,
-                    imgsz=imgsz_test,
+                    image_size=imgsz_test,
                     conf_thres=conf,
                     iou_thres=iou,
                     model=attempt_load(final, device).half(),
