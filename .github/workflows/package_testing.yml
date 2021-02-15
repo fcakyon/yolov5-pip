@@ -54,3 +54,14 @@ jobs:
     - name: Test with unittest
       run: |
         python -m unittest
+    - name: Test scripts
+      run: |
+        di=cpu # inference devices  # define device
+        # train
+        python scripts/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --cfg models/yolov5s.yaml --epochs 1 --device $di
+        # detect
+        python scripts/detect.py --weights yolov5/weights/yolov5s.pt --device $di
+        python scripts/detect.py --weights runs/train/exp/weights/last.pt --device $di
+        # test
+        python scripts/test.py --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --device $di
+        python scripts/test.py --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
