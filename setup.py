@@ -36,6 +36,7 @@ setuptools.setup(
     python_requires=">=3.6",
     install_requires=get_requirements(),
     extras_require={"tests": ["pytest"]},
+    include_package_data=True,
     options={'bdist_wheel':{'python_tag':'py36.py37.py38'}},
     classifiers=[
         "Development Status :: 5 - Production/Stable",
