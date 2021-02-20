@@ -134,8 +134,7 @@ def attempt_load(weights, map_location=None):
     # Loads an ensemble of models weights=[a,b,c] or a single model weights=[a] or weights=a
     model = Ensemble()
     # add yolov5 folder to system path
-    here = Path(__file__).parent.absolute()
-    yolov5_folder_dir = str(here+"/..")
+    yolov5_folder_dir = str(Path(__file__).parents[1].absolute())
     sys.path.insert(0, yolov5_folder_dir)
     for w in weights if isinstance(weights, list) else [weights]:
         attempt_download(w)
