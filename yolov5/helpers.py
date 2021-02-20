@@ -42,11 +42,10 @@ def load_model(model_path, device=None, autoshape=True):
     if not device:
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
-    # add models folder to system path
+    # add yolov5 folder to system path
     here = Path(__file__).parent.absolute()
-    models_folder_dir = str(here / "models")
-    sys.path.insert(0, models_folder_dir)
-    print(sys.path)
+    yolov5_folder_dir = str(here)
+    sys.path.insert(0, yolov5_folder_dir)
 
     attempt_download(model_path)  # download if not found locally
     model = torch.load(model_path, map_location=torch.device(device))
@@ -57,8 +56,8 @@ def load_model(model_path, device=None, autoshape=True):
     hub_model.names = model.names  # class names
     model = hub_model
 
-    # add models folder from system path
-    sys.path.remove(models_folder_dir)
+    # add yolov5 folder from system path
+    sys.path.remove(yolov5_folder_dir)
 
     if autoshape:
         model = model.autoshape()
