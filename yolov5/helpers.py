@@ -56,7 +56,7 @@ def load_model(model_path, device=None, autoshape=True):
     hub_model.names = model.names  # class names
     model = hub_model
 
-    # add yolov5 folder from system path
+    # remove yolov5 folder from system path
     sys.path.remove(yolov5_folder_dir)
 
     if autoshape:
