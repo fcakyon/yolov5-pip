@@ -101,8 +101,10 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         here = Path(__file__).parent.absolute()
         yolov5_folder_dir = str(here)
         sys.path.insert(0, yolov5_folder_dir)
-        ckpt = torch.load(weights, map_location=device)  # load checkpoint
+        # load checkpoint
+        ckpt = torch.load(weights, map_location=device)
         # remove yolov5 folder from system path
+        sys.path.remove(yolov5_folder_dir)
         if hyp.get("anchors"):
             ckpt["model"].yaml["anchors"] = round(hyp["anchors"])  # force autoanchor
         model = Model(opt.cfg or ckpt["model"].yaml, ch=3, nc=nc).to(device)  # create
