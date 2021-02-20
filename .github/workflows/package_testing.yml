@@ -44,7 +44,7 @@ jobs:
         restore-keys: ${{ matrix.os }}-${{ matrix.python-version }}-
     - name: Update pip
       run: python -m pip install --upgrade pip
-    - name: Install numpy for Python 3.6
+    - name: Install numpy and matplotlib for Python 3.6
       if: matrix.python-version == 3.6
       run: >
         pip install "numpy>=1.18.5,<1.20" "matplotlib>=3.2.2,<4"
