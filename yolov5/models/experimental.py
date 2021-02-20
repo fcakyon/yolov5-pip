@@ -1,5 +1,8 @@
 # This file contains experimental modules
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -130,11 +133,16 @@ class Ensemble(nn.ModuleList):
 def attempt_load(weights, map_location=None):
     # Loads an ensemble of models weights=[a,b,c] or a single model weights=[a] or weights=a
     model = Ensemble()
+    # add yolov5 folder to system path
+    yolov5_folder_dir = str(Path(__file__).parents[1].absolute())
+    sys.path.insert(0, yolov5_folder_dir)
     for w in weights if isinstance(weights, list) else [weights]:
         attempt_download(w)
         model.append(
             torch.load(w, map_location=map_location)["model"].float().fuse().eval()
         )  # load FP32 model
+    # remove yolov5 folder from system path
+    sys.path.remove(yolov5_folder_dir)
 
     # Compatibility updates
     for m in model.modules():

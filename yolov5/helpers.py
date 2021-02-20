@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 from yolov5.models.yolo import Model
@@ -41,6 +42,11 @@ def load_model(model_path, device=None, autoshape=True):
     if not device:
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
+    # add yolov5 folder to system path
+    here = Path(__file__).parent.absolute()
+    yolov5_folder_dir = str(here)
+    sys.path.insert(0, yolov5_folder_dir)
+
     attempt_download(model_path)  # download if not found locally
     model = torch.load(model_path, map_location=torch.device(device))
     if isinstance(model, dict):
@@ -49,6 +55,9 @@ def load_model(model_path, device=None, autoshape=True):
     hub_model.load_state_dict(model.float().state_dict())  # load state_dict
     hub_model.names = model.names  # class names
     model = hub_model
+
+    # remove yolov5 folder from system path
+    sys.path.remove(yolov5_folder_dir)
 
     if autoshape:
         model = model.autoshape()
