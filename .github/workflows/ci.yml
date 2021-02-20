@@ -49,7 +49,7 @@ jobs:
     - name: Install numpy for Python 3.6
       if: matrix.python-version == 3.6
       run: >
-        pip install "numpy>=1.18.5,<1.20"
+        pip install "numpy>=1.18.5,<1.20" "matplotlib>=3.2.2,<4"
     - name: Install dependencies
       run: >
         pip install -r requirements.txt

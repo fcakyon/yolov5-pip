@@ -23,7 +23,7 @@ pip install yolov5
 - Install yolov5 using pip `(for Python 3.6)`:
 
 ```console
-pip install "numpy>=1.18.5,<1.20"
+pip install "numpy>=1.18.5,<1.20" "matplotlib>=3.2.2,<4"
 pip install yolov5
 ```
 
