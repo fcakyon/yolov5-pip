@@ -46,6 +46,7 @@ def load_model(model_path, device=None, autoshape=True):
     here = Path(__file__).parent.absolute()
     models_folder_dir = str(here / "models")
     sys.path.insert(0, models_folder_dir)
+    print(sys.path)
 
     attempt_download(model_path)  # download if not found locally
     model = torch.load(model_path, map_location=torch.device(device))
