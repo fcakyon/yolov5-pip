@@ -1,8 +1,8 @@
 # Packaged YOLOv5 Object Detector
 
 [![Downloads](https://pepy.tech/badge/yolov5/month)](https://pepy.tech/project/yolov5)
-![CI CPU Testing](https://github.com/fcakyon/yolov5-python/workflows/CI%20CPU%20Testing/badge.svg)
-![Package CPU Testing](https://github.com/fcakyon/yolov5-python/workflows/Package%20CPU%20Testing/badge.svg)
+<a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/ci.yml"><img src="https://github.com/fcakyon/yolov5-python/workflows/CI%20CPU%20Testing/badge.svg" alt="CI CPU testing"></a>
+<a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/package_testing.yml"><img src="https://github.com/fcakyon/yolov5-python/workflows/Package%20CPU%20Testing/badge.svg" alt="Package CPU testing"></a>
 
 You can finally install [YOLOv5 object detector](https://github.com/ultralytics/yolov5) using [pip](https://pypi.org/project/yolov5/) and integrate into your project easily.
 
@@ -98,6 +98,6 @@ $ python detect.py --source data/images --weights yolov5s.pt --conf 0.25
 
 ## Status
 
-Builds for the latest commit for `Windows/Linux/MacOS` with `Python3.6/3.7/3.8`: ![CI CPU Testing](https://github.com/fcakyon/yolov5-python/workflows/CI%20CPU%20Testing/badge.svg)
+Builds for the latest commit for `Windows/Linux/MacOS` with `Python3.6/3.7/3.8`: <a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/package_testing.yml"><img src="https://github.com/fcakyon/yolov5-python/workflows/Package%20CPU%20Testing/badge.svg" alt="CI CPU testing"></a>
 
-Status for the train/detect/test scripts: ![Package CPU Testing](https://github.com/fcakyon/yolov5-python/workflows/Package%20CPU%20Testing/badge.svg)
+Status for the train/detect/test scripts: <a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/package_testing.yml"><img src="https://github.com/fcakyon/yolov5-python/workflows/Package%20CPU%20Testing/badge.svg" alt="Package CPU testing"></a>
