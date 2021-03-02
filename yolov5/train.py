@@ -25,12 +25,14 @@ from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import Model
 from yolov5.utils.autoanchor import check_anchors
 from yolov5.utils.datasets import create_dataloader
-from yolov5.utils.general import (check_dataset, check_img_size, fitness,
+from yolov5.utils.general import (check_dataset, check_file, check_git_status,
+                                  check_img_size, check_requirements, colorstr,
+                                  fitness, get_latest_run, increment_path,
                                   init_seeds, labels_to_class_weights,
                                   labels_to_image_weights, one_cycle,
-                                  strip_optimizer)
+                                  print_mutation, set_logging, strip_optimizer)
 from yolov5.utils.google_utils import attempt_download
-from yolov5.utils.loss import compute_loss
+from yolov5.utils.loss import ComputeLoss
 from yolov5.utils.plots import (plot_evolution, plot_images, plot_labels,
                                 plot_results)
 from yolov5.utils.torch_utils import (ModelEMA, intersect_dicts, select_device,
@@ -438,8 +440,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     torch.cuda.empty_cache()
     return results
 
-
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default='yolov5s.pt', help='initial weights path')
     parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
@@ -609,3 +610,6 @@ if __name__ == '__main__':
         plot_evolution(yaml_file)
         print(f'Hyperparameter evolution complete. Best results saved as: {yaml_file}\n'
               f'Command to train a new model with these hyperparameters: $ python train.py --hyp {yaml_file}')
+
+if __name__ == '__main__':
+    main()

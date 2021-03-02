@@ -12,11 +12,11 @@ from tqdm import tqdm
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.datasets import create_dataloader
 from yolov5.utils.general import (box_iou, check_dataset, check_file,
-                                  check_img_size, coco80_to_coco91_class,
+                                  check_img_size, check_requirements,
+                                  coco80_to_coco91_class, colorstr,
                                   increment_path, non_max_suppression,
                                   scale_coords, set_logging, xywh2xyxy,
                                   xyxy2xywh)
-from yolov5.utils.loss import compute_loss
 from yolov5.utils.metrics import ConfusionMatrix, ap_per_class
 from yolov5.utils.plots import output_to_target, plot_images, plot_study_txt
 from yolov5.utils.torch_utils import select_device, time_synchronized
@@ -40,7 +40,8 @@ def test(data,
          save_conf=False,  # save auto-label confidences
          plots=True,
          log_imgs=0,  # number of logged images
-         compute_loss=None):
+         compute_loss=None,
+         opt=None):
     # Initialize/load model and set device
     training = model is not None
     if training:  # called by train.py
@@ -281,8 +282,7 @@ def test(data,
         maps[c] = ap[i]
     return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t
 
-
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(prog='test.py')
     parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model.pt path(s)')
     parser.add_argument('--data', type=str, default='data/coco128.yaml', help='*.data path')
@@ -322,6 +322,7 @@ if __name__ == '__main__':
              save_txt=opt.save_txt | opt.save_hybrid,
              save_hybrid=opt.save_hybrid,
              save_conf=opt.save_conf,
+             opt=opt
              )
 
     elif opt.task == 'speed':  # speed benchmarks
@@ -341,3 +342,6 @@ if __name__ == '__main__':
             np.savetxt(f, y, fmt='%10.4g')  # save
         os.system('zip -r study.zip study_*.txt')
         plot_study_txt(x=x)  # plot
+
+if __name__ == '__main__':
+    main()

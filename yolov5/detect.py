@@ -10,6 +10,7 @@ from numpy import random
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.datasets import LoadImages, LoadStreams
 from yolov5.utils.general import (apply_classifier, check_img_size,
+                                  check_imshow, check_requirements,
                                   increment_path, non_max_suppression,
                                   scale_coords, set_logging, strip_optimizer,
                                   xyxy2xywh)
@@ -18,7 +19,7 @@ from yolov5.utils.torch_utils import (load_classifier, select_device,
                                       time_synchronized)
 
 
-def detect(save_img=False):
+def detect(save_img=False, opt=None):
     source, weights, view_img, save_txt, imgsz = opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://'))
@@ -146,11 +147,10 @@ def detect(save_img=False):
 
     print(f'Done. ({time.time() - t0:.3f}s)')
 
-
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='data/images', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--source', type=str, default='yolov5/data/images', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
@@ -172,7 +172,10 @@ if __name__ == '__main__':
     with torch.no_grad():
         if opt.update:  # update all models (to fix SourceChangeWarning)
             for opt.weights in ['yolov5s.pt', 'yolov5m.pt', 'yolov5l.pt', 'yolov5x.pt']:
-                detect()
+                detect(opt=opt)
                 strip_optimizer(opt.weights)
         else:
-            detect()
+            detect(opt=opt)
+
+if __name__ == '__main__':
+    main()
