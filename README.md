@@ -59,18 +59,19 @@ results = yolov5.predict([image1, image2], size=1280, augment=True)
 
 ## Tutorials
 
-* [Train Custom Data](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data)
-* [Transfer Learning with Frozen Layers](https://github.com/ultralytics/yolov5/issues/1314)
+- [Train Custom Data](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data)
+- [Transfer Learning with Frozen Layers](https://github.com/ultralytics/yolov5/issues/1314)
 
 ## Scripts
 
-You can download and use [train.py](scripts/train.py), [detect.py](scripts/detect.py) and [test.py](scripts/test.py) scripts after installing the package via `pip`:
+You can call [yolo_train](scripts/train.py), [yolo_detect](scripts/detect.py) and [yolo_test](scripts/test.py) commands after installing the package via `pip`:
 
 ### Training
 
 Run commands below to reproduce results on [COCO](https://github.com/ultralytics/yolov5/blob/master/data/scripts/get_coco.sh) dataset (dataset auto-downloads on first use). Training times for YOLOv5s/m/l/x are 2/4/6/8 days on a single V100 (multi-GPU times faster). Use the largest `--batch-size` your GPU allows (batch sizes shown for 16 GB devices).
+
 ```bash
-$ python train.py --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 64
+$ yolo_train --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 64
                                          yolov5m                                40
                                          yolov5l                                24
                                          yolov5x                                16
@@ -78,10 +79,11 @@ $ python train.py --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 
 
 ### Inference
 
-[detect.py](scripts/detect.py) runs inference on a variety of sources, downloading models automatically from the [latest YOLOv5 release](https://github.com/ultralytics/yolov5/releases) and saving results to `runs/detect`.
+[yolo_detect](scripts/detect.py) command runs inference on a variety of sources, downloading models automatically from the [latest YOLOv5 release](https://github.com/ultralytics/yolov5/releases) and saving results to `runs/detect`.
+
 ```bash
-$ python detect.py --source 0  # webcam
-                            file.jpg  # image 
+$ yolo_detect --source 0  # webcam
+                            file.jpg  # image
                             file.mp4  # video
                             path/  # directory
                             path/*.jpg  # glob
@@ -91,10 +93,10 @@ $ python detect.py --source 0  # webcam
 ```
 
 To run inference on example images in `data/images`:
-```bash
-$ python detect.py --source data/images --weights yolov5s.pt --conf 0.25
-```
 
+```bash
+$ yolo_detect --source data/images --weights yolov5s.pt --conf 0.25
+```
 
 ## Status
 

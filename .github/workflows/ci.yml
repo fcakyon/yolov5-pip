@@ -2,14 +2,14 @@ name: CI CPU Testing
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-  
+
     strategy:
       matrix:
         operating-system: [ubuntu-latest, windows-latest, macos-latest]
@@ -17,54 +17,59 @@ jobs:
       fail-fast: false
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Restore Ubuntu cache
-      uses: actions/cache@v1
-      if: matrix.operating-system == 'ubuntu-latest'
-      with:
-        path: ~/.cache/pip
-        key: ${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('**/setup.py')}}
-        restore-keys: ${{ matrix.os }}-${{ matrix.python-version }}-
-    - name: Restore MacOS cache
-      uses: actions/cache@v1
-      if:  matrix.operating-system == 'macos-latest'
-      with:
-        path: ~/Library/Caches/pip
-        key: ${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('**/setup.py')}}
-        restore-keys: ${{ matrix.os }}-${{ matrix.python-version }}-
-    - name: Restore Windows cache
-      uses: actions/cache@v1
-      if: matrix.operating-system == 'windows-latest'
-      with:
-        path: ~\AppData\Local\pip\Cache
-        key: ${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('**/setup.py')}}
-        restore-keys: ${{ matrix.os }}-${{ matrix.python-version }}-
-    - name: Update pip
-      run: python -m pip install --upgrade pip
-    - name: Install  numpy and matplotlib for Python 3.6
-      if: matrix.python-version == 3.6
-      run: >
-        pip install "numpy>=1.18.5,<1.20" "matplotlib>=3.2.2,<4"
-    - name: Install dependencies
-      run: >
-        pip install -r requirements.txt
-    - name: Test with unittest
-      run: |
-        python -m unittest
-    - name: Test scripts
-      run: |
-        pip install -e .
-        di=cpu # inference devices  # define device
-        # train
-        python scripts/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --cfg models/yolov5s.yaml --epochs 1 --device $di
-        # detect
-        python scripts/detect.py --weights yolov5/weights/yolov5s.pt --device $di
-        python scripts/detect.py --weights runs/train/exp/weights/last.pt --device $di
-        # test
-        python scripts/test.py --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --device $di
-        python scripts/test.py --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Restore Ubuntu cache
+        uses: actions/cache@v1
+        if: matrix.operating-system == 'ubuntu-latest'
+        with:
+          path: ~/.cache/pip
+          key: ${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('**/setup.py')}}
+          restore-keys: ${{ matrix.os }}-${{ matrix.python-version }}-
+      - name: Restore MacOS cache
+        uses: actions/cache@v1
+        if: matrix.operating-system == 'macos-latest'
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('**/setup.py')}}
+          restore-keys: ${{ matrix.os }}-${{ matrix.python-version }}-
+      - name: Restore Windows cache
+        uses: actions/cache@v1
+        if: matrix.operating-system == 'windows-latest'
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('**/setup.py')}}
+          restore-keys: ${{ matrix.os }}-${{ matrix.python-version }}-
+      - name: Update pip
+        run: python -m pip install --upgrade pip
+      - name: Install  numpy and matplotlib for Python 3.6
+        if: matrix.python-version == 3.6
+        run: >
+          pip install "numpy>=1.18.5,<1.20" "matplotlib>=3.2.2,<4"
+      - name: Install dependencies
+        run: >
+          pip install -r requirements.txt
+      - name: Test with unittest
+        run: |
+          python -m unittest
+      - name: Test scripts
+        run: |
+          pip install -e .
+          di=cpu # inference devices  # define device
+          # train
+          python yolov5/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --cfg models/yolov5s.yaml --epochs 1 --device $di
+          yolo_train --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --cfg models/yolov5s.yaml --epochs 1 --device $di
+          # detect
+          python yolov5/detect.py --weights yolov5/weights/yolov5s.pt --device $di
+          yolo_detect --weights yolov5/weights/yolov5s.pt --device $di
+          python yolov5/detect.py --weights runs/train/exp/weights/last.pt --device $di
+          yolo_detect --weights runs/train/exp/weights/last.pt --device $di
+          # test
+          python yolov5/test.py --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --device $di
+          yolo_test --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --device $di
+          python yolov5/test.py --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
+          yolo_test --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di

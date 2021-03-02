@@ -3,6 +3,7 @@ import logging
 import math
 import os
 import random
+import sys
 import time
 from pathlib import Path
 from threading import Thread
@@ -78,7 +79,17 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     if pretrained:
         with torch_distributed_zero_first(rank):
             attempt_download(weights)  # download if not found locally
+
+        # add yolov5 folder to system path
+        here = Path(__file__).parent.absolute()
+        yolov5_folder_dir = str(here)
+        sys.path.insert(0, yolov5_folder_dir)
+
         ckpt = torch.load(weights, map_location=device)  # load checkpoint
+
+        # remove yolov5 folder from system path
+        sys.path.remove(yolov5_folder_dir)
+
         if hyp.get('anchors'):
             ckpt['model'].yaml['anchors'] = round(hyp['anchors'])  # force autoanchor
         model = Model(opt.cfg or ckpt['model'].yaml, ch=3, nc=nc).to(device)  # create
