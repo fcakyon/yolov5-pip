@@ -6,22 +6,6 @@ from yolov5.utils.google_utils import attempt_download
 from yolov5.utils.torch_utils import torch
 
 
-class OptFactory:
-    def __init__(self, dictionary):
-        for k, v in dictionary.items():
-            setattr(self, k, v)
-
-"""
-def load_model(model_path, device):
-    model = attempt_load(weights=model_path, map_location=device)
-
-    hub_model = Model(model.yaml).to(next(model.parameters()).device)  # create
-    hub_model.load_state_dict(model.float().state_dict())  # load state_dict
-    hub_model.names = model.names  # class names
-    hub_model = hub_model.autoshape()
-    return hub_model
-"""
-
 def load_model(model_path, device=None, autoshape=True):
     """
     Creates a specified YOLOv5 model
