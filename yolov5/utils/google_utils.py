@@ -47,37 +47,40 @@ def attempt_download(weights):
             return
 
 
-def gdrive_download(id='16TiPfZj7htmTyhntwcZyEEAejOUxuT6m', name='tmp.zip'):
-    # Downloads a file from Google Drive. from yolov5.utils.google_utils import *; gdrive_download()
-    t = time.time()
-    print('Downloading https://drive.google.com/uc?export=download&id=%s as %s... ' % (id, name), end='')
-    os.remove(name) if os.path.exists(name) else None  # remove existing
-    os.remove('cookie') if os.path.exists('cookie') else None
+def attempt_download(file, repo='ultralytics/yolov5'):
+    # Attempt file download if does not exist
+    file = Path(str(file).strip().replace("'", '').lower())
 
-    # Attempt file download
-    out = "NUL" if platform.system() == "Windows" else "/dev/null"
-    os.system('curl -c ./cookie -s -L "drive.google.com/uc?export=download&id=%s" > %s ' % (id, out))
-    if os.path.exists('cookie'):  # large file
-        s = 'curl -Lb ./cookie "drive.google.com/uc?export=download&confirm=%s&id=%s" -o %s' % (get_token(), id, name)
-    else:  # small file
-        s = 'curl -s -L -o %s "drive.google.com/uc?export=download&id=%s"' % (name, id)
-    r = os.system(s)  # execute, capture return
-    os.remove('cookie') if os.path.exists('cookie') else None
+    if not file.exists():
+        try:
+            response = requests.get(f'https://api.github.com/repos/{repo}/releases/latest').json()  # github api
+            assets = [x['name'] for x in response['assets']]  # release assets, i.e. ['yolov5s.pt', 'yolov5m.pt', ...]
+            tag = response['tag_name']  # i.e. 'v1.0'
+        except:  # fallback plan
+            assets = ['yolov5s.pt', 'yolov5m.pt', 'yolov5l.pt', 'yolov5x.pt']
+            tag = subprocess.check_output('git tag', shell=True).decode().split()[-1]
 
-    # Error check
-    if r != 0:
-        os.remove(name) if os.path.exists(name) else None  # remove partial
-        print('Download error ')  # raise Exception('Download error')
-        return r
-
-    # Unzip if archive
-    if name.endswith('.zip'):
-        print('unzipping... ', end='')
-        os.system('unzip -q %s' % name)  # unzip
-        os.remove(name)  # remove zip to free space
-
-    print('Done (%.1fs)' % (time.time() - t))
-    return r
+        name = file.name
+        if name in assets:
+            msg = f'{file} missing, try downloading from https://github.com/{repo}/releases/'
+            redundant = False  # second download option
+            try:  # GitHub
+                url = f'https://github.com/{repo}/releases/download/{tag}/{name}'
+                print(f'Downloading {url} to {file}...')
+                torch.hub.download_url_to_file(url, file)
+                assert file.exists() and file.stat().st_size > 1E6  # check
+            except Exception as e:  # GCP
+                print(f'Download error: {e}')
+                assert redundant, 'No secondary mirror'
+                url = f'https://storage.googleapis.com/{repo}/ckpt/{name}'
+                print(f'Downloading {url} to {file}...')
+                os.system(f'curl -L {url} -o {file}')  # torch.hub.download_url_to_file(url, weights)
+            finally:
+                if not file.exists() or file.stat().st_size < 1E6:  # check
+                    file.unlink(missing_ok=True)  # remove partial downloads
+                    print(f'ERROR: Download failure: {msg}')
+                print('')
+                return
 
 
 def get_token(cookie="./cookie"):
