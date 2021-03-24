@@ -14,7 +14,7 @@ from yolov5.utils.general import (
     scale_coords,
     xyxy2xywh,
 )
-from yolov5.utils.plots import color_list
+from yolov5.utils.plots import color_list, plot_one_box
 
 
 def autopad(k, p=None):  # kernel, padding
@@ -207,7 +207,6 @@ class NMS(nn.Module):
 
 class autoShape(nn.Module):
     # input-robust model wrapper for passing cv2/np/PIL/torch inputs. Includes preprocessing, inference and NMS
-    img_size = 640  # inference size (pixels)
     conf = 0.25  # NMS confidence threshold
     iou = 0.45  # NMS IoU threshold
     classes = None  # (optional list) filter by class
@@ -232,6 +231,7 @@ class autoShape(nn.Module):
         #   torch:           = torch.zeros(16,3,720,1280)  # BCHW
         #   multiple:        = [Image.open('image1.jpg'), Image.open('image2.jpg'), ...]  # list of images
 
+        t = [time_synchronized()]
         p = next(self.model.parameters())  # for device and type
         if isinstance(imgs, torch.Tensor):  # torch
             return self.model(
@@ -248,6 +248,8 @@ class autoShape(nn.Module):
                 im = Image.open(
                     requests.get(im, stream=True).raw if im.startswith("http") else im
                 )  # open
+                im.filename = f  # for uri
+            files.append(Path(im.filename).with_suffix('.jpg').name if isinstance(im, Image.Image) else f'image{i}.jpg')
             im = np.array(im)  # to numpy
             if im.shape[0] < 5:  # image in CHW
                 im = im.transpose((1, 2, 0))  # reverse dataloader .transpose(2, 0, 1)
@@ -271,20 +273,22 @@ class autoShape(nn.Module):
         # Inference
         with torch.no_grad():
             y = self.model(x, augment, profile)[0]  # forward
+        t = [time_synchronized()]
+
+        # Post-process
         y = non_max_suppression(
             y, conf_thres=self.conf, iou_thres=self.iou, classes=self.classes
         )  # NMS
-
-        # Post-process
         for i in range(n):
             scale_coords(shape1, y[i][:, :4], shape0[i])
+        t.append(time_synchronized())
 
-        return Detections(imgs, y, self.names)
+        return Detections(imgs, y, files, t, self.names, x.shape)
 
 
 class Detections:
     # detections class for YOLOv5 inference results
-    def __init__(self, imgs, pred, names=None):
+    def __init__(self, imgs, pred, files, times=None, names=None, shape=None):
         super(Detections, self).__init__()
         d = pred[0].device  # device
         gn = [
@@ -294,13 +298,17 @@ class Detections:
         self.imgs = imgs  # list of images as numpy arrays
         self.pred = pred  # list of tensors pred[0] = (xyxy, conf, cls)
         self.names = names  # class names
+        self.files = files  # image filenames
         self.xyxy = pred  # xyxy pixels
         self.xywh = [xyxy2xywh(x) for x in pred]  # xywh pixels
         self.xyxyn = [x / g for x, g in zip(self.xyxy, gn)]  # xyxy normalized
         self.xywhn = [x / g for x, g in zip(self.xywh, gn)]  # xywh normalized
         self.n = len(self.pred)
+        self.t = ((times[i + 1] - times[i]) * 1000 / self.n for i in range(3))  # timestamps (ms)
+        self.s = shape  # inference BCHW shape
 
-    def display(self, pprint=False, show=False, save=False):
+
+    def display(self, pprint=False, show=False, save=False, render=False, save_dir=''):
         colors = color_list()
         for i, (img, pred) in enumerate(zip(self.imgs, self.pred)):
             str = f"Image {i + 1}/{len(self.pred)}: {img.shape[0]}x{img.shape[1]} "
@@ -308,46 +316,46 @@ class Detections:
                 for c in pred[:, -1].unique():
                     n = (pred[:, -1] == c).sum()  # detections per class
                     str += f"{n} {self.names[int(c)]}s, "  # add to string
-                if show or save:
-                    img = (
-                        Image.fromarray(img.astype(np.uint8))
-                        if isinstance(img, np.ndarray)
-                        else img
-                    )  # from np
+                if show or save or render:
                     for *box, conf, cls in pred:  # xyxy, confidence, class
-                        # str += '%s %.2f, ' % (names[int(cls)], conf)  # label
-                        ImageDraw.Draw(img).rectangle(
-                            box, width=4, outline=colors[int(cls) % 10]
-                        )  # plot
-            if save:
-                f = f"results{i}.jpg"
-                str += f"saved to '{f}'"
-                img.save(f)  # save
-            if show:
-                img.show(f"Image {i}")  # show
+                        label = f'{self.names[int(cls)]} {conf:.2f}'
+                        plot_one_box(box, img, label=label, color=colors[int(cls) % 10])
+            img = Image.fromarray(img.astype(np.uint8)) if isinstance(img, np.ndarray) else img  # from np
             if pprint:
-                print(str)
+                print(str.rstrip(', '))
+            if show:
+                img.show(self.files[i])  # show
+            if save:
+                f = Path(save_dir) / self.files[i]
+                img.save(f)  # save
+                print(f"{'Saving' * (i == 0)} {f},", end='' if i < self.n - 1 else ' done.\n')
+            if render:
+                self.imgs[i] = np.asarray(img)
 
     def print(self):
         self.display(pprint=True)  # print results
+        print(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {tuple(self.s)}' %
+              tuple(self.t))
 
     def show(self):
         self.display(show=True)  # show results
 
-    def save(self):
-        self.display(save=True)  # save results
+    def save(self, save_dir='results/'):
+        Path(save_dir).mkdir(exist_ok=True)
+        self.display(save=True, save_dir=save_dir)  # save results
+
+    def render(self):
+        self.display(render=True)  # render results
+        return self.imgs
 
     def __len__(self):
         return self.n
 
     def tolist(self):
         # return a list of Detections objects, i.e. 'for result in results.tolist():'
-        x = [
-            Detections([self.imgs[i]], [self.pred[i]], self.names)
-            for i in range(self.n)
-        ]
+        x = [Detections([self.imgs[i]], [self.pred[i]], self.names) for i in range(self.n)]
         for d in x:
-            for k in ["imgs", "pred", "xyxy", "xyxyn", "xywh", "xywhn"]:
+            for k in ['imgs', 'pred', 'xyxy', 'xyxyn', 'xywh', 'xywhn']:
                 setattr(d, k, getattr(d, k)[0])  # pop out of list
         return x
 
