@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -6,21 +7,12 @@ from yolov5.utils.google_utils import attempt_download
 from yolov5.utils.torch_utils import torch
 
 
-class OptFactory:
-    def __init__(self, dictionary):
-        for k, v in dictionary.items():
-            setattr(self, k, v)
-
-"""
-def load_model(model_path, device):
-    model = attempt_load(weights=model_path, map_location=device)
-
-    hub_model = Model(model.yaml).to(next(model.parameters()).device)  # create
-    hub_model.load_state_dict(model.float().state_dict())  # load state_dict
-    hub_model.names = model.names  # class names
-    hub_model = hub_model.autoshape()
-    return hub_model
-"""
+def create_dir(_dir):
+    """
+    Creates given directory if it is not present.
+    """
+    if not os.path.exists(_dir):
+        os.makedirs(_dir)
 
 def load_model(model_path, device=None, autoshape=True):
     """
@@ -103,11 +95,15 @@ class YOLOv5:
         self.model_path = model_path
         self.device = device
         if load_on_init:
+            model_folder_directory = os.path.dirname(model_path)
+            create_dir(model_folder_directory)
             self.model = load_model(model_path=model_path, device=device, autoshape=True)
         else:
             self.model = None
 
     def load_model(self):
+        model_folder_directory = os.path.dirname(self.model_path)
+        create_dir(model_folder_directory)
         self.model = load_model(model_path=self.model_path, device=self.device, autoshape=True)
 
     def predict(self, image_list, size=640, augment=False):
