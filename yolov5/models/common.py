@@ -1,12 +1,14 @@
 # This file contains modules common to various models
 
 import math
+from pathlib import Path
 
 import numpy as np
 import requests
 import torch
 import torch.nn as nn
-from PIL import Image, ImageDraw
+from PIL import Image
+
 from yolov5.utils.datasets import letterbox
 from yolov5.utils.general import (
     make_divisible,
