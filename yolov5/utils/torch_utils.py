@@ -53,7 +53,7 @@ def git_describe():
 
 def select_device(device="", batch_size=None):
     # device = 'cpu' or '0' or '0,1,2,3'
-    s = f"Using torch {torch.__version__} "  # string
+    s = f'YOLOv5 {git_describe()} torch {torch.__version__} '  # string
     cpu = device.lower() == "cpu"
     if cpu:
         os.environ[
@@ -65,7 +65,7 @@ def select_device(device="", batch_size=None):
             torch.cuda.is_available()
         ), f"CUDA unavailable, invalid device {device} requested"  # check availability
 
-    cuda = torch.cuda.is_available() and not cpu
+    cuda = not cpu and torch.cuda.is_available()
     if cuda:
         n = torch.cuda.device_count()
         if (
@@ -145,7 +145,7 @@ def profile(x, ops, n=100, device=None):
             else 0
         )  # parameters
         print(
-            f"{p:12.4g}{flops:12.4g}{dtf:16.4g}{dtb:16.4g}{str(s_in):>24s}{str(s_out):>24s}"
+            f"{p:12g}{flops:12.4g}{dtf:16.4g}{dtb:16.4g}{str(s_in):>24s}{str(s_out):>24s}"
         )
 
 
@@ -267,7 +267,7 @@ def model_info(model, verbose=False, img_size=640):
     try:  # FLOPS
         from thop import profile
 
-        stride = int(model.stride.max()) if hasattr(model, "stride") else 32
+        stride = max(int(model.stride.max()), 32) if hasattr(model, 'stride') else 32
         img = torch.zeros(
             (1, model.yaml.get("ch", 3), stride, stride),
             device=next(model.parameters()).device,
