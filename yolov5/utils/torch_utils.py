@@ -3,6 +3,8 @@
 import logging
 import math
 import os
+import platform
+import subprocess
 import time
 from contextlib import contextmanager
 from copy import deepcopy
@@ -41,6 +43,14 @@ def init_torch_seeds(seed=0):
         cudnn.benchmark, cudnn.deterministic = True, False
 
 
+def git_describe():
+    # return human-readable git description, i.e. v5.0-5-g3e25f1e https://git-scm.com/docs/git-describe
+    if Path('.git').exists():
+        return subprocess.check_output('git describe --tags --long --always', shell=True).decode('utf-8')[:-1]
+    else:
+        return ''
+
+
 def select_device(device="", batch_size=None):
     # device = 'cpu' or '0' or '0,1,2,3'
     s = f"Using torch {torch.__version__} "  # string
@@ -69,9 +79,9 @@ def select_device(device="", batch_size=None):
             p = torch.cuda.get_device_properties(i)
             s += f"{'' if i == 0 else space}CUDA:{d} ({p.name}, {p.total_memory / 1024 ** 2}MB)\n"  # bytes to MB
     else:
-        s += "CPU"
+        s += "CPU\n"
 
-    logger.info(f"{s}\n")  # skip a line
+    logger.info(s.encode().decode('ascii', 'ignore') if platform.system() == 'Windows' else s)  # emoji-safe
     return torch.device("cuda:0" if cuda else "cpu")
 
 
