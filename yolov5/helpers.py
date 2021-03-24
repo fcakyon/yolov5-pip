@@ -7,6 +7,11 @@ from yolov5.utils.google_utils import attempt_download
 from yolov5.utils.torch_utils import torch
 
 
+class OptFactory:
+    def __init__(self, dictionary):
+        for k, v in dictionary.items():
+            setattr(self, k, v)
+
 def create_dir(_dir):
     """
     Creates given directory if it is not present.
