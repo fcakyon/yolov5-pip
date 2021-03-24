@@ -15,7 +15,7 @@ import pandas as pd
 import seaborn as sns
 import torch
 import yaml
-from PIL import Image, ImageDraw ImageFont
+from PIL import Image, ImageDraw, ImageFont
 from scipy.signal import butter, filtfilt
 from yolov5.utils.general import xywh2xyxy, xyxy2xywh
 from yolov5.utils.metrics import fitness
