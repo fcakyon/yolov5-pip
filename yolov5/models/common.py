@@ -15,7 +15,7 @@ from yolov5.utils.general import (
     xyxy2xywh,
 )
 from yolov5.utils.plots import color_list, plot_one_box
-from yolov5.utils.torch_utils import 
+from yolov5.utils.torch_utils import time_synchronized
 
 
 def autopad(k, p=None):  # kernel, padding
