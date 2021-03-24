@@ -119,7 +119,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             % (len(state_dict), len(model.state_dict()), weights)
         )  # report
     else:
-        model = Model(opt.cfg, ch=3, nc=nc).to(device)  # create
+        model = Model(opt.cfg, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
 
     # Freeze
     freeze = []  # parameter names to freeze (full or partial)
