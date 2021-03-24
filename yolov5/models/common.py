@@ -243,7 +243,7 @@ class autoShape(nn.Module):
         n, imgs = (
             (len(imgs), imgs) if isinstance(imgs, list) else (1, [imgs])
         )  # number of images, list of images
-        shape0, shape1 = [], []  # image and inference shapes
+        shape0, shape1, files = [], [], []  # image and inference shapes, filenames
         for i, im in enumerate(imgs):
             if isinstance(im, str):  # filename or uri
                 im = Image.open(
