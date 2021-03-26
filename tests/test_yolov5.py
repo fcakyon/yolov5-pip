@@ -51,7 +51,6 @@ class TestYolov5(unittest.TestCase):
         self.assertEqual(len(results.pred[0]), 3)
         
         # prepare image
-        image_path = TestConstants.ZIDANE_IMAGE_PATH
         image = image_path
 
         # perform inference
@@ -79,7 +78,6 @@ class TestYolov5(unittest.TestCase):
         self.assertEqual(len(results.pred[0]), 6)
         
         # prepare image
-        image_path = TestConstants.ZIDANE_IMAGE_PATH
         image = image_path
 
         # perform inference
