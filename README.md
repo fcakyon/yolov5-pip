@@ -56,6 +56,12 @@ results = yolov5.predict(image1, augment=True)
 
 # perform inference on multiple images
 results = yolov5.predict([image1, image2], size=1280, augment=True)
+
+# show detection bounding boxes on image
+results.show()
+
+# save results into "results/" folder
+results.save(save_dir='results/')
 ```
 
 ## Tutorials
