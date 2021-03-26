@@ -248,7 +248,7 @@ class autoShape(nn.Module):
         shape0, shape1, files = [], [], []  # image and inference shapes, filenames
         for i, im in enumerate(imgs):
             if isinstance(im, str):  # filename or uri
-                im = Image.open(
+                im, f = Image.open(
                     requests.get(im, stream=True).raw if im.startswith("http") else im
                 )  # open
                 im.filename = f  # for uri
