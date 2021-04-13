@@ -105,7 +105,7 @@ class TestYolov5(unittest.TestCase):
         # compare
         self.assertEqual(results.n, 2)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 5)
+        self.assertEqual(len(results.pred[0]), 4)
         self.assertEqual(len(results.pred[1]), 8)
 
         # prepare image
@@ -120,7 +120,7 @@ class TestYolov5(unittest.TestCase):
         # compare
         self.assertEqual(results.n, 2)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 5)
+        self.assertEqual(len(results.pred[0]), 4)
         self.assertEqual(len(results.pred[1]), 8)
         
 
