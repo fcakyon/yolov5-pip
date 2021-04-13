@@ -75,7 +75,7 @@ class TestYolov5(unittest.TestCase):
         # compare
         self.assertEqual(results.n, 1)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 6)
+        self.assertEqual(len(results.pred[0]), 8)
         
         # prepare image
         image = image_path
@@ -86,7 +86,7 @@ class TestYolov5(unittest.TestCase):
         # compare
         self.assertEqual(results.n, 1)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 6)
+        self.assertEqual(len(results.pred[0]), 8)
 
         # init yolov5s model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
