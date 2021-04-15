@@ -16,34 +16,38 @@ def gsutil_getsize(url=''):
     return eval(s.split(' ')[0]) if len(s) else 0  # bytes
 
 
-def attempt_download(weights):
-    if not Path(weights).exists():
-        # Attempt to download pretrained weights if not found locally
-        weights = str(weights).strip().replace("'", '')
-        file = Path(weights).name.lower()
+def attempt_download(file, repo='ultralytics/yolov5'):
+    # Attempt file download if does not exist
+    file = Path(str(file).strip().replace("'", '').lower())
 
-        msg = weights + ' missing, try downloading from https://github.com/ultralytics/yolov5/releases/'
-        response = requests.get('https://api.github.com/repos/ultralytics/yolov5/releases/latest').json()  # github api
-        assets = [x['name'] for x in response['assets']]  # release assets, i.e. ['yolov5s.pt', 'yolov5m.pt', ...]
-        redundant = False  # second download option
+    if not file.exists():
+        try:
+            response = requests.get(f'https://api.github.com/repos/{repo}/releases/latest').json()  # github api
+            assets = [x['name'] for x in response['assets']]  # release assets, i.e. ['yolov5s.pt', 'yolov5m.pt', ...]
+            tag = response['tag_name']  # i.e. 'v1.0'
+        except:  # fallback plan
+            assets = ['yolov5s.pt', 'yolov5m.pt', 'yolov5l.pt', 'yolov5x.pt']
+            tag = subprocess.check_output('git tag', shell=True).decode().split()[-1]
 
-        if file in assets and not os.path.isfile(weights):
+        name = file.name
+        if name in assets:
+            msg = f'{file} missing, try downloading from https://github.com/{repo}/releases/'
+            redundant = False  # second download option
             try:  # GitHub
-                tag = response['tag_name']  # i.e. 'v1.0'
-                url = f'https://github.com/ultralytics/yolov5/releases/download/{tag}/{file}'
-                print('Downloading %s to %s...' % (url, weights))
-                torch.hub.download_url_to_file(url, weights)
-                assert os.path.exists(weights) and os.path.getsize(weights) > 1E6  # check
+                url = f'https://github.com/{repo}/releases/download/{tag}/{name}'
+                print(f'Downloading {url} to {file}...')
+                torch.hub.download_url_to_file(url, file)
+                assert file.exists() and file.stat().st_size > 1E6  # check
             except Exception as e:  # GCP
-                print('Download error: %s' % e)
+                print(f'Download error: {e}')
                 assert redundant, 'No secondary mirror'
-                url = 'https://storage.googleapis.com/ultralytics/yolov5/ckpt/' + file
-                print('Downloading %s to %s...' % (url, weights))
-                r = os.system('curl -L %s -o %s' % (url, weights))  # torch.hub.download_url_to_file(url, weights)
+                url = f'https://storage.googleapis.com/{repo}/ckpt/{name}'
+                print(f'Downloading {url} to {file}...')
+                os.system(f'curl -L {url} -o {file}')  # torch.hub.download_url_to_file(url, weights)
             finally:
-                if not (os.path.exists(weights) and os.path.getsize(weights) > 1E6):  # check
-                    os.remove(weights) if os.path.exists(weights) else None  # remove partial downloads
-                    print('ERROR: Download failure: %s' % msg)
+                if not file.exists() or file.stat().st_size < 1E6:  # check
+                    file.unlink(missing_ok=True)  # remove partial downloads
+                    print(f'ERROR: Download failure: {msg}')
                 print('')
                 return
 
