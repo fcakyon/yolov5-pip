@@ -96,7 +96,7 @@ class YOLOv5:
         """
         Load yolov5 weight.
         """
-        Path(model_path).parents[0].mkdir(parents=True, exist_ok=True)
+        Path(self.model_path).parents[0].mkdir(parents=True, exist_ok=True)
         self.model = load_model(model_path=self.model_path, device=self.device, autoshape=True)
 
     def predict(self, image_list, size=640, augment=False):
