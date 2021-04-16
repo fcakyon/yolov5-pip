@@ -41,10 +41,6 @@ def main():
     sys.path.insert(0, yolov5_folder_dir)
 
     model = attempt_load(opt.weights, map_location=device)  # load FP32 model
-    
-    # remove yolov5 folder from system path
-    sys.path.remove(yolov5_folder_dir)
-    
     labels = model.names
 
     # Checks
@@ -66,6 +62,9 @@ def main():
         #     m.forward = m.forward_export  # assign forward (optional)
     model.model[-1].export = not opt.grid  # set Detect() layer grid export
     y = model(img)  # dry run
+
+    # remove yolov5 folder from system path
+    sys.path.remove(yolov5_folder_dir)
 
     # TorchScript export
     try:
