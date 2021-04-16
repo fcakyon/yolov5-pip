@@ -11,7 +11,7 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
-import yolov5.models
+import yolov5.models as models
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.activations import Hardswish, SiLU
 from yolov5.utils.general import check_img_size, set_logging
