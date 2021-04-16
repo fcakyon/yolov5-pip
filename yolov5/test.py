@@ -42,7 +42,8 @@ def test(data,
          wandb_logger=None,
          compute_loss=None,
          half_precision=True,
-         is_coco=False):
+         is_coco=False,
+         opt=opt):
     # Initialize/load model and set device
     training = model is not None
     if training:  # called by train.py
@@ -342,7 +343,7 @@ def main():
             for i in x:  # img-size
                 print(f'\nRunning {f} point {i}...')
                 r, _, t = test(opt.data, w, opt.batch_size, i, opt.conf_thres, opt.iou_thres, opt.save_json,
-                               plots=False)
+                               plots=False, opt=opt)
                 y.append(r + t)  # results and times
             np.savetxt(f, y, fmt='%10.4g')  # save
         os.system('zip -r study.zip study_*.txt')
