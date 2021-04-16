@@ -87,16 +87,24 @@ class YOLOv5:
         self.model_path = model_path
         self.device = device
         if load_on_init:
-            Path(model_path).mkdir(parents=True, exist_ok=True)
+            Path(model_path).parents[0].mkdir(parents=True, exist_ok=True)
             self.model = load_model(model_path=model_path, device=device, autoshape=True)
         else:
             self.model = None
 
     def load_model(self):
-        Path(model_path).mkdir(parents=True, exist_ok=True)
+        """
+        Load yolov5 weight.
+        """
+        Path(model_path).parents[0].mkdir(parents=True, exist_ok=True)
         self.model = load_model(model_path=self.model_path, device=self.device, autoshape=True)
 
     def predict(self, image_list, size=640, augment=False):
+        """
+        Perform yolov5 prediction using loaded model weights.
+
+        Returns results as a yolov5.models.common.Detections object.
+        """
         assert self.model is not None, "before predict, you need to call .load_model()"
         results = self.model(imgs=image_list, size=size, augment=augment)
         return results
