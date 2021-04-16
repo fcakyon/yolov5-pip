@@ -7,25 +7,25 @@ Usage:
 import argparse
 import sys
 import time
-
-sys.path.append("./")  # to run '$ python *.py' files in subdirectories
+from pathlib import Path
 
 import torch
 import torch.nn as nn
-import yolov5.models
+import yolov5.models as models
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.activations import Hardswish, SiLU
 from yolov5.utils.general import check_img_size, set_logging
+from yolov5.utils.torch_utils import select_device
 
-if __name__ == "__main__":
+
+def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--weights", type=str, default="./yolov5s.pt", help="weights path"
-    )  # from yolov5/models/
-    parser.add_argument(
-        "--img-size", nargs="+", type=int, default=[640, 640], help="image size"
-    )  # height, width
-    parser.add_argument("--batch-size", type=int, default=1, help="batch size")
+    parser.add_argument('--weights', type=str, default='./yolov5s.pt', help='weights path')  # from yolov5/models/
+    parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='image size')  # height, width
+    parser.add_argument('--batch-size', type=int, default=1, help='batch size')
+    parser.add_argument('--dynamic', action='store_true', help='dynamic ONNX axes')
+    parser.add_argument('--grid', action='store_true', help='export Detect() layer grid')
+    parser.add_argument('--device', default='cpu', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     opt = parser.parse_args()
     opt.img_size *= 2 if len(opt.img_size) == 1 else 1  # expand
     print(opt)
@@ -33,21 +33,22 @@ if __name__ == "__main__":
     t = time.time()
 
     # Load PyTorch model
-    model = attempt_load(
-        opt.weights, map_location=torch.device("cpu")
-    )  # load FP32 model
+    device = select_device(opt.device)
+
+    # add yolov5 folder to system path
+    here = Path(__file__).parents[1].absolute()
+    yolov5_folder_dir = str(here)
+    sys.path.insert(0, yolov5_folder_dir)
+
+    model = attempt_load(opt.weights, map_location=device)  # load FP32 model
     labels = model.names
 
     # Checks
     gs = int(max(model.stride))  # grid size (max stride)
-    opt.img_size = [
-        check_img_size(x, gs) for x in opt.img_size
-    ]  # verify img_size are gs-multiples
+    opt.img_size = [check_img_size(x, gs) for x in opt.img_size]  # verify img_size are gs-multiples
 
     # Input
-    img = torch.zeros(
-        opt.batch_size, 3, *opt.img_size
-    )  # image size(1,3,320,192) iDetection
+    img = torch.zeros(opt.batch_size, 3, *opt.img_size).to(device)  # image size(1,3,320,192) iDetection
 
     # Update model
     for k, m in model.named_modules():
@@ -59,65 +60,56 @@ if __name__ == "__main__":
                 m.act = SiLU()
         # elif isinstance(m, models.yolo.Detect):
         #     m.forward = m.forward_export  # assign forward (optional)
-    model.model[-1].export = True  # set Detect() layer export=True
+    model.model[-1].export = not opt.grid  # set Detect() layer grid export
     y = model(img)  # dry run
+
+    # remove yolov5 folder from system path
+    sys.path.remove(yolov5_folder_dir)
 
     # TorchScript export
     try:
-        print("\nStarting TorchScript export with torch %s..." % torch.__version__)
-        f = opt.weights.replace(".pt", ".torchscript.pt")  # filename
-        ts = torch.jit.trace(model, img)
+        print('\nStarting TorchScript export with torch %s...' % torch.__version__)
+        f = opt.weights.replace('.pt', '.torchscript.pt')  # filename
+        ts = torch.jit.trace(model, img, strict=False)
         ts.save(f)
-        print("TorchScript export success, saved as %s" % f)
+        print('TorchScript export success, saved as %s' % f)
     except Exception as e:
-        print("TorchScript export failure: %s" % e)
+        print('TorchScript export failure: %s' % e)
 
     # ONNX export
     try:
         import onnx
 
-        print("\nStarting ONNX export with onnx %s..." % onnx.__version__)
-        f = opt.weights.replace(".pt", ".onnx")  # filename
-        torch.onnx.export(
-            model,
-            img,
-            f,
-            verbose=False,
-            opset_version=12,
-            input_names=["images"],
-            output_names=["classes", "boxes"] if y is None else ["output"],
-        )
+        print('\nStarting ONNX export with onnx %s...' % onnx.__version__)
+        f = opt.weights.replace('.pt', '.onnx')  # filename
+        torch.onnx.export(model, img, f, verbose=False, opset_version=12, input_names=['images'],
+                          output_names=['classes', 'boxes'] if y is None else ['output'],
+                          dynamic_axes={'images': {0: 'batch', 2: 'height', 3: 'width'},  # size(1,3,640,640)
+                                        'output': {0: 'batch', 2: 'y', 3: 'x'}} if opt.dynamic else None)
 
         # Checks
         onnx_model = onnx.load(f)  # load onnx model
         onnx.checker.check_model(onnx_model)  # check onnx model
         # print(onnx.helper.printable_graph(onnx_model.graph))  # print a human readable model
-        print("ONNX export success, saved as %s" % f)
+        print('ONNX export success, saved as %s' % f)
     except Exception as e:
-        print("ONNX export failure: %s" % e)
+        print('ONNX export failure: %s' % e)
 
     # CoreML export
     try:
         import coremltools as ct
 
-        print("\nStarting CoreML export with coremltools %s..." % ct.__version__)
+        print('\nStarting CoreML export with coremltools %s...' % ct.__version__)
         # convert model from torchscript and apply pixel scaling as per detect.py
-        model = ct.convert(
-            ts,
-            inputs=[
-                ct.ImageType(
-                    name="image", shape=img.shape, scale=1 / 255.0, bias=[0, 0, 0]
-                )
-            ],
-        )
-        f = opt.weights.replace(".pt", ".mlmodel")  # filename
+        model = ct.convert(ts, inputs=[ct.ImageType(name='image', shape=img.shape, scale=1 / 255.0, bias=[0, 0, 0])])
+        f = opt.weights.replace('.pt', '.mlmodel')  # filename
         model.save(f)
-        print("CoreML export success, saved as %s" % f)
+        print('CoreML export success, saved as %s' % f)
     except Exception as e:
-        print("CoreML export failure: %s" % e)
+        print('CoreML export failure: %s' % e)
 
     # Finish
-    print(
-        "\nExport complete (%.2fs). Visualize with https://github.com/lutzroeder/netron."
-        % (time.time() - t)
-    )
+    print('\nExport complete (%.2fs). Visualize with https://github.com/lutzroeder/netron.' % (time.time() - t))
+
+if __name__ == '__main__':
+    main()

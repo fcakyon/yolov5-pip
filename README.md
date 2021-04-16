@@ -31,7 +31,34 @@ pip install yolov5
 ## Basic Usage
 
 ```python
-from PIL import Image
+import yolov5
+
+# model
+model = yolov5.load('yolov5s')
+
+# image
+img = 'https://github.com/ultralytics/yolov5/raw/master/data/images/zidane.jpg'
+
+# inference
+results = model(img)
+
+# inference with larger input size
+results = model(img, size=1280)
+
+# inference with test time augmentation
+results = model(img, augment=True)
+
+# show results
+results.show()
+
+# save results
+results.save(save_dir='results/')
+
+```
+
+## Alternative Usage
+
+```python
 from yolov5 import YOLOv5
 
 # set model params
@@ -42,13 +69,13 @@ device = "cuda" # or "cpu"
 yolov5 = YOLOv5(model_path, device)
 
 # load images
-image1 = Image.open("yolov5/data/images/bus.jpg")
-image2 = Image.open("yolov5/data/images/zidane.jpg")
+image1 = 'https://github.com/ultralytics/yolov5/raw/master/data/images/zidane.jpg'
+image2 = 'https://github.com/ultralytics/yolov5/blob/master/data/images/bus.jpg'
 
 # perform inference
 results = yolov5.predict(image1)
 
-# perform inference with higher input size
+# perform inference with larger input size
 results = yolov5.predict(image1, size=1280)
 
 # perform inference with test time augmentation
@@ -64,21 +91,16 @@ results.show()
 results.save(save_dir='results/')
 ```
 
-## Tutorials
-
-- [Train Custom Data](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data)
-- [Transfer Learning with Frozen Layers](https://github.com/ultralytics/yolov5/issues/1314)
-
 ## Scripts
 
-You can download and use [train.py](scripts/train.py), [detect.py](scripts/detect.py) and [test.py](scripts/test.py) scripts after installing the package via `pip`:
+You can call [yolo_train](scripts/train.py), [yolo_detect](scripts/detect.py) and [yolo_test](scripts/test.py) commands after installing the package via `pip`:
 
 ### Training
 
 Run commands below to reproduce results on [COCO](https://github.com/ultralytics/yolov5/blob/master/data/scripts/get_coco.sh) dataset (dataset auto-downloads on first use). Training times for YOLOv5s/m/l/x are 2/4/6/8 days on a single V100 (multi-GPU times faster). Use the largest `--batch-size` your GPU allows (batch sizes shown for 16 GB devices).
 
 ```bash
-$ python train.py --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 64
+$ yolo_train --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 64
                                          yolov5m                                40
                                          yolov5l                                24
                                          yolov5x                                16
@@ -86,10 +108,10 @@ $ python train.py --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 
 
 ### Inference
 
-[detect.py](scripts/detect.py) runs inference on a variety of sources, downloading models automatically from the [latest YOLOv5 release](https://github.com/ultralytics/yolov5/releases) and saving results to `runs/detect`.
+[yolo_detect](scripts/detect.py) command runs inference on a variety of sources, downloading models automatically from the [latest YOLOv5 release](https://github.com/ultralytics/yolov5/releases) and saving results to `runs/detect`.
 
 ```bash
-$ python detect.py --source 0  # webcam
+$ yolo_detect --source 0  # webcam
                             file.jpg  # image
                             file.mp4  # video
                             path/  # directory
@@ -102,7 +124,7 @@ $ python detect.py --source 0  # webcam
 To run inference on example images in `data/images`:
 
 ```bash
-$ python detect.py --source data/images --weights yolov5s.pt --conf 0.25
+$ yolo_detect --source data/images --weights yolov5s.pt --conf 0.25
 ```
 
 ## Status

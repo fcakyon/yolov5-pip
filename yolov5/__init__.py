@@ -1,6 +1,5 @@
-from yolov5.detect import detect
-from yolov5.helpers import YOLOv5, load_model
-from yolov5.test import test
-from yolov5.train import train
+from yolov5.helpers import YOLOv5
+from yolov5.helpers import load_model as load
 
-__version__ = "4.0.14"
+
+__version__ = "5.0.0a1"

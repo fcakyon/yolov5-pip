@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -6,18 +5,6 @@ from yolov5.models.yolo import Model
 from yolov5.utils.google_utils import attempt_download
 from yolov5.utils.torch_utils import torch
 
-
-class OptFactory:
-    def __init__(self, dictionary):
-        for k, v in dictionary.items():
-            setattr(self, k, v)
-
-def create_dir(_dir):
-    """
-    Creates given directory if it is not present.
-    """
-    if not os.path.exists(_dir):
-        os.makedirs(_dir)
 
 def load_model(model_path, device=None, autoshape=True):
     """
@@ -100,18 +87,24 @@ class YOLOv5:
         self.model_path = model_path
         self.device = device
         if load_on_init:
-            model_folder_directory = os.path.dirname(model_path)
-            create_dir(model_folder_directory)
+            Path(model_path).parents[0].mkdir(parents=True, exist_ok=True)
             self.model = load_model(model_path=model_path, device=device, autoshape=True)
         else:
             self.model = None
 
     def load_model(self):
-        model_folder_directory = os.path.dirname(self.model_path)
-        create_dir(model_folder_directory)
+        """
+        Load yolov5 weight.
+        """
+        Path(self.model_path).parents[0].mkdir(parents=True, exist_ok=True)
         self.model = load_model(model_path=self.model_path, device=self.device, autoshape=True)
 
     def predict(self, image_list, size=640, augment=False):
+        """
+        Perform yolov5 prediction using loaded model weights.
+
+        Returns results as a yolov5.models.common.Detections object.
+        """
         assert self.model is not None, "before predict, you need to call .load_model()"
         results = self.model(imgs=image_list, size=size, augment=augment)
         return results
