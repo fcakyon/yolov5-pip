@@ -36,7 +36,7 @@ def main():
     device = select_device(opt.device)
 
     # add yolov5 folder to system path
-    here = Path(__file__).parent[1].absolute()
+    here = Path(__file__).parents[1].absolute()
     yolov5_folder_dir = str(here)
     sys.path.insert(0, yolov5_folder_dir)
 
