@@ -49,6 +49,17 @@ class TestYolov5(unittest.TestCase):
         self.assertEqual(len(results.names), 80)
         self.assertEqual(len(results.pred[0]), 4)
         
+        # prepare image
+        image = image_path
+
+        # perform inference
+        results = yolov5.predict(image, size=640, augment=False)
+
+        # compare
+        self.assertEqual(results.n, 1)
+        self.assertEqual(len(results.names), 80)
+        self.assertEqual(len(results.pred[0]), 4)
+        
         # init yolov5l model
         model_path = TestConstants.YOLOV5L_MODEL_PATH
         device = "cpu"
@@ -57,6 +68,17 @@ class TestYolov5(unittest.TestCase):
         # prepare image
         image_path = TestConstants.BUS_IMAGE_PATH
         image = Image.open(image_path)
+        # perform inference
+        results = yolov5.predict(image, size=1280, augment=False)
+
+        # compare
+        self.assertEqual(results.n, 1)
+        self.assertEqual(len(results.names), 80)
+        self.assertEqual(len(results.pred[0]), 8)
+        
+        # prepare image
+        image = image_path
+
         # perform inference
         results = yolov5.predict(image, size=1280, augment=False)
 
@@ -77,6 +99,21 @@ class TestYolov5(unittest.TestCase):
         image2 = Image.open(image_path2)
 
         # perform inference with multiple images and test augmentation
+        results = yolov5.predict([image1, image2], size=1280, augment=True)
+
+        # compare
+        self.assertEqual(results.n, 2)
+        self.assertEqual(len(results.names), 80)
+        self.assertEqual(len(results.pred[0]), 4)
+        self.assertEqual(len(results.pred[1]), 8)
+
+        # prepare image
+        image_path1 = TestConstants.ZIDANE_IMAGE_PATH
+        image_path2 = TestConstants.BUS_IMAGE_PATH
+        image1 = image_path1
+        image2 = image_path2
+
+        # perform inference
         results = yolov5.predict([image1, image2], size=1280, augment=True)
 
         # compare

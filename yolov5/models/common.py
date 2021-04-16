@@ -1,12 +1,14 @@
 # This file contains modules common to various models
 
 import math
+from pathlib import Path
 
 import numpy as np
 import requests
 import torch
 import torch.nn as nn
-from PIL import Image, ImageDraw
+from PIL import Image
+
 from yolov5.utils.datasets import letterbox
 from yolov5.utils.general import (make_divisible, non_max_suppression,
                                   scale_coords, xyxy2xywh)
@@ -166,7 +168,6 @@ class NMS(nn.Module):
 
 class autoShape(nn.Module):
     # input-robust model wrapper for passing cv2/np/PIL/torch inputs. Includes preprocessing, inference and NMS
-    img_size = 640  # inference size (pixels)
     conf = 0.25  # NMS confidence threshold
     iou = 0.45  # NMS IoU threshold
     classes = None  # (optional list) filter by class
@@ -189,6 +190,7 @@ class autoShape(nn.Module):
         #   torch:           = torch.zeros(16,3,720,1280)  # BCHW
         #   multiple:        = [Image.open('image1.jpg'), Image.open('image2.jpg'), ...]  # list of images
 
+        t = [time_synchronized()]
         p = next(self.model.parameters())  # for device and type
         if isinstance(imgs, torch.Tensor):  # torch
             return self.model(imgs.to(p.device).type_as(p), augment, profile)  # inference
@@ -222,24 +224,29 @@ class autoShape(nn.Module):
         # Post-process
         for i in range(n):
             scale_coords(shape1, y[i][:, :4], shape0[i])
+        t.append(time_synchronized())
 
-        return Detections(imgs, y, self.names)
+        return Detections(imgs, y, files, t, self.names, x.shape)
 
 
 class Detections:
     # detections class for YOLOv5 inference results
-    def __init__(self, imgs, pred, names=None):
+    def __init__(self, imgs, pred, files, times=None, names=None, shape=None):
         super(Detections, self).__init__()
         d = pred[0].device  # device
         gn = [torch.tensor([*[im.shape[i] for i in [1, 0, 1, 0]], 1., 1.], device=d) for im in imgs]  # normalizations
         self.imgs = imgs  # list of images as numpy arrays
         self.pred = pred  # list of tensors pred[0] = (xyxy, conf, cls)
         self.names = names  # class names
+        self.files = files  # image filenames
         self.xyxy = pred  # xyxy pixels
         self.xywh = [xyxy2xywh(x) for x in pred]  # xywh pixels
         self.xyxyn = [x / g for x, g in zip(self.xyxy, gn)]  # xyxy normalized
         self.xywhn = [x / g for x, g in zip(self.xywh, gn)]  # xywh normalized
         self.n = len(self.pred)
+        self.t = ((times[i + 1] - times[i]) * 1000 / self.n for i in range(3))  # timestamps (ms)
+        self.s = shape  # inference BCHW shape
+
 
     def display(self, pprint=False, show=False, save=False, render=False):
         colors = color_list()
@@ -267,12 +274,19 @@ class Detections:
 
     def print(self):
         self.display(pprint=True)  # print results
+        print(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {tuple(self.s)}' %
+              tuple(self.t))
 
     def show(self):
         self.display(show=True)  # show results
 
-    def save(self):
-        self.display(save=True)  # save results
+    def save(self, save_dir='results/'):
+        Path(save_dir).mkdir(exist_ok=True)
+        self.display(save=True, save_dir=save_dir)  # save results
+
+    def render(self):
+        self.display(render=True)  # render results
+        return self.imgs
 
     def render(self):
         self.display(render=True)  # render results
