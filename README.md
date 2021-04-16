@@ -30,7 +30,34 @@ pip install yolov5
 ## Basic Usage
 
 ```python
-from PIL import Image
+import yolov5
+
+# model
+model = yolov5.load('yolov5s')
+
+# image
+img = 'https://github.com/ultralytics/yolov5/raw/master/data/images/zidane.jpg'
+
+# inference
+results = model(img)
+
+# inference with larger input size
+results = model(img, size=1280)
+
+# inference with test time augmentation
+results = model(img, augment=True)
+
+# show results
+results.show()
+
+# save results
+results.save(save_dir='results/')
+
+```
+
+## Alternative Usage
+
+```python
 from yolov5 import YOLOv5
 
 # set model params
@@ -41,13 +68,13 @@ device = "cuda" # or "cpu"
 yolov5 = YOLOv5(model_path, device)
 
 # load images
-image1 = Image.open("yolov5/data/images/bus.jpg")
-image2 = Image.open("yolov5/data/images/zidane.jpg")
+image1 = 'https://github.com/ultralytics/yolov5/raw/master/data/images/zidane.jpg'
+image2 = 'https://github.com/ultralytics/yolov5/blob/master/data/images/bus.jpg'
 
 # perform inference
 results = yolov5.predict(image1)
 
-# perform inference with higher input size
+# perform inference with larger input size
 results = yolov5.predict(image1, size=1280)
 
 # perform inference with test time augmentation
@@ -55,12 +82,14 @@ results = yolov5.predict(image1, augment=True)
 
 # perform inference on multiple images
 results = yolov5.predict([image1, image2], size=1280, augment=True)
+
+# show detection bounding boxes on image
+results.show()
+
+# save results into "results/" folder
+results.save(save_dir='results/')
+
 ```
-
-## Tutorials
-
-- [Train Custom Data](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data)
-- [Transfer Learning with Frozen Layers](https://github.com/ultralytics/yolov5/issues/1314)
 
 ## Scripts
 
