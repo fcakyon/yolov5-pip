@@ -43,7 +43,7 @@ def test(data,
          compute_loss=None,
          half_precision=True,
          is_coco=False,
-         opt=opt):
+         opt=None):
     # Initialize/load model and set device
     training = model is not None
     if training:  # called by train.py
