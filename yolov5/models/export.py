@@ -7,15 +7,15 @@ Usage:
 import argparse
 import sys
 import time
+from pathlib import Path
 
 import torch
 import torch.nn as nn
-from utils.activations import Hardswish, SiLU
-from utils.general import check_img_size, set_logging
-from utils.torch_utils import select_device
-
-import models
-from models.experimental import attempt_load
+import yolov5.models
+from yolov5.models.experimental import attempt_load
+from yolov5.utils.activations import Hardswish, SiLU
+from yolov5.utils.general import check_img_size, set_logging
+from yolov5.utils.torch_utils import select_device
 
 
 def main():
