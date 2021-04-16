@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -88,15 +87,13 @@ class YOLOv5:
         self.model_path = model_path
         self.device = device
         if load_on_init:
-            model_folder_directory = os.path.dirname(model_path)
-            create_dir(model_folder_directory)
+            Path(model_path).mkdir(parents=True, exist_ok=True)
             self.model = load_model(model_path=model_path, device=device, autoshape=True)
         else:
             self.model = None
 
     def load_model(self):
-        model_folder_directory = os.path.dirname(self.model_path)
-        create_dir(model_folder_directory)
+        Path(model_path).mkdir(parents=True, exist_ok=True)
         self.model = load_model(model_path=self.model_path, device=self.device, autoshape=True)
 
     def predict(self, image_list, size=640, augment=False):
