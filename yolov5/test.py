@@ -9,15 +9,17 @@ import torch
 import yaml
 from tqdm import tqdm
 
-from models.experimental import attempt_load
-from utils.datasets import create_dataloader
-from utils.general import (box_iou, check_dataset, check_file, check_img_size,
-                           check_requirements, coco80_to_coco91_class,
-                           colorstr, increment_path, non_max_suppression,
-                           scale_coords, set_logging, xywh2xyxy, xyxy2xywh)
-from utils.metrics import ConfusionMatrix, ap_per_class
-from utils.plots import output_to_target, plot_images, plot_study_txt
-from utils.torch_utils import select_device, time_synchronized
+from yolov5.models.experimental import attempt_load
+from yolov5.utils.datasets import create_dataloader
+from yolov5.utils.general import (box_iou, check_dataset, check_file,
+                                  check_img_size, check_requirements,
+                                  coco80_to_coco91_class, colorstr,
+                                  increment_path, non_max_suppression,
+                                  scale_coords, set_logging, xywh2xyxy,
+                                  xyxy2xywh)
+from yolov5.utils.metrics import ConfusionMatrix, ap_per_class
+from yolov5.utils.plots import output_to_target, plot_images, plot_study_txt
+from yolov5.utils.torch_utils import select_device, time_synchronized
 
 
 def test(data,
