@@ -2,11 +2,12 @@ import argparse
 import logging
 import sys
 from copy import deepcopy
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 from yolov5.models.common import *
-from yolov5.models.experimental import *
+from yolov5.models.experimental import CrossConv, MixConv2d
 from yolov5.utils.autoanchor import check_anchor_order
 from yolov5.utils.general import check_file, make_divisible, set_logging
 from yolov5.utils.torch_utils import (copy_attr, fuse_conv_and_bn,
@@ -108,12 +109,12 @@ class Model(nn.Module):
             for si, fi in zip(s, f):
                 xi = scale_img(x.flip(fi) if fi else x, si, gs=int(self.stride.max()))
                 yi = self.forward_once(xi)[0]  # forward
-                # cv2.imwrite(f'img_{si}.jpg', 255 * xi[0].cpu().numpy().transpose((1, 2, 0))[:, :, ::-1])  # save
+                # cv2.imwrite('img%g.jpg' % s, 255 * xi[0].numpy().transpose((1, 2, 0))[:, :, ::-1])  # save
                 yi[..., :4] /= si  # de-scale
                 if fi == 2:
-                    yi[..., 1] = img_size[0] - 1 - yi[..., 1]  # de-flip ud
+                    yi[..., 1] = img_size[0] - yi[..., 1]  # de-flip ud
                 elif fi == 3:
-                    yi[..., 0] = img_size[1] - 1 - yi[..., 0]  # de-flip lr
+                    yi[..., 0] = img_size[1] - yi[..., 0]  # de-flip lr
                 y.append(yi)
             return torch.cat(y, 1), None  # augmented inference, train
         else:
@@ -212,30 +213,45 @@ def parse_model(d, ch, verbose=1):  # model_dict, input_channels(3)
                 pass
 
         n = max(round(n * gd), 1) if n > 1 else n  # depth gain
-        if m in [Conv, GhostConv, Bottleneck, GhostBottleneck, SPP, DWConv, MixConv2d, Focus, CrossConv, BottleneckCSP,
-                 C3]:
+        if m in [Conv, Bottleneck, SPP, DWConv, MixConv2d, Focus, CrossConv, BottleneckCSP, C3]:
             c1, c2 = ch[f], args[0]
-            if c2 != no:  # if not output
-                c2 = make_divisible(c2 * gw, 8)
+
+            # Normal
+            # if i > 0 and args[0] != no:  # channel expansion factor
+            #     ex = 1.75  # exponential (default 2.0)
+            #     e = math.log(c2 / ch[1]) / math.log(2)
+            #     c2 = int(ch[1] * ex ** e)
+            # if m != Focus:
+
+            c2 = make_divisible(c2 * gw, 8) if c2 != no else c2
+
+            # Experimental
+            # if i > 0 and args[0] != no:  # channel expansion factor
+            #     ex = 1 + gw  # exponential (default 2.0)
+            #     ch1 = 32  # ch[1]
+            #     e = math.log(c2 / ch1) / math.log(2)  # level 1-n
+            #     c2 = int(ch1 * ex ** e)
+            # if m != Focus:
+            #     c2 = make_divisible(c2, 8) if c2 != no else c2
 
             args = [c1, c2, *args[1:]]
             if m in [BottleneckCSP, C3]:
-                args.insert(2, n)  # number of repeats
+                args.insert(2, n)
                 n = 1
         elif m is nn.BatchNorm2d:
             args = [ch[f]]
         elif m is Concat:
-            c2 = sum([ch[x] for x in f])
+            c2 = sum([ch[x if x < 0 else x + 1] for x in f])
         elif m is Detect:
-            args.append([ch[x] for x in f])
+            args.append([ch[x + 1] for x in f])
             if isinstance(args[1], int):  # number of anchors
                 args[1] = [list(range(args[1] * 2))] * len(f)
         elif m is Contract:
-            c2 = ch[f] * args[0] ** 2
+            c2 = ch[f if f < 0 else f + 1] * args[0] ** 2
         elif m is Expand:
-            c2 = ch[f] // args[0] ** 2
+            c2 = ch[f if f < 0 else f + 1] // args[0] ** 2
         else:
-            c2 = ch[f]
+            c2 = ch[f if f < 0 else f + 1]
 
         m_ = nn.Sequential(*[m(*args) for _ in range(n)]) if n > 1 else m(*args)  # module
         t = str(m)[8:-2].replace('__main__.', '')  # module type
@@ -245,8 +261,6 @@ def parse_model(d, ch, verbose=1):  # model_dict, input_channels(3)
             logger.info('%3s%18s%3s%10.0f  %-40s%-30s' % (i, f, n, np, t, args))  # print
         save.extend(x % i for x in ([f] if isinstance(f, int) else f) if x != -1)  # append to savelist
         layers.append(m_)
-        if i == 0:
-            ch = []
         ch.append(c2)
     return nn.Sequential(*layers), sorted(save)
 

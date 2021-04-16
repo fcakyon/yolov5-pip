@@ -10,16 +10,15 @@ from numpy import random
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.datasets import LoadImages, LoadStreams
 from yolov5.utils.general import (apply_classifier, check_img_size,
-                                  check_imshow, check_requirements,
-                                  increment_path, non_max_suppression,
-                                  scale_coords, set_logging, strip_optimizer,
-                                  xyxy2xywh)
+                                  check_requirements, increment_path,
+                                  non_max_suppression, scale_coords,
+                                  set_logging, strip_optimizer, xyxy2xywh)
 from yolov5.utils.plots import plot_one_box
 from yolov5.utils.torch_utils import (load_classifier, select_device,
                                       time_synchronized)
 
 
-def detect(save_img=False, opt=None):
+def detect(save_img=False):
     source, weights, view_img, save_txt, imgsz = opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://'))
@@ -35,8 +34,7 @@ def detect(save_img=False, opt=None):
 
     # Load model
     model = attempt_load(weights, map_location=device)  # load FP32 model
-    stride = int(model.stride.max())  # model stride
-    imgsz = check_img_size(imgsz, s=stride)  # check img_size
+    imgsz = check_img_size(imgsz, s=model.stride.max())  # check img_size
     if half:
         model.half()  # to FP16
 
@@ -49,21 +47,21 @@ def detect(save_img=False, opt=None):
     # Set Dataloader
     vid_path, vid_writer = None, None
     if webcam:
-        view_img = check_imshow()
+        view_img = True
         cudnn.benchmark = True  # set True to speed up constant image size inference
-        dataset = LoadStreams(source, img_size=imgsz, stride=stride)
+        dataset = LoadStreams(source, img_size=imgsz)
     else:
         save_img = True
-        dataset = LoadImages(source, img_size=imgsz, stride=stride)
+        dataset = LoadImages(source, img_size=imgsz)
 
     # Get names and colors
     names = model.module.names if hasattr(model, 'module') else model.names
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
 
     # Run inference
-    if device.type != 'cpu':
-        model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
     t0 = time.time()
+    img = torch.zeros((1, 3, imgsz, imgsz), device=device)  # init img
+    _ = model(img.half() if half else img) if device.type != 'cpu' else None  # run once
     for path, img, im0s, vid_cap in dataset:
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -122,7 +120,6 @@ def detect(save_img=False, opt=None):
             # Stream results
             if view_img:
                 cv2.imshow(str(p), im0)
-                cv2.waitKey(1)  # 1 millisecond
 
             # Save results (image with detections)
             if save_img:
@@ -147,7 +144,8 @@ def detect(save_img=False, opt=None):
 
     print(f'Done. ({time.time() - t0:.3f}s)')
 
-def main():
+
+if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model.pt path(s)')
     parser.add_argument('--source', type=str, default='yolov5/data/images', help='source')  # file/folder, 0 for webcam
@@ -172,10 +170,7 @@ def main():
     with torch.no_grad():
         if opt.update:  # update all models (to fix SourceChangeWarning)
             for opt.weights in ['yolov5s.pt', 'yolov5m.pt', 'yolov5l.pt', 'yolov5x.pt']:
-                detect(opt=opt)
+                detect()
                 strip_optimizer(opt.weights)
         else:
-            detect(opt=opt)
-
-if __name__ == '__main__':
-    main()
+            detect()
