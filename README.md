@@ -93,7 +93,7 @@ results.save(save_dir='results/')
 
 ## Scripts
 
-You can call [yolo_train](scripts/train.py), [yolo_detect](scripts/detect.py) and [yolo_test](scripts/test.py) commands after installing the package via `pip`:
+You can call yolo_train, yolo_detect and yolo_test commands after installing the package via `pip`:
 
 ### Training
 
@@ -101,30 +101,30 @@ Run commands below to reproduce results on [COCO](https://github.com/ultralytics
 
 ```bash
 $ yolo_train --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 64
-                                         yolov5m                                40
-                                         yolov5l                                24
-                                         yolov5x                                16
+                                    yolov5m                                40
+                                    yolov5l                                24
+                                    yolov5x                                16
 ```
 
 ### Inference
 
-[yolo_detect](scripts/detect.py) command runs inference on a variety of sources, downloading models automatically from the [latest YOLOv5 release](https://github.com/ultralytics/yolov5/releases) and saving results to `runs/detect`.
+yolo_detect command runs inference on a variety of sources, downloading models automatically from the [latest YOLOv5 release](https://github.com/ultralytics/yolov5/releases) and saving results to `runs/detect`.
 
 ```bash
 $ yolo_detect --source 0  # webcam
-                            file.jpg  # image
-                            file.mp4  # video
-                            path/  # directory
-                            path/*.jpg  # glob
-                            rtsp://170.93.143.139/rtplive/470011e600ef003a004ee33696235daa  # rtsp stream
-                            rtmp://192.168.1.105/live/test  # rtmp stream
-                            http://112.50.243.8/PLTV/88888888/224/3221225900/1.m3u8  # http stream
+                       file.jpg  # image
+                       file.mp4  # video
+                       path/  # directory
+                       path/*.jpg  # glob
+                       rtsp://170.93.143.139/rtplive/470011e600ef003a004ee33696235daa  # rtsp stream
+                       rtmp://192.168.1.105/live/test  # rtmp stream
+                       http://112.50.243.8/PLTV/88888888/224/3221225900/1.m3u8  # http stream
 ```
 
-To run inference on example images in `data/images`:
+To run inference on example images in `yolov5/data/images`:
 
 ```bash
-$ yolo_detect --source data/images --weights yolov5s.pt --conf 0.25
+$ yolo_detect --source yolov5/data/images --weights yolov5s.pt --conf 0.25
 ```
 
 ## Status
