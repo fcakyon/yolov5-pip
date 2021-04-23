@@ -11,7 +11,7 @@ You can finally install [YOLOv5 object detector](https://github.com/ultralytics/
 
 This package is up-to-date with the latest release of [ultralytics/yolov5](https://github.com/ultralytics/yolov5).
 
-<img src="https://user-images.githubusercontent.com/26833433/103594689-455e0e00-4eae-11eb-9cdf-7d753e2ceeeb.png" width="1000">
+<img src="https://user-images.githubusercontent.com/26833433/114313216-f0a5e100-9af5-11eb-8445-c682b60da2e3.png" width="1000">
 
 ## Installation
 
