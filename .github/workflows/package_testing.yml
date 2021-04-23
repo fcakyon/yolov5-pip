@@ -70,3 +70,7 @@ jobs:
           yolo_test --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --device $di
           python yolov5/test.py --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
           yolo_test --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
+          # export
+          pip install onnx coremltools
+          python yolov5/models/export.py --weights yolov5/weights/yolov5s.pt --device $di
+          yolo_export --weights yolov5/weights/yolov5s.pt --device $di
