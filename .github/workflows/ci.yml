@@ -1,4 +1,4 @@
-name: CI CPU Testing
+name: ci testing
 
 on:
   push:
