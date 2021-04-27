@@ -1,4 +1,4 @@
-name: Package CPU Testing
+name: package testing
 
 on:
   schedule:
