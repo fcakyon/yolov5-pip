@@ -1,15 +1,21 @@
-# Packaged YOLOv5 Object Detector
+<h1 align="center">
+  packaged ultralytics/yolov5
+</h1>
 
-[![PyPI version](https://badge.fury.io/py/yolov5.svg)](https://badge.fury.io/py/yolov5)
-[![Downloads](https://pepy.tech/badge/yolov5/month)](https://pepy.tech/project/yolov5)
-<a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/ci.yml"><img src="https://github.com/fcakyon/yolov5-python/workflows/CI%20CPU%20Testing/badge.svg" alt="CI CPU testing"></a>
-<a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/package_testing.yml"><img src="https://github.com/fcakyon/yolov5-python/workflows/Package%20CPU%20Testing/badge.svg" alt="Package CPU testing"></a>
+<h4 align="center">
+  pip install yolov5
+</h4>
 
-You can finally install [YOLOv5 object detector](https://github.com/ultralytics/yolov5) using [pip](https://pypi.org/project/yolov5/) and integrate into your project easily.
+<div align="center">
+  <a href="https://badge.fury.io/py/yolov5"><img src="https://badge.fury.io/py/yolov5.svg" alt="Downloads"></a>
+  <a href="https://pepy.tech/project/yolov5"><img src="https://pepy.tech/badge/yolov5/month" alt="Downloads"></a>
+  <a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/ci.yml"><img src="https://github.com/fcakyon/yolov5-python/workflows/CI%20CPU%20Testing/badge.svg" alt="CI CPU testing"></a>
+  <a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/package_testing.yml"><img src="https://github.com/fcakyon/yolov5-python/workflows/Package%20CPU%20Testing/badge.svg" alt="Package CPU testing"></a>
+</div>
 
 ## Overview
 
-This package is up-to-date with the latest release of [ultralytics/yolov5](https://github.com/ultralytics/yolov5).
+You can finally install [YOLOv5 object detector](https://github.com/ultralytics/yolov5) using [pip](https://pypi.org/project/yolov5/) and integrate into your project easily.
 
 <img src="https://user-images.githubusercontent.com/26833433/114313216-f0a5e100-9af5-11eb-8445-c682b60da2e3.png" width="1000">
 
