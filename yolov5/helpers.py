@@ -1,12 +1,14 @@
+import logging
 import sys
 from pathlib import Path
 
 from yolov5.models.yolo import Model
+from yolov5.utils.general import set_logging
 from yolov5.utils.google_utils import attempt_download
 from yolov5.utils.torch_utils import torch
 
 
-def load_model(model_path, device=None, autoshape=True):
+def load_model(model_path, device=None, autoshape=True, verbose=False):
     """
     Creates a specified YOLOv5 model
 
@@ -16,12 +18,16 @@ def load_model(model_path, device=None, autoshape=True):
         device (str): select device that model will be loaded (cpu, cuda)
         pretrained (bool): load pretrained weights into the model
         autoshape (bool): make model ready for inference
+        verbose (bool): if False, yolov5 logs will be silent
 
     Returns:
         pytorch model
 
     (Adapted from yolov5.hubconf.create)
     """
+    # set logging
+    set_logging(verbose=verbose)
+
     # set device if not given
     if not device:
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -35,7 +41,7 @@ def load_model(model_path, device=None, autoshape=True):
     model = torch.load(model_path, map_location=torch.device(device))
     if isinstance(model, dict):
         model = model["model"]  # load model
-    hub_model = Model(model.yaml, verbose=0).to(next(model.parameters()).device)  # create
+    hub_model = Model(model.yaml).to(next(model.parameters()).device)  # create
     hub_model.load_state_dict(model.float().state_dict())  # load state_dict
     hub_model.names = model.names  # class names
     model = hub_model

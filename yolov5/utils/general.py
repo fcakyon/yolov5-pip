@@ -31,10 +31,10 @@ cv2.setNumThreads(0)  # prevent OpenCV from multithreading (incompatible with Py
 os.environ['NUMEXPR_MAX_THREADS'] = str(min(os.cpu_count(), 8))  # NumExpr max threads
 
 
-def set_logging(rank=-1):
+def set_logging(rank=-1, verbose=True):
     logging.basicConfig(
         format="%(message)s",
-        level=logging.INFO if rank in [-1, 0] else logging.WARN)
+        level=logging.INFO if (verbose and rank in [-1, 0]) else logging.WARN)
 
 
 def init_seeds(seed=0):
@@ -58,6 +58,11 @@ def isdocker():
 def emojis(str=''):
     # Return platform-dependent emoji-safe version of string
     return str.encode().decode('ascii', 'ignore') if platform.system() == 'Windows' else str
+
+
+def file_size(file):
+    # Return file size in MB
+    return Path(file).stat().st_size / 1e6
 
 
 def check_online():
@@ -111,8 +116,8 @@ def check_requirements(requirements='requirements.txt', exclude=()):
             pkg.require(r)
         except Exception as e:  # DistributionNotFound or VersionConflict if requirements not met
             n += 1
-            print(f"{prefix} {e.req} not found and is required by YOLOv5, attempting auto-update...")
-            print(subprocess.check_output(f"pip install {e.req}", shell=True).decode())
+            print(f"{prefix} {r} not found and is required by YOLOv5, attempting auto-update...")
+            print(subprocess.check_output(f"pip install '{r}'", shell=True).decode())
 
     if n:  # if packages updated
         source = file.resolve() if 'file' in locals() else requirements
@@ -178,14 +183,19 @@ def check_dataset(dict):
 
 
 def download(url, dir='.', multi_thread=False):
-    # Multi-threaded file download function
+    # Multi-threaded file download and unzip function
     def download_one(url, dir):
         # Download 1 file
         f = dir / Path(url).name  # filename
-        print(f'Downloading {url} to {f}...')
-        torch.hub.download_url_to_file(url, f, progress=True)  # download
-        if f.suffix == '.zip':
-            os.system(f'unzip -qo {f} -d {dir} && rm {f}')  # unzip -quiet -overwrite
+        if not f.exists():
+            print(f'Downloading {url} to {f}...')
+            torch.hub.download_url_to_file(url, f, progress=True)  # download
+        if f.suffix in ('.zip', '.gz'):
+            print(f'Unzipping {f}...')
+            if f.suffix == '.zip':
+                os.system(f'unzip -qo {f} -d {dir} && rm {f}')  # unzip -quiet -overwrite
+            elif f.suffix == '.gz':
+                os.system(f'tar xfz {f} --directory {f.parent} && rm {f}')  # unzip
 
     dir = Path(dir)
     dir.mkdir(parents=True, exist_ok=True)  # make directory
