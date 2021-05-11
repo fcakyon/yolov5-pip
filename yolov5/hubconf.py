@@ -9,6 +9,7 @@ from pathlib import Path
 
 import torch
 
+from yolov5.helpers import better_torch_load
 from yolov5.models.yolo import Model, attempt_load
 from yolov5.utils.general import check_requirements, set_logging
 from yolov5.utils.google_utils import attempt_download
@@ -42,7 +43,7 @@ def create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbos
             model = Model(cfg, channels, classes)  # create model
             if pretrained:
                 attempt_download(fname)  # download if not found locally
-                ckpt = torch.load(fname, map_location=torch.device('cpu'))  # load
+                ckpt = better_torch_load(fname, map_location=torch.device('cpu'))  # load
                 msd = model.state_dict()  # model state_dict
                 csd = ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
                 csd = {k: v for k, v in csd.items() if msd[k].shape == v.shape}  # filter

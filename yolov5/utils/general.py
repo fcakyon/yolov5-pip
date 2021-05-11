@@ -20,6 +20,7 @@ import pkg_resources as pkg
 import torch
 import torchvision
 import yaml
+from yolov5.helpers import better_torch_load
 from yolov5.utils.google_utils import gsutil_getsize
 from yolov5.utils.metrics import fitness
 from yolov5.utils.torch_utils import init_torch_seeds
@@ -577,7 +578,7 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
 
 def strip_optimizer(f='best.pt', s=''):  # from utils.general import *; strip_optimizer()
     # Strip optimizer from 'f' to finalize training, optionally save as 's'
-    x = torch.load(f, map_location=torch.device('cpu'))
+    x = better_torch_load(f, map_location=torch.device('cpu'))
     if x.get('ema'):
         x['model'] = x['ema']  # replace model with ema
     for k in 'optimizer', 'training_results', 'wandb_id', 'ema', 'updates':  # keys

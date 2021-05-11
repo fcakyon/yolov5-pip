@@ -3,7 +3,6 @@ import logging
 import math
 import os
 import random
-import sys
 import time
 from copy import deepcopy
 from pathlib import Path
@@ -23,6 +22,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 import yolov5.test as test  # import test.py to get mAP after each epoch
+from yolov5.helpers import better_torch_load
 from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import Model
 from yolov5.utils.autoanchor import check_anchors
@@ -77,7 +77,7 @@ def train(hyp, opt, device, tb_writer=None):
     loggers = {'wandb': None}  # loggers dict
     if rank in [-1, 0]:
         opt.hyp = hyp  # add hyperparameters
-        run_id = torch.load(weights).get('wandb_id') if weights.endswith('.pt') and os.path.isfile(weights) else None
+        run_id = better_torch_load(weights).get('wandb_id') if weights.endswith('.pt') and os.path.isfile(weights) else None
         wandb_logger = WandbLogger(opt, save_dir.stem, run_id, data_dict)
         neptune_logger = NeptuneLogger(opt, save_dir.stem, data_dict)
         loggers['wandb'] = wandb_logger.wandb
@@ -95,15 +95,7 @@ def train(hyp, opt, device, tb_writer=None):
         with torch_distributed_zero_first(rank):
             attempt_download(weights)  # download if not found locally
 
-        # add yolov5 folder to system path
-        here = Path(__file__).parent.absolute()
-        yolov5_folder_dir = str(here)
-        sys.path.insert(0, yolov5_folder_dir)
-
-        ckpt = torch.load(weights, map_location=device)  # load checkpoint
-
-        # remove yolov5 folder from system path
-        sys.path.remove(yolov5_folder_dir)
+        ckpt = better_torch_load(weights, map_location=device)  # load checkpoint
 
         model = Model(opt.cfg or ckpt['model'].yaml, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
         exclude = ['anchor'] if (opt.cfg or hyp.get('anchors')) and not opt.resume else []  # exclude keys

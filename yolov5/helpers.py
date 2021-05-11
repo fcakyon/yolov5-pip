@@ -1,4 +1,5 @@
 import logging
+import pickle
 import sys
 from pathlib import Path
 
@@ -32,13 +33,8 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
     if not device:
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
-    # add yolov5 folder to system path
-    here = Path(__file__).parent.absolute()
-    yolov5_folder_dir = str(here)
-    sys.path.insert(0, yolov5_folder_dir)
-
     attempt_download(model_path)  # download if not found locally
-    model = torch.load(model_path, map_location=torch.device(device))
+    model = better_torch_load(model_path, map_location=torch.device(device))
     if isinstance(model, dict):
         model = model["model"]  # load model
     hub_model = Model(model.yaml).to(next(model.parameters()).device)  # create
@@ -46,47 +42,57 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
     hub_model.names = model.names  # class names
     model = hub_model
 
-    # remove yolov5 folder from system path
-    sys.path.remove(yolov5_folder_dir)
-
     if autoshape:
         model = model.autoshape()
 
     return model
-    """
-    # get config path automatically if given model name is one of the defaults
-    default_yolov5_model_names = ["yolov5s", "yolov5m", "yolov5l", "yolov5x"]
 
-    model_name = ntpath.basename(model_path).split(".")[0]
-    if model_name in default_yolov5_model_names:
-        config_path = Path(__file__).parent / "models" / f"{model_name}.yaml"  # model.yaml path
-        
-    try:
-        model = Model(config_path, verbose=0)
-        if pretrained:
-            fname = f"{model_name}.pt"  # checkpoint filename
-            attempt_download(model_path)  # download if not found locally
-            ckpt = torch.load(model_path, map_location=torch.device(device))  # load
-            state_dict = ckpt["model"].float().state_dict()  # to FP32
-            state_dict = {
-                k: v
-                for k, v in state_dict.items()
-                if model.state_dict()[k].shape == v.shape
-            }  # filter
-            model.load_state_dict(state_dict, strict=False)  # load
-            model.names = ckpt["model"].names  # set class names attribute
-            if autoshape:
-                model = model.autoshape()  # for file/URI/PIL/cv2/np inputs and NMS
-        return model
 
-    except Exception as e:
-        help_url = "https://github.com/ultralytics/yolov5/issues/36"
-        s = (
-            "Cache maybe be out of date, try force_reload=True. See %s for help."
-            % help_url
-        )
-        raise Exception(s) from e
+def better_torch_load(f, map_location=None, pickle_module=pickle, **pickle_load_args):
     """
+    Loads an object saved with torch.save from a file.
+
+    Same interface with https://pytorch.org/docs/stable/generated/torch.load.html
+    but better yolov5 model loading handling.
+
+    Args:
+        f: a file-like object (has to implement read, :methreadline, :methtell, and :methseek),
+            or a string or os.PathLike object containing a file name
+        map_location: a function, torch.device, string or a dict specifying how to remap storage
+            locations
+        pickle_module: module used for unpickling metadata and objects (has to
+            match the pickle_module used to serialize file)
+        pickle_load_args: (Python 3 only) optional keyword arguments passed over to
+            pickle_module.load and pickle_module.Unpickler, e.g., errors=....
+
+    Example:
+
+    >>> better_torch_load('tensors.pt')
+    # Load all tensors onto the CPU
+    >>> better_torch_load('tensors.pt', map_location=torch.device('cpu'))
+    # Load all tensors onto the CPU, using a function
+    >>> better_torch_load('tensors.pt', map_location=lambda storage, loc: storage)
+    # Load all tensors onto GPU 1
+    >>> better_torch_load('tensors.pt', map_location=lambda storage, loc: storage.cuda(1))
+    # Map tensors from GPU 1 to GPU 0
+    >>> better_torch_load('tensors.pt', map_location={'cuda:1':'cuda:0'})
+    # Load tensor from io.BytesIO object
+    >>> with open('tensor.pt', 'rb') as f:
+            buffer = io.BytesIO(f.read())
+    >>> better_torch_load(buffer)
+    # Load a module with 'ascii' encoding for unpickling
+    >>> better_torch_load('module.pt', encoding='ascii')
+    """
+    # add yolov5 folder to system path
+    here = Path(__file__).parent.absolute()
+    yolov5_folder_dir = str(here)
+    sys.path.insert(0, yolov5_folder_dir)
+    # load torch model
+    torch_model = torch.load(f, map_location=map_location)
+    # remove yolov5 folder from system path
+    sys.path.remove(yolov5_folder_dir)
+    return torch_model
+
 
 class YOLOv5:
     def __init__(self, model_path, device=None, load_on_init=True):

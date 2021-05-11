@@ -44,11 +44,6 @@ def main():
     # Load PyTorch model
     device = select_device(opt.device)
 
-    # add yolov5 folder to system path
-    here = Path(__file__).parents[1].absolute()
-    yolov5_folder_dir = str(here)
-    sys.path.insert(0, yolov5_folder_dir)
-
     model = attempt_load(opt.weights, map_location=device)  # load FP32 model
     labels = model.names
 
@@ -80,9 +75,6 @@ def main():
     for _ in range(2):
         y = model(img)  # dry runs
     print(f"\n{colorstr('PyTorch:')} starting from {opt.weights} ({file_size(opt.weights):.1f} MB)")
-
-    # remove yolov5 folder from system path
-    sys.path.remove(yolov5_folder_dir)
 
     # TorchScript export -----------------------------------------------------------------------------------------------
     prefix = colorstr('TorchScript:')
