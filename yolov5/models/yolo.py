@@ -6,7 +6,7 @@ import sys
 from copy import deepcopy
 from pathlib import Path
 
-sys.path.append(Path(__file__).parent.parent.absolute().__str__())  # to run '$ python *.py' files in subdirectories
+#sys.path.append(Path(__file__).parent.parent.absolute().__str__())  # to run '$ python *.py' files in subdirectories
 logger = logging.getLogger(__name__)
 
 from yolov5.models.common import *
