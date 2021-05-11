@@ -7,7 +7,7 @@ from pathlib import Path
 
 import torch
 import yaml
-from yolov5.helpers import better_torch_load
+from yolov5 import better_torch_load
 
 sys.path.append('./')  # to run '$ python *.py' files in subdirectories
 

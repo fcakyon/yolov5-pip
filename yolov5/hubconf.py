@@ -9,7 +9,7 @@ from pathlib import Path
 
 import torch
 
-from yolov5.helpers import better_torch_load
+from yolov5 import better_torch_load
 from yolov5.models.yolo import Model, attempt_load
 from yolov5.utils.general import check_requirements, set_logging
 from yolov5.utils.google_utils import attempt_download
