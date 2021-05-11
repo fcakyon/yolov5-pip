@@ -1,5 +1,6 @@
 from pathlib import Path
-from utils.general import colorstr
+
+from yolov5.utils.general import colorstr
 
 try:
     import neptune.new as neptune
