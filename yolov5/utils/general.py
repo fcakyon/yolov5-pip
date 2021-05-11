@@ -20,6 +20,7 @@ import pkg_resources as pkg
 import torch
 import torchvision
 import yaml
+from yolov5.helpers import better_torch_load
 from yolov5.utils.google_utils import gsutil_getsize
 from yolov5.utils.metrics import fitness
 from yolov5.utils.torch_utils import init_torch_seeds

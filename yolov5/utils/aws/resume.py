@@ -13,11 +13,12 @@ sys.path.append('./')  # to run '$ python *.py' files in subdirectories
 
 port = 0  # --master_port
 path = Path('').resolve()
-with yolov5_in_syspath():
-    for last in path.rglob('*/**/last.pt'):
+
+for last in path.rglob('*/**/last.pt'):
+    with yolov5_in_syspath():
         ckpt = torch.load(last)
-        if ckpt['optimizer'] is None:
-            continue
+    if ckpt['optimizer'] is None:
+        continue
 
     # Load opt.yaml
     with open(last.parent.parent / 'opt.yaml') as f:
