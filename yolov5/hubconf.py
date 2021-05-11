@@ -9,12 +9,11 @@ from pathlib import Path
 
 import torch
 
-from yolov5 import better_torch_load
 from yolov5.models.yolo import Model, attempt_load
 from yolov5.utils.general import (check_requirements, set_logging,
                                   yolov5_in_syspath)
 from yolov5.utils.google_utils import attempt_download
-from yolov5.utils.torch_utils import select_device
+from yolov5.utils.torch_utils import better_torch_load, select_device
 
 dependencies = ['torch', 'yaml']
 #check_requirements(Path(__file__).parent / 'requirements.txt', exclude=('tensorboard', 'pycocotools', 'thop'))

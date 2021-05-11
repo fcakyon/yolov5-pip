@@ -19,7 +19,6 @@ import torch.nn.functional as F
 from PIL import ExifTags, Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
-from yolov5 import better_torch_load
 from yolov5.utils.general import (check_requirements, clean_str,
                                   resample_segments, segment2box,
                                   segments2boxes, xyn2xy, xywh2xyxy,

@@ -3,7 +3,7 @@ from pathlib import Path
 from yolov5.models.yolo import Model
 from yolov5.utils.general import set_logging, yolov5_in_syspath
 from yolov5.utils.google_utils import attempt_download
-from yolov5.utils.torch_utils import torch
+from yolov5.utils.torch_utils import better_torch_load, torch
 
 
 def load_model(model_path, device=None, autoshape=True, verbose=False):
