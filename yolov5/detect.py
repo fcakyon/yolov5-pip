@@ -6,7 +6,6 @@ import cv2
 import torch
 import torch.backends.cudnn as cudnn
 
-from yolov5 import better_torch_load
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.datasets import LoadImages, LoadStreams
 from yolov5.utils.general import (apply_classifier, check_img_size,
@@ -15,8 +14,8 @@ from yolov5.utils.general import (apply_classifier, check_img_size,
                                   save_one_box, scale_coords, set_logging,
                                   strip_optimizer, xyxy2xywh)
 from yolov5.utils.plots import colors, plot_one_box
-from yolov5.utils.torch_utils import (load_classifier, select_device,
-                                      time_synchronized)
+from yolov5.utils.torch_utils import (better_torch_load, load_classifier,
+                                      select_device, time_synchronized)
 
 
 def detect(opt):
