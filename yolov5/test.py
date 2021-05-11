@@ -192,8 +192,8 @@ def test(data,
 
                 # Per target class
                 for cls in torch.unique(tcls_tensor):
-                    ti = (cls == tcls_tensor).nonzero(as_tuple=False).view(-1)  # prediction indices
-                    pi = (cls == pred[:, 5]).nonzero(as_tuple=False).view(-1)  # target indices
+                    ti = (cls == tcls_tensor).nonzero(as_tuple=False).view(-1)  # target indices
+                    pi = (cls == pred[:, 5]).nonzero(as_tuple=False).view(-1)  # prediction indices
 
                     # Search for detections
                     if pi.shape[0]:
@@ -314,7 +314,7 @@ def main():
     opt.save_json |= opt.data.endswith('coco.yaml')
     opt.data = check_file(opt.data)  # check file
     print(opt)
-    #check_requirements()
+    #check_requirements(exclude=('tensorboard', 'pycocotools', 'thop'))
 
     if opt.task in ('train', 'val', 'test'):  # run normally
         test(opt.data,

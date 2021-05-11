@@ -15,7 +15,7 @@ from yolov5.utils.datasets import letterbox
 from yolov5.utils.general import (increment_path, make_divisible,
                                   non_max_suppression, save_one_box,
                                   scale_coords, xyxy2xywh)
-from yolov5.utils.plots import color_list, plot_one_box
+from yolov5.utils.plots import colors, plot_one_box
 from yolov5.utils.torch_utils import time_synchronized
 
 
@@ -313,7 +313,6 @@ class Detections:
         self.s = shape  # inference BCHW shape
 
     def display(self, pprint=False, show=False, save=False, crop=False, render=False, save_dir=Path('')):
-        colors = color_list()
         for i, (im, pred) in enumerate(zip(self.imgs, self.pred)):
             str = f'image {i + 1}/{len(self.pred)}: {im.shape[0]}x{im.shape[1]} '
             if pred is not None:
@@ -326,7 +325,7 @@ class Detections:
                         if crop:
                             save_one_box(box, im, file=save_dir / 'crops' / self.names[int(cls)] / self.files[i])
                         else:  # all others
-                            plot_one_box(box, im, label=label, color=colors[int(cls) % 10])
+                            plot_one_box(box, im, label=label, color=colors(cls))
 
             im = Image.fromarray(im.astype(np.uint8)) if isinstance(im, np.ndarray) else im  # from np
             if pprint:

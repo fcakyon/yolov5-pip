@@ -35,6 +35,7 @@ from yolov5.utils.general import (check_dataset, check_file, check_git_status,
                                   print_mutation, set_logging, strip_optimizer)
 from yolov5.utils.google_utils import attempt_download
 from yolov5.utils.loss import ComputeLoss
+from yolov5.utils.neptuneai_logging.neptuneai_utils import NeptuneLogger
 from yolov5.utils.plots import (plot_evolution, plot_images, plot_labels,
                                 plot_results)
 from yolov5.utils.torch_utils import (ModelEMA, intersect_dicts, is_parallel,
@@ -78,6 +79,7 @@ def train(hyp, opt, device, tb_writer=None):
         opt.hyp = hyp  # add hyperparameters
         run_id = torch.load(weights).get('wandb_id') if weights.endswith('.pt') and os.path.isfile(weights) else None
         wandb_logger = WandbLogger(opt, save_dir.stem, run_id, data_dict)
+        neptune_logger = NeptuneLogger(opt, save_dir.stem, data_dict)
         loggers['wandb'] = wandb_logger.wandb
         data_dict = wandb_logger.data_dict
         if wandb_logger.wandb:
@@ -368,7 +370,7 @@ def train(hyp, opt, device, tb_writer=None):
             ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'gr', 'names', 'stride', 'class_weights'])
             final_epoch = epoch + 1 == epochs
             if not opt.notest or final_epoch:  # Calculate mAP
-                wandb_logger.current_epoch = epoch + 1
+                wandb_logger.current_epoch = neptune_logger.current_epoch = epoch + 1
                 results, maps, times = test.test(data_dict,
                                                  batch_size=batch_size * 2,
                                                  imgsz=imgsz_test,
@@ -385,25 +387,31 @@ def train(hyp, opt, device, tb_writer=None):
             # Write
             with open(results_file, 'a') as f:
                 f.write(s + '%10.4g' * 7 % results + '\n')  # append metrics, val_loss
-            if len(opt.name) and opt.bucket:
-                os.system('gsutil cp %s gs://%s/results/results%s.txt' % (results_file, opt.bucket, opt.name))
 
             # Log
             tags = ['train/box_loss', 'train/obj_loss', 'train/cls_loss',  # train loss
                     'metrics/precision', 'metrics/recall', 'metrics/mAP_0.5', 'metrics/mAP_0.5:0.95',
                     'val/box_loss', 'val/obj_loss', 'val/cls_loss',  # val loss
                     'x/lr0', 'x/lr1', 'x/lr2']  # params
+            if opt.mmdet_tags:
+                tags = ['train/loss_bbox', 'train/loss_obj', 'train/loss_cls',  # train loss
+                        'val/precision', 'val/recall', 'val/bbox_mAP_50', 'val/bbox_mAP',
+                        'val/loss_bbox', 'val/loss_obj', 'val/loss_cls',  # val loss
+                        'learning_rate_0', 'learning_rate_1', 'learning_rate_2']  # params
             for x, tag in zip(list(mloss[:-1]) + list(results) + lr, tags):
                 if tb_writer:
                     tb_writer.add_scalar(tag, x, epoch)  # tensorboard
                 if wandb_logger.wandb:
                     wandb_logger.log({tag: x})  # W&B
+                if neptune_logger.neptune_run:
+                    neptune_logger.log({tag: x})
 
             # Update best mAP
             fi = fitness(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
             if fi > best_fitness:
                 best_fitness = fi
             wandb_logger.end_epoch(best_result=best_fitness == fi)
+            neptune_logger.end_epoch(best_result=best_fitness == fi)
 
             # Save model
             if (not opt.nosave) or (final_epoch and not opt.evolve):  # if save
@@ -414,7 +422,8 @@ def train(hyp, opt, device, tb_writer=None):
                         'ema': deepcopy(ema.ema).half(),
                         'updates': ema.updates,
                         'optimizer': optimizer.state_dict(),
-                        'wandb_id': wandb_logger.wandb_run.id if wandb_logger.wandb else None}
+                        'wandb_id': wandb_logger.wandb_run.id if wandb_logger.wandb else None,
+                        'neptune_id': neptune_logger.neptune_run['sys/id'].fetch() if neptune_logger.neptune_run else None}
 
                 # Save last, best and delete
                 torch.save(ckpt, last)
@@ -432,10 +441,14 @@ def train(hyp, opt, device, tb_writer=None):
         # Plots
         if plots:
             plot_results(save_dir=save_dir)  # save as results.png
+            files = ['results.png', 'confusion_matrix.png', *[f'{x}_curve.png' for x in ('F1', 'PR', 'P', 'R')]]
             if wandb_logger.wandb:
-                files = ['results.png', 'confusion_matrix.png', *[f'{x}_curve.png' for x in ('F1', 'PR', 'P', 'R')]]
                 wandb_logger.log({"Results": [wandb_logger.wandb.Image(str(save_dir / f), caption=f) for f in files
                                               if (save_dir / f).exists()]})
+            if neptune_logger.neptune_run:
+                for f in files:
+                    if (save_dir / f).exists():
+                        neptune_logger.neptune_run['Results/{}'.format(f)].log(neptune_logger.neptune.types.File(str(save_dir / f)))
         # Test best.pt
         logger.info('%g epochs completed in %.3f hours.\n' % (epoch - start_epoch + 1, (time.time() - t0) / 3600))
         if opt.data.endswith('coco.yaml') and nc == 80:  # if COCO
@@ -465,6 +478,7 @@ def train(hyp, opt, device, tb_writer=None):
                                             name='run_' + wandb_logger.wandb_run.id + '_model',
                                             aliases=['last', 'best', 'stripped'])
         wandb_logger.finish_run()
+        neptune_logger.finish_run()
     else:
         dist.destroy_process_group()
     torch.cuda.empty_cache()
@@ -509,6 +523,9 @@ def main():
     parser.add_argument('--bbox_interval', type=int, default=-1, help='Set bounding-box image logging interval for W&B')
     parser.add_argument('--save_period', type=int, default=-1, help='Log model after every "save_period" epoch')
     parser.add_argument('--artifact_alias', type=str, default="latest", help='version of dataset artifact to be used')
+    parser.add_argument('--mmdet_tags', action='store_true', help='Log train/val tags in MMDetection format')
+    parser.add_argument('--neptune_token', type=str, default="", help='neptune.ai api token')
+    parser.add_argument('--neptune_project', type=str, default="", help='https://docs.neptune.ai/api-reference/neptune')
     opt = parser.parse_args()
 
     # Set DDP variables
@@ -517,7 +534,7 @@ def main():
     set_logging(opt.global_rank)
     if opt.global_rank in [-1, 0]:
         check_git_status()
-        #check_requirements()
+        #check_requirements(exclude=('pycocotools', 'thop'))
 
     # Resume
     wandb_run = check_wandb_resume(opt)

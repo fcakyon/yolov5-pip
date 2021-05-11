@@ -28,8 +28,11 @@ def main():
     parser.add_argument('--weights', type=str, default='./yolov5s.pt', help='weights path')
     parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='image size')  # height, width
     parser.add_argument('--batch-size', type=int, default=1, help='batch size')
-    parser.add_argument('--grid', action='store_true', help='export Detect() layer grid')
     parser.add_argument('--device', default='cpu', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--half', action='store_true', help='FP16 half-precision export')
+    parser.add_argument('--inplace', action='store_true', help='set YOLOv5 Detect() inplace=True')
+    parser.add_argument('--train', action='store_true', help='model.train() mode')
+    parser.add_argument('--optimize', action='store_true', help='optimize TorchScript for mobile')  # TorchScript-only
     parser.add_argument('--dynamic', action='store_true', help='dynamic ONNX axes')  # ONNX-only
     parser.add_argument('--simplify', action='store_true', help='simplify ONNX model')  # ONNX-only
     opt = parser.parse_args()
@@ -52,11 +55,16 @@ def main():
     # Checks
     gs = int(max(model.stride))  # grid size (max stride)
     opt.img_size = [check_img_size(x, gs) for x in opt.img_size]  # verify img_size are gs-multiples
+    assert not (opt.device.lower() == "cpu" and opt.half), '--half only compatible with GPU export, i.e. use --device 0'
 
     # Input
     img = torch.zeros(opt.batch_size, 3, *opt.img_size).to(device)  # image size(1,3,320,192) iDetection
 
     # Update model
+    if opt.half:
+        img, model = img.half(), model.half()  # to FP16
+    if opt.train:
+        model.train()  # training mode (no grid construction in Detect layer)
     for k, m in model.named_modules():
         m._non_persistent_buffers_set = set()  # pytorch 1.6.0 compatibility
         if isinstance(m, models.common.Conv):  # assign export-friendly activations
@@ -64,9 +72,11 @@ def main():
                 m.act = Hardswish()
             elif isinstance(m.act, nn.SiLU):
                 m.act = SiLU()
-        # elif isinstance(m, models.yolo.Detect):
-        #     m.forward = m.forward_export  # assign forward (optional)
-    model.model[-1].export = not opt.grid  # set Detect() layer grid export
+        elif isinstance(m, models.yolo.Detect):
+            m.inplace = opt.inplace
+            m.onnx_dynamic = opt.dynamic
+            # m.forward = m.forward_export  # assign forward (optional)
+
     for _ in range(2):
         y = model(img)  # dry runs
     print(f"\n{colorstr('PyTorch:')} starting from {opt.weights} ({file_size(opt.weights):.1f} MB)")
@@ -80,8 +90,7 @@ def main():
         print(f'\n{prefix} starting export with torch {torch.__version__}...')
         f = opt.weights.replace('.pt', '.torchscript.pt')  # filename
         ts = torch.jit.trace(model, img, strict=False)
-        ts = optimize_for_mobile(ts)  # https://pytorch.org/tutorials/recipes/script_optimized.html
-        ts.save(f)
+        (optimize_for_mobile(ts) if opt.optimize else ts).save(f)
         print(f'{prefix} export success, saved as {f} ({file_size(f):.1f} MB)')
     except Exception as e:
         print(f'{prefix} export failure: {e}')
@@ -126,7 +135,6 @@ def main():
         import coremltools as ct
 
         print(f'{prefix} starting export with coremltools {ct.__version__}...')
-        # convert model from torchscript and apply pixel scaling as per detect.py
         model = ct.convert(ts, inputs=[ct.ImageType(name='image', shape=img.shape, scale=1 / 255.0, bias=[0, 0, 0])])
         f = opt.weights.replace('.pt', '.mlmodel')  # filename
         model.save(f)
