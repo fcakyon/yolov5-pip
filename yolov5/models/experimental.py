@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from yolov5.models.common import Conv, DWConv
+from yolov5.utils.general import yolov5_in_syspath
 from yolov5.utils.google_utils import attempt_download
 
 
@@ -112,33 +113,31 @@ class Ensemble(nn.ModuleList):
         return y, None  # inference, train output
 
 
-def attempt_load(weights, map_location=None):
+def attempt_load(weights, map_location=None, inplace=True):
+    with yolov5_in_syspath():
+        from models.yolo import Detect, Model
+
     # Loads an ensemble of models weights=[a,b,c] or a single model weights=[a] or weights=a
     model = Ensemble()
 
-    # add yolov5 folder to system path
-    yolov5_folder_dir = str(Path(__file__).parents[1].absolute())
-    sys.path.insert(0, yolov5_folder_dir)
-
     for w in weights if isinstance(weights, list) else [weights]:
         attempt_download(w)
-        ckpt = torch.load(w, map_location=map_location)  # load
+        with yolov5_in_syspath():
+            ckpt = torch.load(w, map_location=map_location)  # load
         model.append(ckpt['ema' if ckpt.get('ema') else 'model'].float().fuse().eval())  # FP32 model
-
-    # remove yolov5 folder from system path
-    sys.path.remove(yolov5_folder_dir)
 
     # Compatibility updates
     for m in model.modules():
-        if type(m) in [nn.Hardswish, nn.LeakyReLU, nn.ReLU, nn.ReLU6, nn.SiLU]:
-            m.inplace = True  # pytorch 1.7.0 compatibility
+        if type(m) in [nn.Hardswish, nn.LeakyReLU, nn.ReLU, nn.ReLU6, nn.SiLU, Detect, Model]:
+            m.inplace = inplace  # pytorch 1.7.0 compatibility
         elif type(m) is Conv:
             m._non_persistent_buffers_set = set()  # pytorch 1.6.0 compatibility
 
     if len(model) == 1:
         return model[-1]  # return model
     else:
-        print('Ensemble created with %s\n' % weights)
-        for k in ['names', 'stride']:
+        print(f'Ensemble created with {weights}\n')
+        for k in ['names']:
             setattr(model, k, getattr(model[-1], k))
+        model.stride = model[torch.argmax(torch.tensor([m.stride.max() for m in model])).int()].stride  # max stride
         return model  # return ensemble

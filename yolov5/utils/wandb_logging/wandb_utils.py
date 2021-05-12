@@ -5,15 +5,13 @@ from pathlib import Path
 import torch
 import yaml
 from tqdm import tqdm
-
-sys.path.append(str(Path(__file__).parent.parent.parent))  # add utils/ to path
-from utils.datasets import LoadImagesAndLabels
-from utils.datasets import img2label_paths
-from utils.general import colorstr, xywh2xyxy, check_dataset
+#sys.path.append(str(Path(__file__).parent.parent.parent))  # add utils/ to path
+from yolov5.utils.datasets import LoadImagesAndLabels, img2label_paths
+from yolov5.utils.general import check_dataset, check_file, colorstr, xywh2xyxy
 
 try:
     import wandb
-    from wandb import init, finish
+    from wandb import finish, init
 except ImportError:
     wandb = None
 
@@ -54,7 +52,7 @@ def check_wandb_resume(opt):
 
 
 def process_wandb_config_ddp_mode(opt):
-    with open(opt.data) as f:
+    with open(check_file(opt.data)) as f:
         data_dict = yaml.safe_load(f)  # data dict
     train_dir, val_dir = None, None
     if isinstance(data_dict['train'], str) and data_dict['train'].startswith(WANDB_ARTIFACT_PREFIX):
@@ -115,7 +113,7 @@ class WandbLogger():
     def check_and_upload_dataset(self, opt):
         assert wandb, 'Install wandb to upload dataset'
         check_dataset(self.data_dict)
-        config_path = self.log_dataset_artifact(opt.data,
+        config_path = self.log_dataset_artifact(check_file(opt.data),
                                                 opt.single_cls,
                                                 'YOLOv5' if opt.project == 'runs/train' else Path(opt.project).stem)
         print("Created dataset config file ", config_path)
@@ -158,7 +156,8 @@ class WandbLogger():
 
     def download_dataset_artifact(self, path, alias):
         if isinstance(path, str) and path.startswith(WANDB_ARTIFACT_PREFIX):
-            dataset_artifact = wandb.use_artifact(remove_prefix(path, WANDB_ARTIFACT_PREFIX) + ":" + alias)
+            artifact_path = Path(remove_prefix(path, WANDB_ARTIFACT_PREFIX) + ":" + alias)
+            dataset_artifact = wandb.use_artifact(artifact_path.as_posix())
             assert dataset_artifact is not None, "'Error: W&B dataset artifact doesn\'t exist'"
             datadir = dataset_artifact.download()
             return datadir, dataset_artifact
@@ -196,9 +195,9 @@ class WandbLogger():
         nc, names = (1, ['item']) if single_cls else (int(data['nc']), data['names'])
         names = {k: v for k, v in enumerate(names)}  # to index dictionary
         self.train_artifact = self.create_dataset_table(LoadImagesAndLabels(
-            data['train']), names, name='train') if data.get('train') else None
+            data['train'], rect=True, batch_size=1), names, name='train') if data.get('train') else None
         self.val_artifact = self.create_dataset_table(LoadImagesAndLabels(
-            data['val']), names, name='val') if data.get('val') else None
+            data['val'], rect=True, batch_size=1), names, name='val') if data.get('val') else None
         if data.get('train'):
             data['train'] = WANDB_ARTIFACT_PREFIX + str(Path(project) / 'train')
         if data.get('val'):
@@ -243,16 +242,12 @@ class WandbLogger():
         table = wandb.Table(columns=["id", "train_image", "Classes", "name"])
         class_set = wandb.Classes([{'id': id, 'name': name} for id, name in class_to_id.items()])
         for si, (img, labels, paths, shapes) in enumerate(tqdm(dataset)):
-            height, width = shapes[0]
-            labels[:, 2:] = (xywh2xyxy(labels[:, 2:].view(-1, 4))) * torch.Tensor([width, height, width, height])
             box_data, img_classes = [], {}
-            for cls, *xyxy in labels[:, 1:].tolist():
+            for cls, *xywh in labels[:, 1:].tolist():
                 cls = int(cls)
-                box_data.append({"position": {"minX": xyxy[0], "minY": xyxy[1], "maxX": xyxy[2], "maxY": xyxy[3]},
+                box_data.append({"position": {"middle": [xywh[0], xywh[1]], "width": xywh[2], "height": xywh[3]},
                                  "class_id": cls,
-                                 "box_caption": "%s" % (class_to_id[cls]),
-                                 "scores": {"acc": 1},
-                                 "domain": "pixel"})
+                                 "box_caption": "%s" % (class_to_id[cls])})
                 img_classes[cls] = class_to_id[cls]
             boxes = {"ground_truth": {"box_data": box_data, "class_labels": class_to_id}}  # inference-space
             table.add_data(si, wandb.Image(paths, classes=class_set, boxes=boxes), json.dumps(img_classes),

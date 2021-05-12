@@ -1,5 +1,4 @@
 # YOLOv5 general utils
-
 import glob
 import logging
 import math
@@ -9,6 +8,7 @@ import random
 import re
 import subprocess
 import time
+from contextlib import contextmanager
 from itertools import repeat
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
@@ -16,6 +16,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pandas as pd
+import pkg_resources as pkg
 import torch
 import torchvision
 import yaml
@@ -50,9 +51,18 @@ def get_latest_run(search_dir='.'):
     return max(last_list, key=os.path.getctime) if last_list else ''
 
 
-def isdocker():
+def is_docker():
     # Is environment a Docker container
     return Path('/workspace').exists()  # or Path('/.dockerenv').exists()
+
+
+def is_colab():
+    # Is environment a Google Colab instance
+    try:
+        import google.colab
+        return True
+    except Exception as e:
+        return False
 
 
 def emojis(str=''):
@@ -80,7 +90,7 @@ def check_git_status():
     print(colorstr('github: '), end='')
     try:
         assert Path('.git').exists(), 'skipping check (not a git repository)'
-        assert not isdocker(), 'skipping check (Docker image)'
+        assert not is_docker(), 'skipping check (Docker image)'
         assert check_online(), 'skipping check (offline)'
 
         cmd = 'git fetch && git config --get remote.origin.url'
@@ -97,10 +107,19 @@ def check_git_status():
         print(e)
 
 
+def check_python(minimum='3.7.0', required=True):
+    # Check current python version vs. required python version
+    current = platform.python_version()
+    result = pkg.parse_version(current) >= pkg.parse_version(minimum)
+    if required:
+        assert result, f'Python {minimum} required by YOLOv5, but Python {current} is currently installed'
+    return result
+
+
 def check_requirements(requirements='requirements.txt', exclude=()):
     # Check installed dependencies meet requirements (pass *.txt file or list of packages)
-    import pkg_resources as pkg
     prefix = colorstr('red', 'bold', 'requirements:')
+    check_python()  # check python version
     if isinstance(requirements, (str, Path)):  # requirements.txt file
         file = Path(requirements)
         if not file.exists():
@@ -137,7 +156,8 @@ def check_img_size(img_size, s=32):
 def check_imshow():
     # Check if environment supports image displays
     try:
-        assert not isdocker(), 'cv2.imshow() is disabled in Docker environments'
+        assert not is_docker(), 'cv2.imshow() is disabled in Docker environments'
+        assert not is_colab(), 'cv2.imshow() is disabled in Google Colab environments'
         cv2.imshow('test', np.zeros((1, 1, 3)))
         cv2.waitKey(1)
         cv2.destroyAllWindows()
@@ -182,25 +202,34 @@ def check_dataset(dict):
                 raise Exception('Dataset not found.')
 
 
-def download(url, dir='.', multi_thread=False):
+def download(url, dir='.', unzip=True, delete=True, curl=False, threads=1):
     # Multi-threaded file download and unzip function
     def download_one(url, dir):
         # Download 1 file
         f = dir / Path(url).name  # filename
         if not f.exists():
             print(f'Downloading {url} to {f}...')
-            torch.hub.download_url_to_file(url, f, progress=True)  # download
-        if f.suffix in ('.zip', '.gz'):
+            if curl:
+                os.system(f"curl -L '{url}' -o '{f}' --retry 9 -C -")  # curl download, retry and resume on fail
+            else:
+                torch.hub.download_url_to_file(url, f, progress=True)  # torch download
+        if unzip and f.suffix in ('.zip', '.gz'):
             print(f'Unzipping {f}...')
             if f.suffix == '.zip':
-                os.system(f'unzip -qo {f} -d {dir} && rm {f}')  # unzip -quiet -overwrite
+                s = f'unzip -qo {f} -d {dir} && rm {f}'  # unzip -quiet -overwrite
             elif f.suffix == '.gz':
-                os.system(f'tar xfz {f} --directory {f.parent} && rm {f}')  # unzip
+                s = f'tar xfz {f} --directory {f.parent}'  # unzip
+            if delete:  # delete zip file after unzip
+                s += f' && rm {f}'
+            os.system(s)
 
     dir = Path(dir)
     dir.mkdir(parents=True, exist_ok=True)  # make directory
-    if multi_thread:
-        ThreadPool(8).imap(lambda x: download_one(*x), zip(url, repeat(dir)))  # 8 threads
+    if threads > 1:
+        pool = ThreadPool(threads)
+        pool.imap(lambda x: download_one(*x), zip(url, repeat(dir)))  # multi-threaded
+        pool.close()
+        pool.join()
     else:
         for u in tuple(url) if isinstance(url, str) else url:
             download_one(u, dir)
@@ -462,6 +491,10 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
     nc = prediction.shape[2] - 5  # number of classes
     xc = prediction[..., 4] > conf_thres  # candidates
 
+    # Checks
+    assert 0 <= conf_thres <= 1, f'Invalid Confidence threshold {conf_thres}, valid values are between 0.0 and 1.0'
+    assert 0 <= iou_thres <= 1, f'Invalid IoU {iou_thres}, valid values are between 0.0 and 1.0'
+
     # Settings
     min_wh, max_wh = 2, 4096  # (pixels) minimum and maximum box width and height
     max_det = 300  # maximum number of detections per image
@@ -544,7 +577,8 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
 
 def strip_optimizer(f='best.pt', s=''):  # from utils.general import *; strip_optimizer()
     # Strip optimizer from 'f' to finalize training, optionally save as 's'
-    x = torch.load(f, map_location=torch.device('cpu'))
+    with yolov5_in_syspath():
+        x = torch.load(f, map_location=torch.device('cpu'))
     if x.get('ema'):
         x['model'] = x['ema']  # replace model with ema
     for k in 'optimizer', 'training_results', 'wandb_id', 'ema', 'updates':  # keys
@@ -652,3 +686,24 @@ def increment_path(path, exist_ok=False, sep='', mkdir=False):
     if not dir.exists() and mkdir:
         dir.mkdir(parents=True, exist_ok=True)  # make directory
     return path
+
+import contextlib
+import sys
+
+
+@contextlib.contextmanager
+def yolov5_in_syspath():
+    """
+    Temporarily add yolov5 folder to `sys.path`.
+    
+    torch.hub handles it in the same way: https://github.com/pytorch/pytorch/blob/75024e228ca441290b6a1c2e564300ad507d7af6/torch/hub.py#L387
+    
+    Proper fix for: #22, #134, #353, #1155, #1389, #1680, #2531, #3071   
+    No need for such workarounds: #869, #1052, #2949
+    """
+    yolov5_folder_dir = str(Path(__file__).parents[1].absolute())
+    try:
+        sys.path.insert(0, yolov5_folder_dir)
+        yield
+    finally:
+        sys.path.remove(yolov5_folder_dir)

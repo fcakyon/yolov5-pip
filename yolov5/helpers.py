@@ -1,9 +1,7 @@
-import logging
-import sys
 from pathlib import Path
 
 from yolov5.models.yolo import Model
-from yolov5.utils.general import set_logging
+from yolov5.utils.general import set_logging, yolov5_in_syspath
 from yolov5.utils.google_utils import attempt_download
 from yolov5.utils.torch_utils import torch
 
@@ -32,13 +30,9 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
     if not device:
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
-    # add yolov5 folder to system path
-    here = Path(__file__).parent.absolute()
-    yolov5_folder_dir = str(here)
-    sys.path.insert(0, yolov5_folder_dir)
-
     attempt_download(model_path)  # download if not found locally
-    model = torch.load(model_path, map_location=torch.device(device))
+    with yolov5_in_syspath():
+        model = torch.load(model_path, map_location=torch.device(device))
     if isinstance(model, dict):
         model = model["model"]  # load model
     hub_model = Model(model.yaml).to(next(model.parameters()).device)  # create
@@ -46,47 +40,11 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
     hub_model.names = model.names  # class names
     model = hub_model
 
-    # remove yolov5 folder from system path
-    sys.path.remove(yolov5_folder_dir)
-
     if autoshape:
         model = model.autoshape()
 
     return model
-    """
-    # get config path automatically if given model name is one of the defaults
-    default_yolov5_model_names = ["yolov5s", "yolov5m", "yolov5l", "yolov5x"]
 
-    model_name = ntpath.basename(model_path).split(".")[0]
-    if model_name in default_yolov5_model_names:
-        config_path = Path(__file__).parent / "models" / f"{model_name}.yaml"  # model.yaml path
-        
-    try:
-        model = Model(config_path, verbose=0)
-        if pretrained:
-            fname = f"{model_name}.pt"  # checkpoint filename
-            attempt_download(model_path)  # download if not found locally
-            ckpt = torch.load(model_path, map_location=torch.device(device))  # load
-            state_dict = ckpt["model"].float().state_dict()  # to FP32
-            state_dict = {
-                k: v
-                for k, v in state_dict.items()
-                if model.state_dict()[k].shape == v.shape
-            }  # filter
-            model.load_state_dict(state_dict, strict=False)  # load
-            model.names = ckpt["model"].names  # set class names attribute
-            if autoshape:
-                model = model.autoshape()  # for file/URI/PIL/cv2/np inputs and NMS
-        return model
-
-    except Exception as e:
-        help_url = "https://github.com/ultralytics/yolov5/issues/36"
-        s = (
-            "Cache maybe be out of date, try force_reload=True. See %s for help."
-            % help_url
-        )
-        raise Exception(s) from e
-    """
 
 class YOLOv5:
     def __init__(self, model_path, device=None, load_on_init=True):

@@ -5,7 +5,6 @@ from pathlib import Path
 import cv2
 import torch
 import torch.backends.cudnn as cudnn
-from numpy import random
 
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.datasets import LoadImages, LoadStreams
@@ -13,8 +12,9 @@ from yolov5.utils.general import (apply_classifier, check_img_size,
                                   check_imshow, check_requirements,
                                   increment_path, non_max_suppression,
                                   save_one_box, scale_coords, set_logging,
-                                  strip_optimizer, xyxy2xywh)
-from yolov5.utils.plots import plot_one_box
+                                  strip_optimizer, xyxy2xywh,
+                                  yolov5_in_syspath)
+from yolov5.utils.plots import colors, plot_one_box
 from yolov5.utils.torch_utils import (load_classifier, select_device,
                                       time_synchronized)
 
@@ -38,6 +38,7 @@ def detect(opt):
     model = attempt_load(weights, map_location=device)  # load FP32 model
     stride = int(model.stride.max())  # model stride
     imgsz = check_img_size(imgsz, s=stride)  # check img_size
+    names = model.module.names if hasattr(model, 'module') else model.names  # get class names
     if half:
         model.half()  # to FP16
 
@@ -45,7 +46,8 @@ def detect(opt):
     classify = False
     if classify:
         modelc = load_classifier(name='resnet101', n=2)  # initialize
-        modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model']).to(device).eval()
+        with yolov5_in_syspath():
+            modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model']).to(device).eval()
 
     # Set Dataloader
     vid_path, vid_writer = None, None
@@ -55,10 +57,6 @@ def detect(opt):
         dataset = LoadStreams(source, img_size=imgsz, stride=stride)
     else:
         dataset = LoadImages(source, img_size=imgsz, stride=stride)
-
-    # Get names and colors
-    names = model.module.names if hasattr(model, 'module') else model.names
-    colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
 
     # Run inference
     if device.type != 'cpu':
@@ -86,7 +84,7 @@ def detect(opt):
         # Process detections
         for i, det in enumerate(pred):  # detections per image
             if webcam:  # batch_size >= 1
-                p, s, im0, frame = path[i], '%g: ' % i, im0s[i].copy(), dataset.count
+                p, s, im0, frame = path[i], f'{i}: ', im0s[i].copy(), dataset.count
             else:
                 p, s, im0, frame = path, '', im0s.copy(), getattr(dataset, 'frame', 0)
 
@@ -95,6 +93,7 @@ def detect(opt):
             txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
             s += '%gx%g ' % img.shape[2:]  # print string
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
+            imc = im0.copy() if opt.save_crop else im0  # for opt.save_crop
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
@@ -115,10 +114,9 @@ def detect(opt):
                     if save_img or opt.save_crop or view_img:  # Add bbox to image
                         c = int(cls)  # integer class
                         label = None if opt.hide_labels else (names[c] if opt.hide_conf else f'{names[c]} {conf:.2f}')
-
-                        plot_one_box(xyxy, im0, label=label, color=colors[c], line_thickness=opt.line_thickness)
+                        plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_thickness=opt.line_thickness)
                         if opt.save_crop:
-                            save_one_box(xyxy, im0s, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+                            save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
 
             # Print time (inference + NMS)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
@@ -179,7 +177,7 @@ def main():
     parser.add_argument('--hide-conf', default=False, action='store_true', help='hide confidences')
     opt = parser.parse_args()
     print(opt)
-    #check_requirements(exclude=('pycocotools', 'thop'))
+    #check_requirements(exclude=('tensorboard', 'pycocotools', 'thop'))
 
     with torch.no_grad():
         if opt.update:  # update all models (to fix SourceChangeWarning)
