@@ -505,7 +505,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         x['results'] = nf, nm, ne, nc, i + 1
         x['version'] = 0.1  # cache version
         try:
-            torch.save(x, path)  # save for next time
+            with yolov5_in_syspath:
+                torch.save(x, path)  # save for next time
             logging.info(f'{prefix}New cache created: {path}')
         except Exception as e:
             logging.info(f'{prefix}WARNING: Cache directory {path.parent} is not writeable: {e}')  # path not writeable

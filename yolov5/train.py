@@ -419,9 +419,11 @@ def train(hyp, opt, device, tb_writer=None):
                         'neptune_id': neptune_logger.neptune_run['sys/id'].fetch() if neptune_logger.neptune_run else None}
 
                 # Save last, best and delete
-                torch.save(ckpt, last)
+                with yolov5_in_syspath:
+                    torch.save(ckpt, last)
                 if best_fitness == fi:
-                    torch.save(ckpt, best)
+                    with yolov5_in_syspath:
+                        torch.save(ckpt, best)
                 if wandb_logger.wandb:
                     if ((epoch + 1) % opt.save_period == 0 and not final_epoch) and opt.save_period != -1:
                         wandb_logger.log_model(

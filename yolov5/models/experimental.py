@@ -127,9 +127,10 @@ def attempt_load(weights, map_location=None, inplace=True):
         model.append(ckpt['ema' if ckpt.get('ema') else 'model'].float().fuse().eval())  # FP32 model
 
     # Compatibility updates
+    target_class_name_list = [class_.__name__ for class_ in [nn.Hardswish, nn.LeakyReLU, nn.ReLU, nn.ReLU6, nn.SiLU, Detect, Model]] # yolov5 5.0.3 compatibility
     for m in model.modules():
-        if type(m) in [nn.Hardswish, nn.LeakyReLU, nn.ReLU, nn.ReLU6, nn.SiLU, Detect, Model]:
-            m.inplace = inplace  # pytorch 1.7.0 compatibility
+        if type(m).__name__ in target_class_name_list:
+            m.inplace = inplace # pytorch 1.7.0 compatibility
         elif type(m) is Conv:
             m._non_persistent_buffers_set = set()  # pytorch 1.6.0 compatibility
 
