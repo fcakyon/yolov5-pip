@@ -38,8 +38,7 @@ from yolov5.utils.loss import ComputeLoss
 from yolov5.utils.neptuneai_logging.neptuneai_utils import NeptuneLogger
 from yolov5.utils.plots import (plot_evolution, plot_images, plot_labels,
                                 plot_results)
-from yolov5.utils.torch_utils import (ModelEMA, better_torch_load,
-                                      intersect_dicts, is_parallel,
+from yolov5.utils.torch_utils import (ModelEMA, intersect_dicts, is_parallel,
                                       select_device,
                                       torch_distributed_zero_first)
 from yolov5.utils.wandb_logging.wandb_utils import (WandbLogger,
