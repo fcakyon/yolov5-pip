@@ -7,16 +7,17 @@ from pathlib import Path
 
 import torch
 import yaml
-from yolov5.utils.torch_utils import better_torch_load
+from yolov5.utils.general import yolov5_in_syspath
 
 sys.path.append('./')  # to run '$ python *.py' files in subdirectories
 
 port = 0  # --master_port
 path = Path('').resolve()
-for last in path.rglob('*/**/last.pt'):
-    ckpt = better_torch_load(last)
-    if ckpt['optimizer'] is None:
-        continue
+with yolov5_in_syspath():
+    for last in path.rglob('*/**/last.pt'):
+        ckpt = torch.load(last)
+        if ckpt['optimizer'] is None:
+            continue
 
     # Load opt.yaml
     with open(last.parent.parent / 'opt.yaml') as f:

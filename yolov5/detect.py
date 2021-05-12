@@ -12,10 +12,11 @@ from yolov5.utils.general import (apply_classifier, check_img_size,
                                   check_imshow, check_requirements,
                                   increment_path, non_max_suppression,
                                   save_one_box, scale_coords, set_logging,
-                                  strip_optimizer, xyxy2xywh)
+                                  strip_optimizer, xyxy2xywh,
+                                  yolov5_in_syspath)
 from yolov5.utils.plots import colors, plot_one_box
-from yolov5.utils.torch_utils import (better_torch_load, load_classifier,
-                                      select_device, time_synchronized)
+from yolov5.utils.torch_utils import (load_classifier, select_device,
+                                      time_synchronized)
 
 
 def detect(opt):
@@ -45,7 +46,8 @@ def detect(opt):
     classify = False
     if classify:
         modelc = load_classifier(name='resnet101', n=2)  # initialize
-        modelc.load_state_dict(better_torch_load('weights/resnet101.pt', map_location=device)['model']).to(device).eval()
+        with yolov5_in_syspath():
+            modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model']).to(device).eval()
 
     # Set Dataloader
     vid_path, vid_writer = None, None

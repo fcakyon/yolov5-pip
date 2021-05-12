@@ -7,8 +7,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from yolov5.models.common import Conv, DWConv
+from yolov5.utils.general import yolov5_in_syspath
 from yolov5.utils.google_utils import attempt_download
-from yolov5.utils.torch_utils import better_torch_load
 
 
 class CrossConv(nn.Module):
@@ -114,16 +114,16 @@ class Ensemble(nn.ModuleList):
 
 
 def attempt_load(weights, map_location=None, inplace=True):
-    import yolov5.models as models
-
-    from models.yolo import Detect, Model
+    with yolov5_in_syspath():
+        from models.yolo import Detect, Model
 
     # Loads an ensemble of models weights=[a,b,c] or a single model weights=[a] or weights=a
     model = Ensemble()
 
     for w in weights if isinstance(weights, list) else [weights]:
         attempt_download(w)
-        ckpt = better_torch_load(w, map_location=map_location)  # load
+        with yolov5_in_syspath():
+            ckpt = torch.load(w, map_location=map_location)  # load
         model.append(ckpt['ema' if ckpt.get('ema') else 'model'].float().fuse().eval())  # FP32 model
 
     # Compatibility updates

@@ -1,12 +1,9 @@
-import logging
-import pickle
-import sys
 from pathlib import Path
 
 from yolov5.models.yolo import Model
-from yolov5.utils.general import set_logging
+from yolov5.utils.general import set_logging, yolov5_in_syspath
 from yolov5.utils.google_utils import attempt_download
-from yolov5.utils.torch_utils import better_torch_load, torch
+from yolov5.utils.torch_utils import torch
 
 
 def load_model(model_path, device=None, autoshape=True, verbose=False):
@@ -34,7 +31,8 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
     attempt_download(model_path)  # download if not found locally
-    model = better_torch_load(model_path, map_location=torch.device(device))
+    with yolov5_in_syspath():
+        model = torch.load(model_path, map_location=torch.device(device))
     if isinstance(model, dict):
         model = model["model"]  # load model
     hub_model = Model(model.yaml).to(next(model.parameters()).device)  # create

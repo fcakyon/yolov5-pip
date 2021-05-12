@@ -31,14 +31,14 @@ from yolov5.utils.general import (check_dataset, check_file, check_git_status,
                                   fitness, get_latest_run, increment_path,
                                   init_seeds, labels_to_class_weights,
                                   labels_to_image_weights, one_cycle,
-                                  print_mutation, set_logging, strip_optimizer)
+                                  print_mutation, set_logging, strip_optimizer,
+                                  yolov5_in_syspath)
 from yolov5.utils.google_utils import attempt_download
 from yolov5.utils.loss import ComputeLoss
 from yolov5.utils.neptuneai_logging.neptuneai_utils import NeptuneLogger
 from yolov5.utils.plots import (plot_evolution, plot_images, plot_labels,
                                 plot_results)
-from yolov5.utils.torch_utils import (ModelEMA, better_torch_load,
-                                      intersect_dicts, is_parallel,
+from yolov5.utils.torch_utils import (ModelEMA, intersect_dicts, is_parallel,
                                       select_device,
                                       torch_distributed_zero_first)
 from yolov5.utils.wandb_logging.wandb_utils import (WandbLogger,
@@ -77,7 +77,8 @@ def train(hyp, opt, device, tb_writer=None):
     loggers = {'wandb': None}  # loggers dict
     if rank in [-1, 0]:
         opt.hyp = hyp  # add hyperparameters
-        run_id = better_torch_load(weights).get('wandb_id') if weights.endswith('.pt') and os.path.isfile(weights) else None
+        with yolov5_in_syspath():
+            run_id = torch.load(weights).get('wandb_id') if weights.endswith('.pt') and os.path.isfile(weights) else None
         wandb_logger = WandbLogger(opt, save_dir.stem, run_id, data_dict)
         neptune_logger = NeptuneLogger(opt, save_dir.stem, data_dict)
         loggers['wandb'] = wandb_logger.wandb
@@ -94,8 +95,8 @@ def train(hyp, opt, device, tb_writer=None):
     if pretrained:
         with torch_distributed_zero_first(rank):
             attempt_download(weights)  # download if not found locally
-
-        ckpt = better_torch_load(weights, map_location=device)  # load checkpoint
+        with yolov5_in_syspath():
+            ckpt = torch.load(weights, map_location=device)  # load checkpoint
 
         model = Model(opt.cfg or ckpt['model'].yaml, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
         exclude = ['anchor'] if (opt.cfg or hyp.get('anchors')) and not opt.resume else []  # exclude keys

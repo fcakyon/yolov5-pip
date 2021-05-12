@@ -10,9 +10,10 @@ from pathlib import Path
 import torch
 
 from yolov5.models.yolo import Model, attempt_load
-from yolov5.utils.general import check_requirements, set_logging
+from yolov5.utils.general import (check_requirements, set_logging,
+                                  yolov5_in_syspath)
 from yolov5.utils.google_utils import attempt_download
-from yolov5.utils.torch_utils import better_torch_load, select_device
+from yolov5.utils.torch_utils import select_device
 
 dependencies = ['torch', 'yaml']
 #check_requirements(Path(__file__).parent / 'requirements.txt', exclude=('tensorboard', 'pycocotools', 'thop'))
@@ -42,7 +43,8 @@ def create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbos
             model = Model(cfg, channels, classes)  # create model
             if pretrained:
                 attempt_download(fname)  # download if not found locally
-                ckpt = better_torch_load(fname, map_location=torch.device('cpu'))  # load
+                with yolov5_in_syspath():
+                    ckpt = torch.load(fname, map_location=torch.device('cpu'))  # load
                 msd = model.state_dict()  # model state_dict
                 csd = ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
                 csd = {k: v for k, v in csd.items() if msd[k].shape == v.shape}  # filter

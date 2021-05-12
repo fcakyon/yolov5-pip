@@ -22,9 +22,8 @@ from tqdm import tqdm
 from yolov5.utils.general import (check_requirements, clean_str,
                                   resample_segments, segment2box,
                                   segments2boxes, xyn2xy, xywh2xyxy,
-                                  xywhn2xyxy, xyxy2xywh)
-from yolov5.utils.torch_utils import (better_torch_load,
-                                      torch_distributed_zero_first)
+                                  xywhn2xyxy, xyxy2xywh, yolov5_in_syspath)
+from yolov5.utils.torch_utils import torch_distributed_zero_first
 
 # Parameters
 help_url = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'
@@ -384,7 +383,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         self.label_files = img2label_paths(self.img_files)  # labels
         cache_path = (p if p.is_file() else Path(self.label_files[0]).parent).with_suffix('.cache')  # cached labels
         if cache_path.is_file():
-            cache, exists = better_torch_load(cache_path), True  # load
+            with yolov5_in_syspath():
+                cache, exists = torch.load(cache_path), True  # load
             if cache['hash'] != get_hash(self.label_files + self.img_files) or 'version' not in cache:  # changed
                 cache, exists = self.cache_labels(cache_path, prefix), False  # re-cache
         else:
