@@ -440,7 +440,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                         'updates': ema.updates,
                         'optimizer': optimizer.state_dict(),
                         'wandb_id': wandb_logger.wandb_run.id if loggers['wandb'] else None,
-                        'neptune_id': neptune_logger.neptune_run['sys/id'].fetch() if loggers['neptune'] else None
+                        'neptune_id': neptune_logger.neptune_run['sys/id'].fetch() if neptune_logger.neptune_run else None
                         }
 
                 # Save last, best and delete
