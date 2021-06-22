@@ -7,45 +7,59 @@
 </h4>
 
 <div align="center">
+  <a href="https://pepy.tech/project/yolov5"><img src="https://pepy.tech/badge/yolov5" alt="total downloads"></a>
+  <a href="https://pepy.tech/project/yolov5"><img src="https://pepy.tech/badge/yolov5/month" alt="monthly downloads"></a>
   <a href="https://badge.fury.io/py/yolov5"><img src="https://badge.fury.io/py/yolov5.svg" alt="pypi version"></a>
-  <a href="https://pepy.tech/project/yolov5"><img src="https://pepy.tech/badge/yolov5/month" alt="downloads"></a>
+  <br>
   <a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/ci.yml"><img src="https://github.com/fcakyon/yolov5-pip/actions/workflows/ci.yml/badge.svg" alt="ci testing"></a>
   <a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/package_testing.yml"><img src="https://github.com/fcakyon/yolov5-pip/actions/workflows/package_testing.yml/badge.svg" alt="package testing"></a>
 </div>
 
-## Overview
+## <div align="center">Overview</div>
 
-You can finally install [YOLOv5 object detector](https://github.com/ultralytics/yolov5) using [pip](https://pypi.org/project/yolov5/) and integrate into your project easily.
-
+<div align="center">
+You can finally install <a href="https://github.com/ultralytics/yolov5">YOLOv5 object detector</a> using <a href="https://pypi.org/project/yolov5/">pip</a> and integrate into your project easily.
+</p>
 <img src="https://user-images.githubusercontent.com/26833433/114313216-f0a5e100-9af5-11eb-8445-c682b60da2e3.png" width="1000">
+</div>
 
-## Installation
+## <div align="center">Install</div>
 
-- Install yolov5 using pip `(for Python >=3.7)`:
+<details open>
+<summary>Install yolov5 using pip (for Python >=3.7)</summary>
 
 ```console
 pip install yolov5
 ```
 
-- Install yolov5 using pip `(for Python 3.6)`:
+</details>
+
+<details closed>
+<summary>Install yolov5 using pip `(for Python 3.6)`</summary>
 
 ```console
 pip install "numpy>=1.18.5,<1.20" "matplotlib>=3.2.2,<4"
 pip install yolov5
 ```
 
-## Basic Usage
+</details>
+
+## <div align="center">Use from Python</div>
+
+
+<details open>
+<summary>Basic</summary>
 
 ```python
 import yolov5
 
-# model
+# load model
 model = yolov5.load('yolov5s')
 
-# image
+# set image
 img = 'https://github.com/ultralytics/yolov5/raw/master/data/images/zidane.jpg'
 
-# inference
+# perform inference
 results = model(img)
 
 # inference with larger input size
@@ -54,15 +68,24 @@ results = model(img, size=1280)
 # inference with test time augmentation
 results = model(img, augment=True)
 
-# show results
+# parse results
+predictions = results.pred[0]
+boxes = predictions[:, :4] # x1, x2, y1, y2
+scores = predictions[:, 4]
+categories = predictions[:, 5]
+
+# show detection bounding boxes on image
 results.show()
 
-# save results
+# save results into "results/" folder
 results.save(save_dir='results/')
 
 ```
 
-## Alternative Usage
+</details>
+
+<details closed>
+<summary>Alternative</summary>
 
 ```python
 from yolov5 import YOLOv5
@@ -90,6 +113,12 @@ results = yolov5.predict(image1, augment=True)
 # perform inference on multiple images
 results = yolov5.predict([image1, image2], size=1280, augment=True)
 
+# parse results
+predictions = results.pred[0]
+boxes = predictions[:, :4] # x1, x2, y1, y2
+scores = predictions[:, 4]
+categories = predictions[:, 5]
+
 # show detection bounding boxes on image
 results.show()
 
@@ -97,11 +126,41 @@ results.show()
 results.save(save_dir='results/')
 ```
 
-## Scripts
+</details>
 
-You can call yolo_train, yolo_detect and yolo_test commands after installing the package via `pip`:
+<details open>
+<summary>Train/Detect/Test/Export</summary>
 
-### Training
+- You can directly use these functions by importing them:
+
+```python
+from yolov5 import train, test, detect, export
+
+train.run(imgsz=640, data='coco128.yaml')
+test.run(imgsz=640, data='coco128.yaml', weights='yolov5s.pt')
+detect.run(imgsz=640)
+export.run(imgsz=640, weights='yolov5s.pt')
+```
+
+- You can pass any argument as input:
+
+```python
+from yolov5 import detect
+
+img_url = 'https://github.com/ultralytics/yolov5/raw/master/data/images/zidane.jpg'
+
+detect.run(source=img_url, weights="yolov5s6.pt", conf_thres=0.25, imgsz=640)
+
+```
+
+</details>
+
+## <div align="center">Use from CLI</div>
+
+You can call `yolo_train`, `yolo_detect`, `yolo_test` and `yolo_export` commands after installing the package via `pip`:
+
+<details closed>
+<summary>Training</summary>
 
 Run commands below to reproduce results on [COCO](https://github.com/ultralytics/yolov5/blob/master/data/scripts/get_coco.sh) dataset (dataset auto-downloads on first use). Training times for YOLOv5s/m/l/x are 2/4/6/8 days on a single V100 (multi-GPU times faster). Use the largest `--batch-size` your GPU allows (batch sizes shown for 16 GB devices).
 
@@ -112,7 +171,10 @@ $ yolo_train --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 64
                                     yolov5x                                16
 ```
 
-### Inference
+</details>
+
+<details closed>
+<summary>Inference</summary>
 
 yolo_detect command runs inference on a variety of sources, downloading models automatically from the [latest YOLOv5 release](https://github.com/ultralytics/yolov5/releases) and saving results to `runs/detect`.
 
@@ -129,12 +191,4 @@ $ yolo_detect --source 0  # webcam
 
 To run inference on example images in `yolov5/data/images`:
 
-```bash
-$ yolo_detect --source yolov5/data/images --weights yolov5s.pt --conf 0.25
-```
-
-## Status
-
-Builds for the latest commit for `Windows/Linux/MacOS` with `Python3.6/3.7/3.8`: <a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/ci.yml"><img src="https://github.com/fcakyon/yolov5-python/workflows/CI%20CPU%20Testing/badge.svg" alt="CI CPU testing"></a>
-
-Status for the train/detect/test scripts: <a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/package_testing.yml"><img src="https://github.com/fcakyon/yolov5-python/workflows/Package%20CPU%20Testing/badge.svg" alt="Package CPU testing"></a>
+</details>
