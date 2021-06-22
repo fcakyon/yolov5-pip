@@ -1,11 +1,9 @@
 # YOLOv5 experimental modules
 
-import sys
-from pathlib import Path
-
 import numpy as np
 import torch
 import torch.nn as nn
+
 from yolov5.models.common import Conv, DWConv
 from yolov5.utils.general import yolov5_in_syspath
 from yolov5.utils.google_utils import attempt_download
@@ -119,7 +117,6 @@ def attempt_load(weights, map_location=None, inplace=True):
 
     # Loads an ensemble of models weights=[a,b,c] or a single model weights=[a] or weights=a
     model = Ensemble()
-
     for w in weights if isinstance(weights, list) else [weights]:
         attempt_download(w)
         with yolov5_in_syspath():
@@ -130,7 +127,7 @@ def attempt_load(weights, map_location=None, inplace=True):
     target_class_name_list = [class_.__name__ for class_ in [nn.Hardswish, nn.LeakyReLU, nn.ReLU, nn.ReLU6, nn.SiLU, Detect, Model]] # yolov5 5.0.3 compatibility
     for m in model.modules():
         if type(m).__name__ in target_class_name_list:
-            m.inplace = inplace # pytorch 1.7.0 compatibility
+            m.inplace = inplace  # pytorch 1.7.0 compatibility
         elif type(m) is Conv:
             m._non_persistent_buffers_set = set()  # pytorch 1.6.0 compatibility
 

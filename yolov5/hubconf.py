@@ -5,21 +5,10 @@ Usage:
     model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
 """
 
-from pathlib import Path
-
 import torch
 
-from yolov5.models.yolo import Model, attempt_load
-from yolov5.utils.general import (check_requirements, set_logging,
-                                  yolov5_in_syspath)
-from yolov5.utils.google_utils import attempt_download
-from yolov5.utils.torch_utils import select_device
 
-dependencies = ['torch', 'yaml']
-#check_requirements(Path(__file__).parent / 'requirements.txt', exclude=('tensorboard', 'pycocotools', 'thop'))
-
-
-def create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbose=True):
+def _create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbose=True, device=None):
     """Creates a specified YOLOv5 model
 
     Arguments:
@@ -29,11 +18,22 @@ def create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbos
         classes (int): number of model classes
         autoshape (bool): apply YOLOv5 .autoshape() wrapper to model
         verbose (bool): print all information to screen
+        device (str, torch.device, None): device to use for model parameters
 
     Returns:
         YOLOv5 pytorch model
     """
+    from pathlib import Path
+
+    from yolov5.models.yolo import Model, attempt_load
+    from yolov5.utils.general import check_requirements, set_logging, yolov5_in_syspath
+    from yolov5.utils.google_utils import attempt_download
+    from yolov5.utils.torch_utils import select_device
+
+    check_requirements(requirements=Path(__file__).parent / 'requirements.txt',
+                       exclude=('tensorboard', 'thop', 'opencv-python'))
     set_logging(verbose=verbose)
+
     fname = Path(name).with_suffix('.pt')  # checkpoint filename
     try:
         if pretrained and channels == 3 and classes == 80:
@@ -42,7 +42,7 @@ def create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbos
             cfg = list((Path(__file__).parent / 'models').rglob(f'{name}.yaml'))[0]  # model.yaml path
             model = Model(cfg, channels, classes)  # create model
             if pretrained:
-                attempt_download(fname)  # download if not found locally
+                attempt_download(fname)
                 with yolov5_in_syspath():
                     ckpt = torch.load(fname, map_location=torch.device('cpu'))  # load
                 msd = model.state_dict()  # model state_dict
@@ -53,7 +53,7 @@ def create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbos
                     model.names = ckpt['model'].names  # set class names attribute
         if autoshape:
             model = model.autoshape()  # for file/URI/PIL/cv2/np inputs and NMS
-        device = select_device('0' if torch.cuda.is_available() else 'cpu')  # default to GPU if available
+        device = select_device('0' if torch.cuda.is_available() else 'cpu') if device is None else torch.device(device)
         return model.to(device)
 
     except Exception as e:
@@ -62,53 +62,53 @@ def create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbos
         raise Exception(s) from e
 
 
-def custom(path='path/to/model.pt', autoshape=True, verbose=True):
+def custom(path='path/to/model.pt', autoshape=True, verbose=True, device=None):
     # YOLOv5 custom or local model
-    return create(path, autoshape=autoshape, verbose=verbose)
+    return _create(path, autoshape=autoshape, verbose=verbose, device=device)
 
 
-def yolov5s(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True):
+def yolov5s(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True, device=None):
     # YOLOv5-small model https://github.com/ultralytics/yolov5
-    return create('yolov5s', pretrained, channels, classes, autoshape, verbose)
+    return _create('yolov5s', pretrained, channels, classes, autoshape, verbose, device)
 
 
-def yolov5m(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True):
+def yolov5m(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True, device=None):
     # YOLOv5-medium model https://github.com/ultralytics/yolov5
-    return create('yolov5m', pretrained, channels, classes, autoshape, verbose)
+    return _create('yolov5m', pretrained, channels, classes, autoshape, verbose, device)
 
 
-def yolov5l(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True):
+def yolov5l(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True, device=None):
     # YOLOv5-large model https://github.com/ultralytics/yolov5
-    return create('yolov5l', pretrained, channels, classes, autoshape, verbose)
+    return _create('yolov5l', pretrained, channels, classes, autoshape, verbose, device)
 
 
-def yolov5x(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True):
+def yolov5x(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True, device=None):
     # YOLOv5-xlarge model https://github.com/ultralytics/yolov5
-    return create('yolov5x', pretrained, channels, classes, autoshape, verbose)
+    return _create('yolov5x', pretrained, channels, classes, autoshape, verbose, device)
 
 
-def yolov5s6(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True):
+def yolov5s6(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True, device=None):
     # YOLOv5-small-P6 model https://github.com/ultralytics/yolov5
-    return create('yolov5s6', pretrained, channels, classes, autoshape, verbose)
+    return _create('yolov5s6', pretrained, channels, classes, autoshape, verbose, device)
 
 
-def yolov5m6(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True):
+def yolov5m6(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True, device=None):
     # YOLOv5-medium-P6 model https://github.com/ultralytics/yolov5
-    return create('yolov5m6', pretrained, channels, classes, autoshape, verbose)
+    return _create('yolov5m6', pretrained, channels, classes, autoshape, verbose, device)
 
 
-def yolov5l6(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True):
+def yolov5l6(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True, device=None):
     # YOLOv5-large-P6 model https://github.com/ultralytics/yolov5
-    return create('yolov5l6', pretrained, channels, classes, autoshape, verbose)
+    return _create('yolov5l6', pretrained, channels, classes, autoshape, verbose, device)
 
 
-def yolov5x6(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True):
+def yolov5x6(pretrained=True, channels=3, classes=80, autoshape=True, verbose=True, device=None):
     # YOLOv5-xlarge-P6 model https://github.com/ultralytics/yolov5
-    return create('yolov5x6', pretrained, channels, classes, autoshape, verbose)
+    return _create('yolov5x6', pretrained, channels, classes, autoshape, verbose, device)
 
 
 if __name__ == '__main__':
-    model = create(name='yolov5s', pretrained=True, channels=3, classes=80, autoshape=True, verbose=True)  # pretrained
+    model = _create(name='yolov5s', pretrained=True, channels=3, classes=80, autoshape=True, verbose=True)  # pretrained
     # model = custom(path='path/to/model.pt')  # custom
 
     # Verify inference

@@ -1,20 +1,24 @@
-import json
+"""Utilities and tools for tracking runs with Weights & Biases."""
+import logging
+import os
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
-import torch
 import yaml
 from tqdm import tqdm
-#sys.path.append(str(Path(__file__).parent.parent.parent))  # add utils/ to path
-from yolov5.utils.datasets import LoadImagesAndLabels, img2label_paths
-from yolov5.utils.general import check_dataset, check_file, colorstr, xywh2xyxy
+
+from yolov5.utils.datasets import LoadImagesAndLabels
+from yolov5.utils.datasets import img2label_paths
+from yolov5.utils.general import colorstr, check_dataset, check_file
 
 try:
     import wandb
-    from wandb import finish, init
+    from wandb import init, finish
 except ImportError:
     wandb = None
 
+RANK = int(os.getenv('RANK', -1))
 WANDB_ARTIFACT_PREFIX = 'wandb-artifact://'
 
 
@@ -33,18 +37,19 @@ def get_run_info(run_path):
     run_path = Path(remove_prefix(run_path, WANDB_ARTIFACT_PREFIX))
     run_id = run_path.stem
     project = run_path.parent.stem
+    entity = run_path.parent.parent.stem
     model_artifact_name = 'run_' + run_id + '_model'
-    return run_id, project, model_artifact_name
+    return entity, project, run_id, model_artifact_name
 
 
 def check_wandb_resume(opt):
-    process_wandb_config_ddp_mode(opt) if opt.global_rank not in [-1, 0] else None
+    process_wandb_config_ddp_mode(opt) if RANK not in [-1, 0] else None
     if isinstance(opt.resume, str):
         if opt.resume.startswith(WANDB_ARTIFACT_PREFIX):
-            if opt.global_rank not in [-1, 0]:  # For resuming DDP runs
-                run_id, project, model_artifact_name = get_run_info(opt.resume)
+            if RANK not in [-1, 0]:  # For resuming DDP runs
+                entity, project, run_id, model_artifact_name = get_run_info(opt.resume)
                 api = wandb.Api()
-                artifact = api.artifact(project + '/' + model_artifact_name + ':latest')
+                artifact = api.artifact(entity + '/' + project + '/' + model_artifact_name + ':latest')
                 modeldir = artifact.download()
                 opt.weights = str(Path(modeldir) / "last.pt")
             return True
@@ -76,6 +81,19 @@ def process_wandb_config_ddp_mode(opt):
 
 
 class WandbLogger():
+    """Log training runs, datasets, models, and predictions to Weights & Biases.
+
+    This logger sends information to W&B at wandb.ai. By default, this information
+    includes hyperparameters, system configuration and metrics, model metrics,
+    and basic data metrics and analyses.
+
+    By providing additional command line arguments to train.py, datasets,
+    models and predictions can also be logged.
+
+    For more on how this logger is used, see the Weights & Biases documentation:
+    https://docs.wandb.com/guides/integrations/yolov5
+    """
+
     def __init__(self, opt, name, run_id, data_dict, job_type='Training'):
         # Pre-training routine --
         self.job_type = job_type
@@ -83,26 +101,31 @@ class WandbLogger():
         # It's more elegant to stick to 1 wandb.init call, but useful config data is overwritten in the WandbLogger's wandb.init call
         if isinstance(opt.resume, str):  # checks resume from artifact
             if opt.resume.startswith(WANDB_ARTIFACT_PREFIX):
-                run_id, project, model_artifact_name = get_run_info(opt.resume)
+                entity, project, run_id, model_artifact_name = get_run_info(opt.resume)
                 model_artifact_name = WANDB_ARTIFACT_PREFIX + model_artifact_name
                 assert wandb, 'install wandb to resume wandb runs'
                 # Resume wandb-artifact:// runs here| workaround for not overwriting wandb.config
-                self.wandb_run = wandb.init(id=run_id, project=project, resume='allow')
+                self.wandb_run = wandb.init(id=run_id,
+                                            project=project,
+                                            entity=entity,
+                                            resume='allow',
+                                            allow_val_change=True)
                 opt.resume = model_artifact_name
         elif self.wandb:
             self.wandb_run = wandb.init(config=opt,
                                         resume="allow",
                                         project='YOLOv5' if opt.project == 'runs/train' else Path(opt.project).stem,
+                                        entity=opt.entity,
                                         name=name,
                                         job_type=job_type,
-                                        id=run_id) if not wandb.run else wandb.run
+                                        id=run_id,
+                                        allow_val_change=True) if not wandb.run else wandb.run
         if self.wandb_run:
             if self.job_type == 'Training':
                 if not opt.resume:
                     wandb_data_dict = self.check_and_upload_dataset(opt) if opt.upload_dataset else data_dict
                     # Info useful for resuming from artifacts
-                    self.wandb_run.config.opt = vars(opt)
-                    self.wandb_run.config.data_dict = wandb_data_dict
+                    self.wandb_run.config.update({'opt': vars(opt), 'data_dict': data_dict}, allow_val_change=True)
                 self.data_dict = self.setup_training(opt, data_dict)
             if self.job_type == 'Dataset Creation':
                 self.data_dict = self.check_and_upload_dataset(opt)
@@ -170,8 +193,8 @@ class WandbLogger():
             modeldir = model_artifact.download()
             epochs_trained = model_artifact.metadata.get('epochs_trained')
             total_epochs = model_artifact.metadata.get('total_epochs')
-            assert epochs_trained < total_epochs, 'training to %g epochs is finished, nothing to resume.' % (
-                total_epochs)
+            is_finished = total_epochs is None
+            assert not is_finished, 'training is finished, can only resume incomplete runs.'
             return modeldir, model_artifact
         return None, None
 
@@ -186,7 +209,7 @@ class WandbLogger():
         })
         model_artifact.add_file(str(path / 'last.pt'), name='last.pt')
         wandb.log_artifact(model_artifact,
-                           aliases=['latest', 'epoch ' + str(self.current_epoch), 'best' if best_model else ''])
+                           aliases=['latest', 'last', 'epoch ' + str(self.current_epoch), 'best' if best_model else ''])
         print("Saving model artifact on epoch ", epoch + 1)
 
     def log_dataset_artifact(self, data_file, single_cls, project, overwrite_config=False):
@@ -250,7 +273,7 @@ class WandbLogger():
                                  "box_caption": "%s" % (class_to_id[cls])})
                 img_classes[cls] = class_to_id[cls]
             boxes = {"ground_truth": {"box_data": box_data, "class_labels": class_to_id}}  # inference-space
-            table.add_data(si, wandb.Image(paths, classes=class_set, boxes=boxes), json.dumps(img_classes),
+            table.add_data(si, wandb.Image(paths, classes=class_set, boxes=boxes), list(img_classes.values()),
                            Path(paths).name)
         artifact.add(table, name)
         return artifact
@@ -284,12 +307,13 @@ class WandbLogger():
 
     def end_epoch(self, best_result=False):
         if self.wandb_run:
-            wandb.log(self.log_dict)
-            self.log_dict = {}
+            with all_logging_disabled():
+                wandb.log(self.log_dict)
+                self.log_dict = {}
             if self.result_artifact:
                 train_results = wandb.JoinedTable(self.val_table, self.result_table, "id")
                 self.result_artifact.add(train_results, 'result')
-                wandb.log_artifact(self.result_artifact, aliases=['latest', 'epoch ' + str(self.current_epoch),
+                wandb.log_artifact(self.result_artifact, aliases=['latest', 'last', 'epoch ' + str(self.current_epoch),
                                                                   ('best' if best_result else '')])
                 self.result_table = wandb.Table(["epoch", "id", "prediction", "avg_confidence"])
                 self.result_artifact = wandb.Artifact("run_" + wandb.run.id + "_progress", "evaluation")
@@ -297,5 +321,21 @@ class WandbLogger():
     def finish_run(self):
         if self.wandb_run:
             if self.log_dict:
-                wandb.log(self.log_dict)
+                with all_logging_disabled():
+                    wandb.log(self.log_dict)
             wandb.run.finish()
+
+
+@contextmanager
+def all_logging_disabled(highest_level=logging.CRITICAL):
+    """ source - https://gist.github.com/simon-weber/7853144
+    A context manager that will prevent any logging messages triggered during the body from being processed.
+    :param highest_level: the maximum logging level in use.
+      This would only need to be changed if a custom level greater than CRITICAL is defined.
+    """
+    previous_level = logging.root.manager.disable
+    logging.disable(highest_level)
+    try:
+        yield
+    finally:
+        logging.disable(previous_level)

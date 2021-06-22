@@ -1,4 +1,8 @@
-# YOLOv5 YOLO-specific modules
+"""YOLOv5-specific modules
+
+Usage:
+    $ python path/to/models/yolo.py --cfg yolov5s.yaml
+"""
 
 import argparse
 import logging
@@ -6,22 +10,20 @@ import sys
 from copy import deepcopy
 from pathlib import Path
 
-#sys.path.append(Path(__file__).parent.parent.absolute().__str__())  # to run '$ python *.py' files in subdirectories
-logger = logging.getLogger(__name__)
 
 from yolov5.models.common import *
 from yolov5.models.experimental import *
 from yolov5.utils.autoanchor import check_anchor_order
-from yolov5.utils.general import check_file, make_divisible, set_logging
-from yolov5.utils.torch_utils import (copy_attr, fuse_conv_and_bn,
-                                      initialize_weights, model_info,
-                                      scale_img, select_device,
-                                      time_synchronized)
+from yolov5.utils.general import make_divisible, check_file, set_logging
+from yolov5.utils.torch_utils import time_synchronized, fuse_conv_and_bn, model_info, scale_img, initialize_weights, \
+    select_device, copy_attr
 
 try:
-    import thop  # for FLOPS computation
+    import thop  # for FLOPs computation
 except ImportError:
     thop = None
+
+logger = logging.getLogger(__name__)
 
 
 class Detect(nn.Module):
@@ -138,13 +140,13 @@ class Model(nn.Module):
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
 
             if profile:
-                o = thop.profile(m, inputs=(x,), verbose=False)[0] / 1E9 * 2 if thop else 0  # FLOPS
+                o = thop.profile(m, inputs=(x,), verbose=False)[0] / 1E9 * 2 if thop else 0  # FLOPs
                 t = time_synchronized()
                 for _ in range(10):
                     _ = m(x)
                 dt.append((time_synchronized() - t) * 100)
                 if m == self.model[0]:
-                    logger.info(f"{'time (ms)':>10s} {'GFLOPS':>10s} {'params':>10s}  {'module'}")
+                    logger.info(f"{'time (ms)':>10s} {'GFLOPs':>10s} {'params':>10s}  {'module'}")
                 logger.info(f'{dt[-1]:10.2f} {o:10.2f} {m.np:10.0f}  {m.type}')
 
             x = m(x)  # run
@@ -217,9 +219,9 @@ class Model(nn.Module):
             self.model = self.model[:-1]  # remove
         return self
 
-    def autoshape(self):  # add autoShape module
-        logger.info('Adding autoShape... ')
-        m = autoShape(self)  # wrap model
+    def autoshape(self):  # add AutoShape module
+        logger.info('Adding AutoShape... ')
+        m = AutoShape(self)  # wrap model
         copy_attr(m, self, include=('yaml', 'nc', 'hyp', 'names', 'stride'), exclude=())  # copy attributes
         return m
 
