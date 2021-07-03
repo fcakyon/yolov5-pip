@@ -26,12 +26,12 @@ def _create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbo
     from pathlib import Path
 
     from yolov5.models.yolo import Model, attempt_load
-    from yolov5.utils.general import check_requirements, set_logging, yolov5_in_syspath
+    from yolov5.utils.general import set_logging, yolov5_in_syspath
     from yolov5.utils.google_utils import attempt_download
     from yolov5.utils.torch_utils import select_device
 
-    check_requirements(requirements=Path(__file__).parent / 'requirements.txt',
-                       exclude=('tensorboard', 'thop', 'opencv-python'))
+    #check_requirements(requirements=Path(__file__).parent / 'requirements.txt',
+    #                   exclude=('tensorboard', 'thop', 'opencv-python'))
     set_logging(verbose=verbose)
 
     fname = Path(name).with_suffix('.pt')  # checkpoint filename

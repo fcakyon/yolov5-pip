@@ -23,7 +23,7 @@ from PIL import Image, ExifTags
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from yolov5.utils.general import check_requirements, check_file, check_dataset, xyxy2xywh, xywh2xyxy, xywhn2xyxy, xyn2xy, \
+from yolov5.utils.general import check_file, check_dataset, xyxy2xywh, xywh2xyxy, xywhn2xyxy, xyn2xy, \
     segment2box, segments2boxes, resample_segments, clean_str, yolov5_in_syspath
 from yolov5.utils.torch_utils import torch_distributed_zero_first
 
@@ -283,7 +283,7 @@ class LoadStreams:  # multiple IP or RTSP cameras
             # Start thread to read frames from video stream
             print(f'{i + 1}/{n}: {s}... ', end='')
             if 'youtube.com/' in s or 'youtu.be/' in s:  # if source is YouTube video
-                check_requirements(('pafy', 'youtube_dl'))
+                #check_requirements(('pafy', 'youtube_dl'))
                 import pafy
                 s = pafy.new(s).getbest(preftype="mp4").url  # YouTube URL
             s = eval(s) if s.isnumeric() else s  # i.e. s = '0' local webcam

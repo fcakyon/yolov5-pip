@@ -16,7 +16,7 @@ import torch.backends.cudnn as cudnn
 
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.datasets import LoadStreams, LoadImages
-from yolov5.utils.general import check_img_size, check_requirements, check_imshow, colorstr, non_max_suppression, \
+from yolov5.utils.general import check_img_size, check_imshow, colorstr, non_max_suppression, \
     apply_classifier, scale_coords, xyxy2xywh, strip_optimizer, set_logging, increment_path, save_one_box, yolov5_in_syspath
 from yolov5.utils.plots import colors, plot_one_box
 from yolov5.utils.torch_utils import select_device, load_classifier, time_synchronized
@@ -213,7 +213,7 @@ def parse_opt():
 def main():
     opt = parse_opt()
     print(colorstr('detect: ') + ', '.join(f'{k}={v}' for k, v in vars(opt).items()))
-    check_requirements(exclude=('tensorboard', 'thop'))
+    #check_requirements(exclude=('tensorboard', 'thop'))
     run(**vars(opt))
 
 
