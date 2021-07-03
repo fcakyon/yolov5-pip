@@ -17,7 +17,7 @@ from yolov5.models.common import Conv
 from yolov5.models.yolo import Detect
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.activations import Hardswish, SiLU
-from yolov5.utils.general import colorstr, check_img_size, check_requirements, file_size, set_logging
+from yolov5.utils.general import colorstr, check_img_size, file_size, set_logging
 from yolov5.utils.torch_utils import select_device
 
 
@@ -106,7 +106,7 @@ def run(weights='./yolov5s.pt',  # weights path
             # Simplify
             if simplify:
                 try:
-                    check_requirements(['onnx-simplifier'])
+                    #check_requirements(['onnx-simplifier'])
                     import onnxsim
 
                     print(f'{prefix} simplifying with onnx-simplifier {onnxsim.__version__}...')

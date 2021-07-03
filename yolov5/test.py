@@ -19,7 +19,7 @@ from tqdm import tqdm
 
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.datasets import create_dataloader
-from yolov5.utils.general import coco80_to_coco91_class, check_dataset, check_file, check_img_size, check_requirements, \
+from yolov5.utils.general import coco80_to_coco91_class, check_dataset, check_file, check_img_size,  \
     box_iou, non_max_suppression, scale_coords, xyxy2xywh, xywh2xyxy, set_logging, increment_path, colorstr
 from yolov5.utils.metrics import ap_per_class, ConfusionMatrix
 from yolov5.utils.plots import plot_images, output_to_target, plot_study_txt
@@ -274,7 +274,7 @@ def run(data,
             json.dump(jdict, f)
 
         try:  # https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocoEvalDemo.ipynb
-            check_requirements(['pycocotools'])
+            #check_requirements(['pycocotools'])
             from pycocotools.coco import COCO
             from pycocotools.cocoeval import COCOeval
 
@@ -333,7 +333,7 @@ def main():
     opt = parse_opt()
     set_logging()
     print(colorstr('test: ') + ', '.join(f'{k}={v}' for k, v in vars(opt).items()))
-    check_requirements(exclude=('tensorboard', 'thop'))
+    #check_requirements(exclude=('tensorboard', 'thop'))
 
     if opt.task in ('train', 'val', 'test'):  # run normally
         run(**vars(opt))
