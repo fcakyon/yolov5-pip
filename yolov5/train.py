@@ -488,7 +488,7 @@ def main(opt):
         opt.cfg, opt.weights, opt.resume = '', ckpt, True  # reinstate
         LOGGER.info(f'Resuming training from {ckpt}')
     else:
-        opt.hyp = opt.hyp or str(Path(__file__).parent / 'data' / ('hyp.finetune.yaml' if opt.weights else 'hyp.scratch.yaml'))
+        opt.hyp = opt.hyp or str(Path(__file__).parent / 'data' / 'hyps' / ('hyp.finetune.yaml' if opt.weights else 'hyp.scratch.yaml'))
         opt.data = opt.data or str(Path(__file__).parent / 'data/coco128.yaml')
 
         opt.data, opt.cfg, opt.hyp = check_file(opt.data), check_file(opt.cfg), check_file(opt.hyp)  # check files
