@@ -89,6 +89,7 @@ var/
 wheels/
 *.egg-info/
 wandb/
+!yolov5/utils/loggers/wandb
 .installed.cfg
 *.egg
 
