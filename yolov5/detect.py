@@ -25,7 +25,7 @@ from yolov5.utils.torch_utils import select_device, load_classifier, time_sync
 
 
 @torch.no_grad()
-def run(weights='yolov5s.pt',  # model.pt path(s)
+def detect(weights='yolov5s.pt',  # model.pt path(s)
         source='data/images',  # file/dir/URL/glob, 0 for webcam
         imgsz=640,  # inference size (pixels)
         conf_thres=0.25,  # confidence threshold
@@ -240,7 +240,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
     print(f'Done. ({time.time() - t0:.3f}s)')
 
 
-def parse_opt():
+def parse_opt(known=False):
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model.pt path(s)')
     parser.add_argument('--source', type=str, default='yolov5/data/images', help='file/dir/URL/glob, 0 for webcam')
@@ -266,17 +266,20 @@ def parse_opt():
     parser.add_argument('--hide-labels', default=False, action='store_true', help='hide labels')
     parser.add_argument('--hide-conf', default=False, action='store_true', help='hide confidences')
     parser.add_argument('--half', action='store_true', help='use FP16 half-precision inference')
-    opt = parser.parse_args()
+    opt = parser.parse_known_args()[0] if known else parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
     return opt
 
 
-def main():
-    opt = parse_opt()
+def run(**kwargs):
+    opt = parse_opt(True)
+    for k, v in kwargs.items():
+        setattr(opt, k, v)
     print(colorstr('detect: ') + ', '.join(f'{k}={v}' for k, v in vars(opt).items()))
     #check_requirements(exclude=('tensorboard', 'thop'))
-    run(**vars(opt))
+    detect(**vars(opt))
 
 
 if __name__ == "__main__":
-    main()
+    opt = parse_opt()
+    detect(opt)

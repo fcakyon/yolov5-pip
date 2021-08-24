@@ -68,7 +68,7 @@ jobs:
           yolov5 detect --weights yolov5/weights/yolov5s.pt --device $di
           python yolov5/detect.py --weights runs/train/exp/weights/last.pt --device $di
           yolov5 detect --weights runs/train/exp/weights/last.pt --device $di
-          # test
+          # val
           python yolov5/val.py --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --device $di
           yolov5 val --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --device $di
           python yolov5/val.py --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
