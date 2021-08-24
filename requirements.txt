@@ -31,3 +31,4 @@ pandas
 # albumentations>=1.0.3
 thop  # FLOPs computation
 pycocotools>=2.0s
+fire
