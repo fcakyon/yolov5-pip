@@ -76,7 +76,8 @@ def process_batch(detections, labels, iouv):
 @torch.no_grad()
 def run(data,
         weights=None,  # model.pt path(s)
-        batch_size=32,  # batch size
+        batch_size=None,  # batch size
+        batch=None,  # batch size
         imgsz=None,  # inference size (pixels)
         img=None,  # inference size (pixels)
         conf_thres=0.001,  # confidence threshold
@@ -106,6 +107,11 @@ def run(data,
         imgsz = 640
     elif img is not None:
         imgsz = img
+    if batch_size is None and batch is None:
+        batch_size = 32
+    elif batch is not None:
+        batch_size = batch
+
     # Initialize/load model and set device
     training = model is not None
     if training:  # called by train.py
