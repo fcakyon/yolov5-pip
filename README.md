@@ -134,10 +134,10 @@ results.save(save_dir='results/')
 - You can directly use these functions by importing them:
 
 ```python
-from yolov5 import train, test, detect, export
+from yolov5 import train, val, detect, export
 
 train.run(imgsz=640, data='coco128.yaml')
-test.run(imgsz=640, data='coco128.yaml', weights='yolov5s.pt')
+val.run(imgsz=640, data='coco128.yaml', weights='yolov5s.pt')
 detect.run(imgsz=640)
 export.run(imgsz=640, weights='yolov5s.pt')
 ```
@@ -157,7 +157,7 @@ detect.run(source=img_url, weights="yolov5s6.pt", conf_thres=0.25, imgsz=640)
 
 ## <div align="center">Use from CLI</div>
 
-You can call `yolo_train`, `yolo_detect`, `yolo_test` and `yolo_export` commands after installing the package via `pip`:
+You can call `yolov5 train`, `yolov5 detect`, `yolov5 val` and `yolov5 export` commands after installing the package via `pip`:
 
 <details closed>
 <summary>Training</summary>
@@ -165,7 +165,7 @@ You can call `yolo_train`, `yolo_detect`, `yolo_test` and `yolo_export` commands
 Run commands below to reproduce results on [COCO](https://github.com/ultralytics/yolov5/blob/master/data/scripts/get_coco.sh) dataset (dataset auto-downloads on first use). Training times for YOLOv5s/m/l/x are 2/4/6/8 days on a single V100 (multi-GPU times faster). Use the largest `--batch-size` your GPU allows (batch sizes shown for 16 GB devices).
 
 ```bash
-$ yolo_train --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 64
+$ yolov5 train --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 64
                                     yolov5m                                40
                                     yolov5l                                24
                                     yolov5x                                16
@@ -176,10 +176,10 @@ $ yolo_train --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 64
 <details closed>
 <summary>Inference</summary>
 
-yolo_detect command runs inference on a variety of sources, downloading models automatically from the [latest YOLOv5 release](https://github.com/ultralytics/yolov5/releases) and saving results to `runs/detect`.
+yolov5 detect command runs inference on a variety of sources, downloading models automatically from the [latest YOLOv5 release](https://github.com/ultralytics/yolov5/releases) and saving results to `runs/detect`.
 
 ```bash
-$ yolo_detect --source 0  # webcam
+$ yolov5 detect --source 0  # webcam
                        file.jpg  # image
                        file.mp4  # video
                        path/  # directory

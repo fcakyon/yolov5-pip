@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from yolov5.utils.general import colorstr
+import yaml
 
 try:
     import neptune.new as neptune
@@ -9,21 +10,21 @@ except ImportError:
 
 
 class NeptuneLogger:
-    def __init__(self, opt, name, data_dict, job_type='Training'):
+    def __init__(self, opt, job_type='Training'):
         # Pre-training routine --
         self.job_type = job_type
-        self.neptune, self.neptune_run, self.data_dict = neptune, None, data_dict
+        with open(opt.data) as f:
+            data_dict = yaml.safe_load(f)  # data dict
+        self.neptune, self.neptune_run = neptune, None, data_dict
 
         if self.neptune and opt.neptune_token:
             self.neptune_run = neptune.init(api_token=opt.neptune_token,
                                             project=opt.neptune_project,
-                                            name=name)
+                                            name=Path(opt.save_dir).stem)
         if self.neptune_run:
             if self.job_type == 'Training':
                 if not opt.resume:
-                    neptune_data_dict = data_dict
                     self.neptune_run["opt"] = vars(opt)
-                    self.neptune_run["data_dict"] = neptune_data_dict
                 self.data_dict = self.setup_training(data_dict)
             prefix = colorstr('neptune: ')
             print(f"{prefix}NeptuneAI logging initiated successfully.")
