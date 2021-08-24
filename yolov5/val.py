@@ -77,7 +77,8 @@ def process_batch(detections, labels, iouv):
 def run(data,
         weights=None,  # model.pt path(s)
         batch_size=32,  # batch size
-        imgsz=640,  # inference size (pixels)
+        imgsz=None,  # inference size (pixels)
+        img=None,  # inference size (pixels)
         conf_thres=0.001,  # confidence threshold
         iou_thres=0.6,  # NMS IoU threshold
         task='val',  # train, val, test, speed or study
@@ -100,6 +101,11 @@ def run(data,
         callbacks=Callbacks(),
         compute_loss=None,
         ):
+
+    if imgsz is None and img is None:
+        imgsz = 640
+    elif img is not None:
+        imgsz = img
     # Initialize/load model and set device
     training = model is not None
     if training:  # called by train.py
