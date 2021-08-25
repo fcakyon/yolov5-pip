@@ -15,7 +15,7 @@ class NeptuneLogger:
         self.job_type = job_type
         with open(opt.data) as f:
             data_dict = yaml.safe_load(f)  # data dict
-        self.neptune, self.neptune_run = neptune, None, data_dict
+        self.neptune, self.neptune_run = neptune, None
 
         if self.neptune and opt.neptune_token:
             self.neptune_run = neptune.init(api_token=opt.neptune_token,
