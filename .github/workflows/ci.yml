@@ -61,19 +61,19 @@ jobs:
           pip install -e .
           di=cpu # inference devices  # define device
           # train
-          python yolov5/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --cfg models/yolov5s.yaml --epochs 1 --device $di
-          yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --cfg models/yolov5s.yaml --epochs 1 --device $di
+          python yolov5/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device $di
+          yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device $di
           # detect
-          python yolov5/detect.py --weights yolov5/weights/yolov5s.pt --device $di
-          yolov5 detect --weights yolov5/weights/yolov5s.pt --device $di
+          python yolov5/detect.py --weights yolov5/weights/yolov5n.pt --device $di
+          yolov5 detect --weights yolov5/weights/yolov5n.pt --device $di
           python yolov5/detect.py --weights runs/train/exp/weights/last.pt --device $di
           yolov5 detect --weights runs/train/exp/weights/last.pt --device $di
           # val
-          python yolov5/val.py --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --device $di
-          yolov5 val --data yolov5/data/coco128.yaml --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --device $di
+          python yolov5/val.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --device $di
+          yolov5 val --data yolov5/data/coco128.yaml --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --device $di
           python yolov5/val.py --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
           yolov5 val --data yolov5/data/coco128.yaml --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
           # export
-          pip install onnx coremltools
-          python yolov5/export.py --weights yolov5/weights/yolov5s.pt --device $di
-          yolov5 export --weights yolov5/weights/yolov5s.pt --device $di
+          pip install onnx onnx-simplifier tensorflowjs
+          python yolov5/export.py --weights yolov5/weights/yolov5n.pt --device $di --include 'torchscript,onnx,tflite'
+          yolov5 export --weights yolov5/weights/yolov5n.pt --device $di --simplify --include 'torchscript,onnx,saved_model,pb,tfjs'

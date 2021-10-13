@@ -18,8 +18,9 @@ from PIL import Image
 from torch.cuda import amp
 
 from yolov5.utils.datasets import exif_transpose, letterbox
-from yolov5.utils.general import non_max_suppression, make_divisible, scale_coords, increment_path, xyxy2xywh, save_one_box
-from yolov5.utils.plots import colors, plot_one_box
+from yolov5.utils.general import colorstr, increment_path, make_divisible, non_max_suppression, save_one_box, \
+    scale_coords, xyxy2xywh
+from yolov5.utils.plots import Annotator, colors
 from yolov5.utils.torch_utils import time_sync
 
 LOGGER = logging.getLogger(__name__)
@@ -277,6 +278,7 @@ class AutoShape(nn.Module):
     conf = 0.25  # NMS confidence threshold
     iou = 0.45  # NMS IoU threshold
     classes = None  # (optional list) filter by class
+    multi_label = False  # NMS multiple labels per box
     max_det = 1000  # maximum number of detections per image
 
     def __init__(self, model):
@@ -285,6 +287,16 @@ class AutoShape(nn.Module):
 
     def autoshape(self):
         LOGGER.info('AutoShape already enabled, skipping... ')  # model already converted to model.autoshape()
+        return self
+
+    def _apply(self, fn):
+        # Apply to(), cpu(), cuda(), half() to model tensors that are not parameters or registered buffers
+        self = super()._apply(fn)
+        m = self.model.model[-1]  # Detect()
+        m.stride = fn(m.stride)
+        m.grid = list(map(fn, m.grid))
+        if isinstance(m.anchor_grid, list):
+            m.anchor_grid = list(map(fn, m.anchor_grid))
         return self
 
     @torch.no_grad()
@@ -336,7 +348,8 @@ class AutoShape(nn.Module):
             t.append(time_sync())
 
             # Post-process
-            y = non_max_suppression(y, self.conf, iou_thres=self.iou, classes=self.classes, max_det=self.max_det)  # NMS
+            y = non_max_suppression(y, self.conf, iou_thres=self.iou, classes=self.classes,
+                                    multi_label=self.multi_label, max_det=self.max_det)  # NMS
             for i in range(n):
                 scale_coords(shape1, y[i][:, :4], shape0[i])
 
@@ -363,34 +376,43 @@ class Detections:
         self.s = shape  # inference BCHW shape
 
     def display(self, pprint=False, show=False, save=False, crop=False, render=False, save_dir=Path('')):
+        crops = []
         for i, (im, pred) in enumerate(zip(self.imgs, self.pred)):
-            str = f'image {i + 1}/{len(self.pred)}: {im.shape[0]}x{im.shape[1]} '
+            s = f'image {i + 1}/{len(self.pred)}: {im.shape[0]}x{im.shape[1]} '  # string
             if pred.shape[0]:
                 for c in pred[:, -1].unique():
                     n = (pred[:, -1] == c).sum()  # detections per class
-                    str += f"{n} {self.names[int(c)]}{'s' * (n > 1)}, "  # add to string
+                    s += f"{n} {self.names[int(c)]}{'s' * (n > 1)}, "  # add to string
                 if show or save or render or crop:
+                    annotator = Annotator(im, example=str(self.names))
                     for *box, conf, cls in reversed(pred):  # xyxy, confidence, class
                         label = f'{self.names[int(cls)]} {conf:.2f}'
                         if crop:
-                            save_one_box(box, im, file=save_dir / 'crops' / self.names[int(cls)] / self.files[i])
+                            file = save_dir / 'crops' / self.names[int(cls)] / self.files[i] if save else None
+                            crops.append({'box': box, 'conf': conf, 'cls': cls, 'label': label,
+                                          'im': save_one_box(box, im, file=file, save=save)})
                         else:  # all others
-                            im = plot_one_box(box, im, label=label, color=colors(cls))
+                            annotator.box_label(box, label, color=colors(cls))
+                    im = annotator.im
             else:
-                str += '(no detections)'
+                s += '(no detections)'
 
             im = Image.fromarray(im.astype(np.uint8)) if isinstance(im, np.ndarray) else im  # from np
             if pprint:
-                LOGGER.info(str.rstrip(', '))
+                LOGGER.info(s.rstrip(', '))
             if show:
                 im.show(self.files[i])  # show
             if save:
                 f = self.files[i]
                 im.save(save_dir / f)  # save
                 if i == self.n - 1:
-                    LOGGER.info(f"Saved {self.n} image{'s' * (self.n > 1)} to '{save_dir}'")
+                    LOGGER.info(f"Saved {self.n} image{'s' * (self.n > 1)} to {colorstr('bold', save_dir)}")
             if render:
                 self.imgs[i] = np.asarray(im)
+        if crop:
+            if save:
+                LOGGER.info(f'Saved results to {save_dir}\n')
+            return crops
 
     def print(self):
         self.display(pprint=True)  # print results
@@ -404,10 +426,9 @@ class Detections:
         save_dir = increment_path(save_dir, exist_ok=save_dir != 'runs/detect/exp', mkdir=True)  # increment save_dir
         self.display(save=True, save_dir=save_dir)  # save results
 
-    def crop(self, save_dir='runs/detect/exp'):
-        save_dir = increment_path(save_dir, exist_ok=save_dir != 'runs/detect/exp', mkdir=True)  # increment save_dir
-        self.display(crop=True, save_dir=save_dir)  # crop results
-        LOGGER.info(f'Saved results to {save_dir}\n')
+    def crop(self, save=True, save_dir='runs/detect/exp'):
+        save_dir = increment_path(save_dir, exist_ok=save_dir != 'runs/detect/exp', mkdir=True) if save else None
+        return self.display(crop=True, save=save, save_dir=save_dir)  # crop results
 
     def render(self):
         self.display(render=True)  # render results

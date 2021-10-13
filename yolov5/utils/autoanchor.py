@@ -15,13 +15,12 @@ from yolov5.utils.general import colorstr
 
 def check_anchor_order(m):
     # Check anchor order against stride order for YOLOv5 Detect() module m, and correct if necessary
-    a = m.anchor_grid.prod(-1).view(-1)  # anchor area
+    a = m.anchors.prod(-1).view(-1)  # anchor area
     da = a[-1] - a[0]  # delta a
     ds = m.stride[-1] - m.stride[0]  # delta s
     if da.sign() != ds.sign():  # same order
         print('Reversing anchor order')
         m.anchors[:] = m.anchors.flip(0)
-        m.anchor_grid[:] = m.anchor_grid.flip(0)
 
 
 def check_anchors(dataset, model, thr=4.0, imgsz=640):
@@ -41,12 +40,12 @@ def check_anchors(dataset, model, thr=4.0, imgsz=640):
         bpr = (best > 1. / thr).float().mean()  # best possible recall
         return bpr, aat
 
-    anchors = m.anchor_grid.clone().cpu().view(-1, 2)  # current anchors
-    bpr, aat = metric(anchors)
+    anchors = m.anchors.clone() * m.stride.to(m.anchors.device).view(-1, 1, 1)  # current anchors
+    bpr, aat = metric(anchors.cpu().view(-1, 2))
     print(f'anchors/target = {aat:.2f}, Best Possible Recall (BPR) = {bpr:.4f}', end='')
     if bpr < 0.98:  # threshold to recompute
         print('. Attempting to improve anchors, please wait...')
-        na = m.anchor_grid.numel() // 2  # number of anchors
+        na = m.anchors.numel() // 2  # number of anchors
         try:
             anchors = kmean_anchors(dataset, n=na, img_size=imgsz, thr=thr, gen=1000, verbose=False)
         except Exception as e:
@@ -54,7 +53,6 @@ def check_anchors(dataset, model, thr=4.0, imgsz=640):
         new_bpr = metric(anchors)[0]
         if new_bpr > bpr:  # replace anchors
             anchors = torch.tensor(anchors, device=m.anchors.device).type_as(m.anchors)
-            m.anchor_grid[:] = anchors.clone().view_as(m.anchor_grid)  # for inference
             m.anchors[:] = anchors.clone().view_as(m.anchors) / m.stride.to(m.anchors.device).view(-1, 1, 1)  # loss
             check_anchor_order(m)
             print(f'{prefix}New anchors saved to model. Update model *.yaml to use these anchors in the future.')
@@ -127,7 +125,7 @@ def kmean_anchors(dataset='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen
     print(f'{prefix}Running kmeans for {n} anchors on {len(wh)} points...')
     s = wh.std(0)  # sigmas for whitening
     k, dist = kmeans(wh / s, n, iter=30)  # points, mean distance
-    assert len(k) == n, print(f'{prefix}ERROR: scipy.cluster.vq.kmeans requested {n} points but returned only {len(k)}')
+    assert len(k) == n, f'{prefix}ERROR: scipy.cluster.vq.kmeans requested {n} points but returned only {len(k)}'
     k *= s
     wh = torch.tensor(wh, dtype=torch.float32)  # filtered
     wh0 = torch.tensor(wh0, dtype=torch.float32)  # unfiltered
