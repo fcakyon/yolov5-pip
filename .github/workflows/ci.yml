@@ -74,6 +74,6 @@ jobs:
           python yolov5/val.py --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
           yolov5 val --data yolov5/data/coco128.yaml --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
           # export
-          pip install onnx coremltools onnx-simplifier tensorflowjs
-          python yolov5/export.py --weights yolov5/weights/yolov5s.pt --device $di
-          yolov5 export --weights yolov5/weights/yolov5s.pt --device $di --include torchscript onnx coreml saved_model pb tflite tfjs
+          pip install onnx onnx-simplifier tensorflowjs
+          python yolov5/export.py --weights yolov5/weights/yolov5n.pt --device $di
+          yolov5 export --weights yolov5/weights/yolov5n.pt --device $di --simplify --include 'torchscript,onnx,saved_model,pb,tflite,tfjs'
