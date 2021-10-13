@@ -61,8 +61,8 @@ jobs:
           pip install -e .
           di=cpu # inference devices  # define device
           # train
-          python yolov5/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --cfg models/yolov5s.yaml --epochs 1 --device $di
-          yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --cfg models/yolov5s.yaml --epochs 1 --device $di
+          python yolov5/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --epochs 1 --device $di
+          yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5s.pt --epochs 1 --device $di
           # detect
           python yolov5/detect.py --weights yolov5/weights/yolov5s.pt --device $di
           yolov5 detect --weights yolov5/weights/yolov5s.pt --device $di
