@@ -162,13 +162,19 @@ You can call `yolov5 train`, `yolov5 detect`, `yolov5 val` and `yolov5 export` c
 <details open>
 <summary>Training</summary>
 
-Finetune one of the pretrained YOLOv5 models using your custom `data.yaml`.
+Finetune one of the pretrained YOLOv5 models using your custom `data.yaml`:
 
 ```bash
 $ yolov5 train --data data.yaml --weights yolov5s.pt --batch-size 16 --img 640
                                           yolov5m.pt              8
                                           yolov5l.pt              4
                                           yolov5x.pt              2
+```
+
+Visualize your experiments via [Neptune.AI](https://neptune.ai/):
+
+```bash
+$ yolov5 train --data data.yaml --weights yolov5s.pt --neptune_project NAMESPACE/PROJECT_NAME --neptune_token YOUR_NEPTUNE_TOKEN
 ```
 
 </details>
