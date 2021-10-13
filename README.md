@@ -91,8 +91,8 @@ results.save(save_dir='results/')
 from yolov5 import YOLOv5
 
 # set model params
-model_path = "yolov5/weights/yolov5s.pt" # it automatically downloads yolov5s model to given path
-device = "cuda" # or "cpu"
+model_path = "yolov5/weights/yolov5s.pt"
+device = "cuda:0" # or "cpu"
 
 # init yolov5 model
 yolov5 = YOLOv5(model_path, device)
@@ -128,7 +128,7 @@ results.save(save_dir='results/')
 
 </details>
 
-<details open>
+<details closed>
 <summary>Train/Detect/Test/Export</summary>
 
 - You can directly use these functions by importing them:
@@ -159,36 +159,45 @@ detect.run(source=img_url, weights="yolov5s6.pt", conf_thres=0.25, imgsz=640)
 
 You can call `yolov5 train`, `yolov5 detect`, `yolov5 val` and `yolov5 export` commands after installing the package via `pip`:
 
-<details closed>
+<details open>
 <summary>Training</summary>
 
-Run commands below to reproduce results on [COCO](https://github.com/ultralytics/yolov5/blob/master/data/scripts/get_coco.sh) dataset (dataset auto-downloads on first use). Training times for YOLOv5s/m/l/x are 2/4/6/8 days on a single V100 (multi-GPU times faster). Use the largest `--batch-size` your GPU allows (batch sizes shown for 16 GB devices).
+Finetune one of the pretrained YOLOv5 models using your custom `data.yaml`.
 
 ```bash
-$ yolov5 train --data coco.yaml --cfg yolov5s.yaml --weights '' --batch-size 64
-                                    yolov5m                                40
-                                    yolov5l                                24
-                                    yolov5x                                16
+$ yolov5 train --data data.yaml --weights yolov5s.pt --batch-size 16 --img 640
+                                          yolov5m.pt              8
+                                          yolov5l.pt              4
+                                          yolov5x.pt              2
 ```
 
 </details>
 
-<details closed>
+<details open>
 <summary>Inference</summary>
 
 yolov5 detect command runs inference on a variety of sources, downloading models automatically from the [latest YOLOv5 release](https://github.com/ultralytics/yolov5/releases) and saving results to `runs/detect`.
 
 ```bash
 $ yolov5 detect --source 0  # webcam
-                       file.jpg  # image
-                       file.mp4  # video
-                       path/  # directory
-                       path/*.jpg  # glob
-                       rtsp://170.93.143.139/rtplive/470011e600ef003a004ee33696235daa  # rtsp stream
-                       rtmp://192.168.1.105/live/test  # rtmp stream
-                       http://112.50.243.8/PLTV/88888888/224/3221225900/1.m3u8  # http stream
+                         file.jpg  # image
+                         file.mp4  # video
+                         path/  # directory
+                         path/*.jpg  # glob
+                         rtsp://170.93.143.139/rtplive/470011e600ef003a004ee33696235daa  # rtsp stream
+                         rtmp://192.168.1.105/live/test  # rtmp stream
+                         http://112.50.243.8/PLTV/88888888/224/3221225900/1.m3u8  # http stream
 ```
 
-To run inference on example images in `yolov5/data/images`:
+</details>
+
+<details open>
+<summary>Export</summary>
+
+You can export your fine-tuned YOLOv5 weights to any format such as `torchscript`, `onnx`, `coreml`, `pb`, `tflite`, `tfjs`:
+
+```bash
+$ yolov5 export --weights yolov5s.pt --include 'torchscript,onnx,coreml,pb,tfjs'
+```
 
 </details>
