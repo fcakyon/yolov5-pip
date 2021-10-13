@@ -1,8 +1,10 @@
 from pathlib import Path
 
 from yolov5.models.yolo import Model
+from yolov5.models.experimental import attempt_load
 from yolov5.utils.general import set_logging, yolov5_in_syspath
 from yolov5.utils.google_utils import attempt_download
+from yolov5.utils.torch_utils import select_device
 from yolov5.utils.torch_utils import torch
 
 
@@ -35,8 +37,11 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
         model = torch.load(model_path, map_location=torch.device(device))
     if isinstance(model, dict):
         model = model["model"]  # load model
-    hub_model = Model(model.yaml).to(next(model.parameters()).device)  # create
-    hub_model.load_state_dict(model.float().state_dict())  # load state_dict
+    hub_model = Model(model.yaml)  # create
+    msd = model.state_dict()  # model state_dict
+    csd = model.float().state_dict()  # checkpoint state_dict as FP32
+    csd = {k: v for k, v in csd.items() if msd[k].shape == v.shape}  # filter
+    hub_model.load_state_dict(csd, strict=False)  # load
     hub_model.names = model.names  # class names
     model = hub_model
 
