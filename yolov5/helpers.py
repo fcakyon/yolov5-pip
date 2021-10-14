@@ -29,7 +29,7 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
     set_logging(verbose=verbose)
 
     # set device if not given
-    if not device:
+    if device is None:
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
     attempt_download(model_path)  # download if not found locally
@@ -48,7 +48,7 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
     if autoshape:
         model = model.autoshape()
 
-    return model
+    return model.to(device)
 
 
 class YOLOv5:
