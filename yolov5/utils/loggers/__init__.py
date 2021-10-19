@@ -117,7 +117,7 @@ class Loggers():
         # Callback runs on train epoch end
         if self.wandb:
             self.wandb.current_epoch = epoch + 1
-        if self.neptune:
+        if self.neptune and self.neptune.neptune_run:
             self.neptune.current_epoch = epoch + 1
 
     def on_val_image_end(self, pred, predn, path, names, im):
@@ -149,7 +149,7 @@ class Loggers():
             self.wandb.log(x)
             self.wandb.end_epoch(best_result=best_fitness == fi)
 
-        if self.neptune:
+        if self.neptune and self.neptune.neptune_run:
             self.neptune.log(x)
             self.neptune.end_epoch()
 
