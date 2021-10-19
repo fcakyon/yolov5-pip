@@ -17,12 +17,12 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 # ROOT = ROOT.relative_to(Path.cwd())  # relative
 
-from models.common import *
-from models.experimental import *
-from utils.autoanchor import check_anchor_order
-from utils.general import check_yaml, make_divisible, print_args, set_logging
-from utils.plots import feature_visualization
-from utils.torch_utils import copy_attr, fuse_conv_and_bn, initialize_weights, model_info, scale_img, \
+from yolov5.models.common import *
+from yolov5.models.experimental import *
+from yolov5.utils.autoanchor import check_anchor_order
+from yolov5.utils.general import check_yaml, make_divisible, print_args, set_logging
+from yolov5.utils.plots import feature_visualization
+from yolov5.utils.torch_utils import copy_attr, fuse_conv_and_bn, initialize_weights, model_info, scale_img, \
     select_device, time_sync
 
 try:
