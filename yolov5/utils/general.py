@@ -294,12 +294,14 @@ def check_imshow():
 
 
 def check_suffix(file='yolov5s.pt', suffix=('.pt',), msg=''):
-    # Check file(s) for acceptable suffixes
+    # Check file(s) for acceptable suffix
     if file and suffix:
         if isinstance(suffix, str):
             suffix = [suffix]
         for f in file if isinstance(file, (list, tuple)) else [file]:
-            assert Path(f).suffix.lower() in suffix, f"{msg}{f} acceptable suffix is {suffix}"
+            s = Path(f).suffix.lower()  # file suffix
+            if len(s):
+                assert s in suffix, f"{msg}{f} acceptable suffix is {suffix}"
 
 
 def check_yaml(file, suffix=('.yaml', '.yml')):
@@ -704,7 +706,7 @@ def strip_optimizer(f='best.pt', s=''):  # from utils.general import *; strip_op
     x = torch.load(f, map_location=torch.device('cpu'))
     if x.get('ema'):
         x['model'] = x['ema']  # replace model with ema
-    for k in 'optimizer', 'training_results', 'wandb_id', 'ema', 'updates':  # keys
+    for k in 'optimizer', 'training_results', 'wandb_id', 'ema', 'updates', 'neptune_id':  # keys
         x[k] = None
     x['epoch'] = -1
     x['model'].half()  # to FP16
