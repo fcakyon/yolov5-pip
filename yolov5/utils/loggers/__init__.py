@@ -176,7 +176,7 @@ class Loggers():
                 self.wandb.finish_run()
                 self.wandb = WandbLogger(self.opt)
 
-        if self.neptune:
+        if self.neptune and self.neptune.neptune_run:
             for f in files:
                 self.neptune.neptune_run['Results/{}'.format(f)].log(neptune.types.File(str(f)))
             self.neptune.finish_run()
