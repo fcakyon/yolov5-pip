@@ -80,18 +80,6 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         yaml.safe_dump(vars(opt), f, sort_keys=False)
     data_dict = None
 
-    # Loggers
-    if RANK in [-1, 0]:
-        loggers = Loggers(save_dir, weights, opt, hyp, LOGGER, mmdet_keys=opt.mmdet_tags)  # loggers instance
-        if loggers.wandb:
-            data_dict = loggers.wandb.data_dict
-            if resume:
-                weights, epochs, hyp = opt.weights, opt.epochs, opt.hyp
-
-        # Register actions
-        for k in methods(loggers):
-            callbacks.register_action(k, callback=getattr(loggers, k))
-
     # Config
     plots = not evolve  # create plots
     cuda = device.type != 'cpu'
@@ -103,6 +91,18 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     names = ['item'] if single_cls and len(data_dict['names']) != 1 else data_dict['names']  # class names
     assert len(names) == nc, f'{len(names)} names found for nc={nc} dataset in {data}'  # check
     is_coco = data.endswith('coco.yaml') and nc == 80  # COCO dataset
+
+    # Loggers
+    if RANK in [-1, 0]:
+        loggers = Loggers(save_dir, weights, opt, hyp, LOGGER, mmdet_keys=opt.mmdet_tags, class_names=names)  # loggers instance
+        if loggers.wandb:
+            data_dict = loggers.wandb.data_dict
+            if resume:
+                weights, epochs, hyp = opt.weights, opt.epochs, opt.hyp
+
+        # Register actions
+        for k in methods(loggers):
+            callbacks.register_action(k, callback=getattr(loggers, k))
 
     # Model
     check_suffix(weights, '.pt')  # check weights
@@ -363,7 +363,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             fi = fitness(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
             if fi > best_fitness:
                 best_fitness = fi
-            log_vals = list(mloss) + list(results) + lr
+            log_vals = list(mloss) + list(results) + lr + list(maps)
             callbacks.run('on_fit_epoch_end', log_vals, epoch, best_fitness, fi)
 
             # Save model
@@ -498,8 +498,8 @@ def main(opt, callbacks=Callbacks()):
     set_logging(RANK)
     if RANK in [-1, 0]:
         print_args(FILE.stem, opt)
-        check_git_status()
-        check_requirements(exclude=['thop'])
+        #check_git_status()
+        #check_requirements(exclude=['thop'])
 
     # Resume
     if opt.resume and not check_wandb_resume(opt) and not opt.evolve:  # resume an interrupted run
