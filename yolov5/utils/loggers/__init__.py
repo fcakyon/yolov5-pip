@@ -38,7 +38,7 @@ except ImportError:
 
 class Loggers():
     # YOLOv5 Loggers class
-    def __init__(self, save_dir=None, weights=None, opt=None, hyp=None, logger=None, include=LOGGERS, mmdet_keys=False):
+    def __init__(self, save_dir=None, weights=None, opt=None, hyp=None, logger=None, include=LOGGERS, mmdet_keys=False, class_names=None):
         self.save_dir = save_dir
         self.weights = weights
         self.opt = opt
@@ -58,6 +58,11 @@ class Loggers():
         for k in LOGGERS:
             setattr(self, k, None)  # init empty logger dictionary
         self.csv = True  # always log to csv
+        self.class_names = class_names
+        if not mmdet_keys:
+            self.class_name_keys = ['metrics/' + name + '_mAP_50' for name in class_names]
+        else:
+            self.class_name_keys = ['val/' + name + '_mAP_50' for name in class_names]
 
         # Message
         if not wandb:
@@ -133,11 +138,11 @@ class Loggers():
 
     def on_fit_epoch_end(self, vals, epoch, best_fitness, fi):
         # Callback runs at the end of each fit (train+val) epoch
-        x = {k: v for k, v in zip(self.keys, vals)}  # dict
+        x = {k: v for k, v in zip(self.keys + self.class_name_keys, vals)}  # dict
         if self.csv:
             file = self.save_dir / 'results.csv'
             n = len(x) + 1  # number of cols
-            s = '' if file.exists() else (('%20s,' * n % tuple(['epoch'] + self.keys)).rstrip(',') + '\n')  # add header
+            s = '' if file.exists() else (('%20s,' * n % tuple(['epoch'] + self.keys + self.class_name_keys)).rstrip(',') + '\n')  # add header
             with open(file, 'a') as f:
                 f.write(s + ('%20.5g,' * n % tuple([epoch] + vals)).rstrip(',') + '\n')
 
@@ -163,13 +168,14 @@ class Loggers():
         # Callback runs on training end
         if plots:
             plot_results(file=self.save_dir / 'results.csv')  # save results.png
-        files = ['results.png', 'confusion_matrix.png', *[f'{x}_curve.png' for x in ('F1', 'PR', 'P', 'R')]]
+        files = ['results.png', 'confusion_matrix.png', *[f'{x}_curve.png' for x in ('F1', 'PR', 'P', 'R')], "results.html"]
         files = [(self.save_dir / f) for f in files if (self.save_dir / f).exists()]  # filter
 
         if self.tb:
             import cv2
             for f in files:
-                self.tb.add_image(f.stem, cv2.imread(str(f))[..., ::-1], epoch, dataformats='HWC')
+                if f.name != "results.html":
+                    self.tb.add_image(f.stem, cv2.imread(str(f))[..., ::-1], epoch, dataformats='HWC')
 
         if self.wandb:
             self.wandb.log({"Results": [wandb.Image(str(f), caption=f.name) for f in files]})
@@ -185,5 +191,9 @@ class Loggers():
 
         if self.neptune and self.neptune.neptune_run:
             for f in files:
-                self.neptune.neptune_run['Results/{}'.format(f)].log(neptune.types.File(str(f)))
+                if f.name == "results.html":
+                    self.neptune.neptune_run['Results/{}'.format(f)].upload(neptune.types.File(str(f)))
+                else:
+                    self.neptune.neptune_run['Results/{}'.format(f)].log(neptune.types.File(str(f)))
+
             self.neptune.finish_run()
