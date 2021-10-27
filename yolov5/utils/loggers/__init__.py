@@ -4,6 +4,7 @@ Logging utils
 """
 
 import os
+from pathlib import Path
 import warnings
 from threading import Thread
 
@@ -63,6 +64,7 @@ class Loggers():
             self.class_name_keys = ['metrics/' + name + '_mAP_50' for name in class_names]
         else:
             self.class_name_keys = ['val/' + name + '_mAP_50' for name in class_names]
+        self.s3_weight_folder = None if not opt.s3_dir else "s3://" + str(Path(opt.s3_dir.replace("s3://","")) / save_dir.name)
 
         # Message
         if not wandb:
@@ -163,6 +165,9 @@ class Loggers():
         if self.wandb:
             if ((epoch + 1) % self.opt.save_period == 0 and not final_epoch) and self.opt.save_period != -1:
                 self.wandb.log_model(last.parent, self.opt, epoch, fi, best_model=best_fitness == fi)
+        if self.neptune and self.neptune.neptune_run and self.s3_weight_folder is not None:
+            if ((epoch + 1) % self.opt.save_period == 0 and not final_epoch) and self.opt.save_period != -1 and best_fitness:
+                self.neptune_run["weight"].track_files(self.s3_weight_folder)
 
     def on_train_end(self, last, best, plots, epoch, results):
         # Callback runs on training end
@@ -195,5 +200,8 @@ class Loggers():
                     self.neptune.neptune_run['Results/{}'.format(f)].upload(neptune.types.File(str(f)))
                 else:
                     self.neptune.neptune_run['Results/{}'.format(f)].log(neptune.types.File(str(f)))
+            
+            if self.s3_weight_folder is not None:
+                self.neptune.neptune_run["weight"].track_files(self.s3_weight_folder)
 
             self.neptune.finish_run()
