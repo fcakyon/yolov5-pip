@@ -46,6 +46,7 @@ from yolov5.utils.loggers.wandb.wandb_utils import check_wandb_resume
 from yolov5.utils.metrics import fitness
 from yolov5.utils.loggers import Loggers
 from yolov5.utils.callbacks import Callbacks
+from yolov5.utils.aws import upload_file_to_s3
 
 LOGGER = logging.getLogger(__name__)
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
@@ -393,6 +394,16 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     if (epoch > 0) and (opt.save_period > 0) and (epoch % opt.save_period == 0):
                         torch.save(ckpt, w / f'epoch{epoch}.pt')
                 del ckpt
+
+                # upload best model to aws s3
+                if opt.s3_dir:
+                    s3_file = str(Path(best.parents[1].name) / "best.pt")
+                    result = upload_file_to_s3(local_file=str(best), s3_dir=opt.s3_dir, s3_file=s3_file)
+                    s3_path = str(Path(opt.s3_dir) / s3_file)
+                    if result:
+                        prefix = colorstr('aws: ')
+                        print(f"{prefix} Best weight has been successfully uploaded to {s3_path}")
+
                 callbacks.run('on_model_save', last, epoch, final_epoch, best_fitness, fi)
 
             # Stop Single-GPU
@@ -433,6 +444,16 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                                             compute_loss=compute_loss)  # val best model with plots
                     if is_coco:
                         callbacks.run('on_fit_epoch_end', list(mloss) + list(results) + lr, epoch, best_fitness, fi)
+
+        # upload best model to aws s3
+        if opt.s3_dir:
+            s3_dir = opt.s3_dir
+            s3_file = str(Path(best.parents[1].name) / "best.pt")
+            result = upload_file_to_s3(local_file=str(best), s3_dir=s3_dir, s3_file=s3_file)
+            s3_path = "s3://" + str(Path(s3_dir.replace("s3://","")) / s3_file)
+            if result:
+                prefix = colorstr('aws: ')
+                print(f"{prefix} Best weight has been successfully uploaded to {s3_path}")
 
         callbacks.run('on_train_end', last, best, plots, epoch, results)
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}")
@@ -488,6 +509,9 @@ def parse_opt(known=False):
     # Neptune AI arguments
     parser.add_argument('--neptune_token', type=str, default="", help='neptune.ai api token')
     parser.add_argument('--neptune_project', type=str, default="", help='https://docs.neptune.ai/api-reference/neptune')
+
+    # AWS arguments
+    parser.add_argument('--s3_dir', type=str, default="", help='aws s3 folder directory to upload best weight')
 
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
     return opt
