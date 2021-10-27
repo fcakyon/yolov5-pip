@@ -177,6 +177,17 @@ Visualize your experiments via [Neptune.AI](https://neptune.ai/):
 $ yolov5 train --data data.yaml --weights yolov5s.pt --neptune_project NAMESPACE/PROJECT_NAME --neptune_token YOUR_NEPTUNE_TOKEN
 ```
 
+Automatically upload weights to AWS S3 (with Neptune.AI artifact tracking integration):
+
+```bash
+export AWS_ACCESS_KEY_ID=YOUR_KEY
+export AWS_SECRET_ACCESS_KEY=YOUR_KEY
+```
+
+```bash
+$ yolov5 train --data data.yaml --weights yolov5s.pt --s3_dir YOUR_S3_FOLDER_DIRECTORY
+```
+
 </details>
 
 <details open>
