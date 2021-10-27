@@ -36,3 +36,5 @@ pycocotools>=2.0  # COCO mAP
 thop  # FLOPs computation
 # CLI
 fire
+# AWS
+boto3>=1.19.1
