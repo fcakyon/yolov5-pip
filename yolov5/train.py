@@ -398,11 +398,11 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 # upload best model to aws s3
                 if opt.s3_dir:
                     s3_file = str(Path(best.parents[1].name) / "best.pt")
+                    LOGGER.info(f"{colorstr('aws:')} Uploading best weight to AWS S3...")
                     result = upload_file_to_s3(local_file=str(best), s3_dir=opt.s3_dir, s3_file=s3_file)
                     s3_path = str(Path(opt.s3_dir) / s3_file)
                     if result:
-                        prefix = colorstr('aws: ')
-                        print(f"{prefix} Best weight has been successfully uploaded to {s3_path}")
+                        LOGGER.info(f"{colorstr('aws:')} Best weight has been successfully uploaded to {s3_path}")
 
                 callbacks.run('on_model_save', last, epoch, final_epoch, best_fitness, fi)
 
@@ -449,11 +449,11 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         if opt.s3_dir:
             s3_dir = opt.s3_dir
             s3_file = str(Path(best.parents[1].name) / "best.pt")
+            LOGGER.info(f"{colorstr('aws:')} Uploading best weight to AWS S3...")
             result = upload_file_to_s3(local_file=str(best), s3_dir=s3_dir, s3_file=s3_file)
             s3_path = "s3://" + str(Path(s3_dir.replace("s3://","")) / s3_file)
             if result:
-                prefix = colorstr('aws: ')
-                print(f"{prefix} Best weight has been successfully uploaded to {s3_path}")
+                LOGGER.info(f"{colorstr('aws:')} Best weight has been successfully uploaded to {s3_path}")
 
         callbacks.run('on_train_end', last, best, plots, epoch, results)
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}")
