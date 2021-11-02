@@ -186,7 +186,7 @@ class Loggers():
             results = []
             for f in files:
                 if f.suffix == ".html":
-                    results.append(wandb.Html(str(f), caption=f.name))
+                    results.append(wandb.Html(str(f)))
                 else:
                     results.append(wandb.Image(str(f), caption=f.name))
                     
