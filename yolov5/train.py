@@ -26,7 +26,6 @@ from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim import Adam, SGD, lr_scheduler
 from tqdm import tqdm
-from sahi.utils.coco import export_coco_as_yolov5_via_yml
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -72,6 +71,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         if "train_json_path" in data_dict:
             is_coco_data = True
     if is_coco_data:
+        from sahi.utils.coco import export_coco_as_yolov5_via_yml
         data = export_coco_as_yolov5_via_yml(yml_path=data, output_dir=save_dir / 'data')
         opt.data = data
 
