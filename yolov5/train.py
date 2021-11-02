@@ -15,6 +15,7 @@ import sys
 import time
 from copy import deepcopy
 from pathlib import Path
+from shutil import copyfile
 
 import numpy as np
 import torch
@@ -25,6 +26,7 @@ from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim import Adam, SGD, lr_scheduler
 from tqdm import tqdm
+from sahi.utils.coco import export_coco_as_yolov5_via_yml
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -62,6 +64,26 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     save_dir, epochs, batch_size, weights, single_cls, evolve, data, cfg, resume, noval, nosave, workers, freeze, = \
         Path(opt.save_dir), opt.epochs, opt.batch_size, opt.weights, opt.single_cls, opt.evolve, opt.data, opt.cfg, \
         opt.resume, opt.noval, opt.nosave, opt.workers, opt.freeze
+
+    # coco to yolov5 conversion
+    is_coco_data = False
+    with open(data, errors='ignore') as f:
+        data_dict = yaml.safe_load(f)  # load data dict
+        if "train_json_path" in data_dict:
+            is_coco_data = True
+    if is_coco_data:
+        data = export_coco_as_yolov5_via_yml(yml_path=data, output_dir=save_dir / 'data')
+        opt.data = data
+
+        w = save_dir / 'data' / 'coco'  # coco dir
+        w.mkdir(parents=True, exist_ok=True)  # make dir
+
+        # copy train.json/val.json and coco_data.yml into data/coco/ folder
+        copyfile(data, str(w / Path(data).name))
+        if "train_json_path" in data_dict and Path(data_dict["train_json_path"]).is_file():
+            copyfile(data_dict["train_json_path"], str(w / Path(data_dict["train_json_path"]).name))
+        if "val_json_path" in data_dict and Path(data_dict["val_json_path"]).is_file():
+            copyfile(data_dict["val_json_path"], str(w / Path(data_dict["val_json_path"]).name))
 
     # Directories
     w = save_dir / 'weights'  # weights dir
@@ -397,7 +419,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
                 # upload best model to aws s3
                 if opt.s3_dir:
-                    s3_file = str(Path(best.parents[1].name) / "best.pt")
+                    s3_file = str(Path(best.parents[1].name) / "weights" / "best.pt")
                     LOGGER.info(f"{colorstr('aws:')} Uploading best weight to AWS S3...")
                     result = upload_file_to_s3(local_file=str(best), s3_dir=opt.s3_dir, s3_file=s3_file)
                     s3_path = str(Path(opt.s3_dir) / s3_file)
@@ -448,7 +470,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         # upload best model to aws s3
         if opt.s3_dir:
             s3_dir = opt.s3_dir
-            s3_file = str(Path(best.parents[1].name) / "best.pt")
+            s3_file = str(Path(best.parents[1].name) / "weights" / "best.pt")
             LOGGER.info(f"{colorstr('aws:')} Uploading best weight to AWS S3...")
             result = upload_file_to_s3(local_file=str(best), s3_dir=s3_dir, s3_file=s3_file)
             s3_path = "s3://" + str(Path(s3_dir.replace("s3://","")) / s3_file)
@@ -502,7 +524,6 @@ def parse_opt(known=False):
 
     # Weights & Biases arguments
     parser.add_argument('--entity', default=None, help='W&B: Entity')
-    parser.add_argument('--upload_dataset', action='store_true', help='W&B: Upload dataset as artifact table')
     parser.add_argument('--bbox_interval', type=int, default=-1, help='W&B: Set bounding-box image logging interval')
     parser.add_argument('--artifact_alias', type=str, default='latest', help='W&B: Version of dataset artifact to use')
 
@@ -511,7 +532,8 @@ def parse_opt(known=False):
     parser.add_argument('--neptune_project', type=str, default="", help='https://docs.neptune.ai/api-reference/neptune')
 
     # AWS arguments
-    parser.add_argument('--s3_dir', type=str, default="", help='aws s3 folder directory to upload best weight')
+    parser.add_argument('--s3_dir', type=str, default="", help='aws s3 folder directory to upload best weight and dataset')
+    parser.add_argument('--upload_dataset', action='store_true', help='upload dataset to aws s3')
 
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
     return opt

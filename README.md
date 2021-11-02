@@ -162,7 +162,7 @@ You can call `yolov5 train`, `yolov5 detect`, `yolov5 val` and `yolov5 export` c
 <details open>
 <summary>Training</summary>
 
-Finetune one of the pretrained YOLOv5 models using your custom `data.yaml`:
+- Finetune one of the pretrained YOLOv5 models using your custom `data.yaml`:
 
 ```bash
 $ yolov5 train --data data.yaml --weights yolov5s.pt --batch-size 16 --img 640
@@ -171,13 +171,27 @@ $ yolov5 train --data data.yaml --weights yolov5s.pt --batch-size 16 --img 640
                                           yolov5x.pt              2
 ```
 
-Visualize your experiments via [Neptune.AI](https://neptune.ai/):
+- Start a training using a COCO formatted dataset:
+
+```yaml
+# data.yml
+train_json_path: "train.json"
+train_image_dir: "train_image_dir/"
+val_json_path: "val.json"
+val_image_dir: "val_image_dir/"
+```
+
+```bash
+$ yolov5 train --data data.yaml --weights yolov5s.pt
+```
+
+- Visualize your experiments via [Neptune.AI](https://neptune.ai/):
 
 ```bash
 $ yolov5 train --data data.yaml --weights yolov5s.pt --neptune_project NAMESPACE/PROJECT_NAME --neptune_token YOUR_NEPTUNE_TOKEN
 ```
 
-Automatically upload weights to AWS S3 (with Neptune.AI artifact tracking integration):
+- Automatically upload weights to AWS S3 (with Neptune.AI artifact tracking integration):
 
 ```bash
 export AWS_ACCESS_KEY_ID=YOUR_KEY
