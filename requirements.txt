@@ -31,7 +31,7 @@ seaborn>=0.11.0
 # Extras --------------------------------------
 # albumentations>=1.0.3
 # Cython  # for pycocotools https://github.com/cocodataset/cocoapi/issues/172
-pycocotools>=2.0  # COCO mAP
+# pycocotools>=2.0  # COCO mAP
 # roboflow
 thop  # FLOPs computation
 # CLI
