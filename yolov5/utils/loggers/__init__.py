@@ -166,8 +166,8 @@ class Loggers():
             if ((epoch + 1) % self.opt.save_period == 0 and not final_epoch) and self.opt.save_period != -1:
                 self.wandb.log_model(last.parent, self.opt, epoch, fi, best_model=best_fitness == fi)
         if self.neptune and self.neptune.neptune_run and self.s3_weight_folder is not None:
-            if ((epoch + 1) % self.opt.save_period == 0 and not final_epoch) and self.opt.save_period != -1 and best_fitness:
-                self.neptune_run["weights"].track_files(self.s3_weight_folder)
+            if not final_epoch and best_fitness == fi:
+                self.neptune.neptune_run["weights"].track_files(self.s3_weight_folder)
 
     def on_train_end(self, last, best, plots, epoch, results):
         # Callback runs on training end
