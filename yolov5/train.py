@@ -15,6 +15,7 @@ import sys
 import time
 from copy import deepcopy
 from pathlib import Path
+from shutil import copyfile
 
 import numpy as np
 import torch
@@ -46,6 +47,7 @@ from yolov5.utils.loggers.wandb.wandb_utils import check_wandb_resume
 from yolov5.utils.metrics import fitness
 from yolov5.utils.loggers import Loggers
 from yolov5.utils.callbacks import Callbacks
+from yolov5.utils.aws import upload_file_to_s3
 
 LOGGER = logging.getLogger(__name__)
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
@@ -61,6 +63,27 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     save_dir, epochs, batch_size, weights, single_cls, evolve, data, cfg, resume, noval, nosave, workers, freeze, = \
         Path(opt.save_dir), opt.epochs, opt.batch_size, opt.weights, opt.single_cls, opt.evolve, opt.data, opt.cfg, \
         opt.resume, opt.noval, opt.nosave, opt.workers, opt.freeze
+
+    # coco to yolov5 conversion
+    is_coco_data = False
+    with open(data, errors='ignore') as f:
+        data_dict = yaml.safe_load(f)  # load data dict
+        if "train_json_path" in data_dict:
+            is_coco_data = True
+    if is_coco_data:
+        from sahi.utils.coco import export_coco_as_yolov5_via_yml
+        data = export_coco_as_yolov5_via_yml(yml_path=data, output_dir=save_dir / 'data')
+        opt.data = data
+
+        w = save_dir / 'data' / 'coco'  # coco dir
+        w.mkdir(parents=True, exist_ok=True)  # make dir
+
+        # copy train.json/val.json and coco_data.yml into data/coco/ folder
+        copyfile(data, str(w / Path(data).name))
+        if "train_json_path" in data_dict and Path(data_dict["train_json_path"]).is_file():
+            copyfile(data_dict["train_json_path"], str(w / Path(data_dict["train_json_path"]).name))
+        if "val_json_path" in data_dict and Path(data_dict["val_json_path"]).is_file():
+            copyfile(data_dict["val_json_path"], str(w / Path(data_dict["val_json_path"]).name))
 
     # Directories
     w = save_dir / 'weights'  # weights dir
@@ -393,6 +416,16 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     if (epoch > 0) and (opt.save_period > 0) and (epoch % opt.save_period == 0):
                         torch.save(ckpt, w / f'epoch{epoch}.pt')
                 del ckpt
+
+                # upload best model to aws s3
+                if opt.s3_dir:
+                    s3_file = str(Path(best.parents[1].name) / "weights" / "best.pt")
+                    LOGGER.info(f"{colorstr('aws:')} Uploading best weight to AWS S3...")
+                    result = upload_file_to_s3(local_file=str(best), s3_dir=opt.s3_dir, s3_file=s3_file)
+                    s3_path = str(Path(opt.s3_dir) / s3_file)
+                    if result:
+                        LOGGER.info(f"{colorstr('aws:')} Best weight has been successfully uploaded to {s3_path}")
+
                 callbacks.run('on_model_save', last, epoch, final_epoch, best_fitness, fi)
 
             # Stop Single-GPU
@@ -433,6 +466,16 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                                             compute_loss=compute_loss)  # val best model with plots
                     if is_coco:
                         callbacks.run('on_fit_epoch_end', list(mloss) + list(results) + lr, epoch, best_fitness, fi)
+
+        # upload best model to aws s3
+        if opt.s3_dir:
+            s3_dir = opt.s3_dir
+            s3_file = str(Path(best.parents[1].name) / "weights" / "best.pt")
+            LOGGER.info(f"{colorstr('aws:')} Uploading best weight to AWS S3...")
+            result = upload_file_to_s3(local_file=str(best), s3_dir=s3_dir, s3_file=s3_file)
+            s3_path = "s3://" + str(Path(s3_dir.replace("s3://","")) / s3_file)
+            if result:
+                LOGGER.info(f"{colorstr('aws:')} Best weight has been successfully uploaded to {s3_path}")
 
         callbacks.run('on_train_end', last, best, plots, epoch, results)
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}")
@@ -481,13 +524,16 @@ def parse_opt(known=False):
 
     # Weights & Biases arguments
     parser.add_argument('--entity', default=None, help='W&B: Entity')
-    parser.add_argument('--upload_dataset', action='store_true', help='W&B: Upload dataset as artifact table')
     parser.add_argument('--bbox_interval', type=int, default=-1, help='W&B: Set bounding-box image logging interval')
     parser.add_argument('--artifact_alias', type=str, default='latest', help='W&B: Version of dataset artifact to use')
 
     # Neptune AI arguments
     parser.add_argument('--neptune_token', type=str, default="", help='neptune.ai api token')
     parser.add_argument('--neptune_project', type=str, default="", help='https://docs.neptune.ai/api-reference/neptune')
+
+    # AWS arguments
+    parser.add_argument('--s3_dir', type=str, default="", help='aws s3 folder directory to upload best weight and dataset')
+    parser.add_argument('--upload_dataset', action='store_true', help='upload dataset to aws s3')
 
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
     return opt

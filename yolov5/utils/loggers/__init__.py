@@ -4,6 +4,7 @@ Logging utils
 """
 
 import os
+from pathlib import Path
 import warnings
 from threading import Thread
 
@@ -63,7 +64,8 @@ class Loggers():
             self.class_name_keys = ['metrics/' + name + '_mAP_50' for name in class_names]
         else:
             self.class_name_keys = ['val/' + name + '_mAP_50' for name in class_names]
-
+        self.s3_weight_folder = None if not opt.s3_dir else "s3://" + str(Path(opt.s3_dir.replace("s3://","")) / save_dir.name / "weights")
+        
         # Message
         if not wandb:
             prefix = colorstr('Weights & Biases: ')
@@ -163,6 +165,9 @@ class Loggers():
         if self.wandb:
             if ((epoch + 1) % self.opt.save_period == 0 and not final_epoch) and self.opt.save_period != -1:
                 self.wandb.log_model(last.parent, self.opt, epoch, fi, best_model=best_fitness == fi)
+        if self.neptune and self.neptune.neptune_run and self.s3_weight_folder is not None:
+            if not final_epoch and best_fitness == fi:
+                self.neptune.neptune_run["weights"].track_files(self.s3_weight_folder)
 
     def on_train_end(self, last, best, plots, epoch, results):
         # Callback runs on training end
@@ -174,11 +179,18 @@ class Loggers():
         if self.tb:
             import cv2
             for f in files:
-                if f.name != "results.html":
+                if f.suffix != ".html":
                     self.tb.add_image(f.stem, cv2.imread(str(f))[..., ::-1], epoch, dataformats='HWC')
 
         if self.wandb:
-            self.wandb.log({"Results": [wandb.Image(str(f), caption=f.name) for f in files]})
+            results = []
+            for f in files:
+                if f.suffix == ".html":
+                    results.append(wandb.Html(str(f)))
+                else:
+                    results.append(wandb.Image(str(f), caption=f.name))
+                    
+            self.wandb.log({"Results": results})
             # Calling wandb.log. TODO: Refactor this into WandbLogger.log_model
             if not self.opt.evolve:
                 wandb.log_artifact(str(best if best.exists() else last), type='model',
@@ -191,9 +203,12 @@ class Loggers():
 
         if self.neptune and self.neptune.neptune_run:
             for f in files:
-                if f.name == "results.html":
+                if f.suffix == ".html":
                     self.neptune.neptune_run['Results/{}'.format(f)].upload(neptune.types.File(str(f)))
                 else:
                     self.neptune.neptune_run['Results/{}'.format(f)].log(neptune.types.File(str(f)))
+
+            if self.s3_weight_folder is not None:
+                self.neptune.neptune_run["weights"].track_files(self.s3_weight_folder)
 
             self.neptune.finish_run()

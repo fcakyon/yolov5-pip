@@ -36,3 +36,7 @@ seaborn>=0.11.0
 thop  # FLOPs computation
 # CLI
 fire
+# AWS
+boto3>=1.19.1
+# coco to yolov5 conversion
+sahi>=0.8.8
