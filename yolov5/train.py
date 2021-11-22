@@ -89,6 +89,10 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             updated_data_dict["val_json_path"] = data_dict["val_json_path"]
             updated_data_dict["train_image_dir"] = data_dict["train_image_dir"]
             updated_data_dict["val_image_dir"] = data_dict["val_image_dir"]
+            if data_dict.get("yolo_s3_data_dir")is not None:
+                updated_data_dict["yolo_s3_data_dir"] = data_dict["yolo_s3_data_dir"]
+            if data_dict.get("coco_s3_data_dir")is not None:
+                updated_data_dict["coco_s3_data_dir"] = data_dict["coco_s3_data_dir"]
         with open(data, 'w') as f:
             yaml.dump(updated_data_dict, f)
 
@@ -96,7 +100,6 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         w.mkdir(parents=True, exist_ok=True)  # make dir
 
         # copy train.json/val.json and coco_data.yml into data/coco/ folder
-        copyfile(data, str(w / Path(data).name))
         if "train_json_path" in data_dict and Path(data_dict["train_json_path"]).is_file():
             copyfile(data_dict["train_json_path"], str(w / "train.json"))
         if "val_json_path" in data_dict and Path(data_dict["val_json_path"]).is_file():
@@ -137,7 +140,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         with open(data, errors='ignore') as f:
             data_dict = yaml.safe_load(f)  # load data dict
         # upload yolo formatted data to s3
-        s3_folder = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / 'data')
+        s3_folder = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / 'data').replace(os.sep, '/')
         LOGGER.info(f"{colorstr('aws:')} Uploading yolo formatted dataset to {s3_folder}")
         s3_file = s3_folder + "/data.yaml"
         result = upload_file_to_s3(local_file=opt.data, s3_file=s3_file)
@@ -452,7 +455,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
                 # upload best model to aws s3
                 if opt.s3_upload_dir:
-                    s3_file = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / "weights" / "best.pt")
+                    s3_file = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / "weights" / "best.pt").replace(os.sep, '/')
                     LOGGER.info(f"{colorstr('aws:')} Uploading best weight to AWS S3...")
                     result = upload_file_to_s3(local_file=str(best), s3_file=s3_file)
                     if result:
@@ -501,7 +504,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
         # upload best model to aws s3
         if opt.s3_upload_dir:
-            s3_file = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / "weights" / "best.pt")
+            s3_file = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / "weights" / "best.pt").replace(os.sep, '/')
             LOGGER.info(f"{colorstr('aws:')} Uploading best weight to AWS S3...")
             result = upload_file_to_s3(local_file=str(best), s3_file=s3_file)
             
