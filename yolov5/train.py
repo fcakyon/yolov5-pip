@@ -47,7 +47,7 @@ from yolov5.utils.loggers.wandb.wandb_utils import check_wandb_resume
 from yolov5.utils.metrics import fitness
 from yolov5.utils.loggers import Loggers
 from yolov5.utils.callbacks import Callbacks
-from yolov5.utils.aws import upload_file_to_s3
+from yolov5.utils.aws import upload_file_to_s3, upload_folder_to_s3
 
 LOGGER = logging.getLogger(__name__)
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
@@ -66,14 +66,31 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
     # coco to yolov5 conversion
     is_coco_data = False
-    with open(data, errors='ignore') as f:
+    has_yolo_s3_data_dir = False
+    with open(opt.data, errors='ignore') as f:
         data_dict = yaml.safe_load(f)  # load data dict
-        if "train_json_path" in data_dict:
+        if data_dict.get("train_json_path") is not None:
             is_coco_data = True
+        if data_dict.get("yolo_s3_data_dir") is not None:
+            has_yolo_s3_data_dir = True 
+
+    if has_yolo_s3_data_dir and opt.upload_dataset:
+        raise ValueError("'--upload_dataset' argument cannot be passed when 'yolo_s3_data_dir' field is not empty in 'data.yaml'.")
+
     if is_coco_data:
         from sahi.utils.coco import export_coco_as_yolov5_via_yml
         data = export_coco_as_yolov5_via_yml(yml_path=data, output_dir=save_dir / 'data')
         opt.data = data
+
+        # add coco fields to data.yaml
+        with open(data, errors='ignore') as f:
+            updated_data_dict = yaml.safe_load(f)  # load data dict
+            updated_data_dict["train_json_path"] = data_dict["train_json_path"]
+            updated_data_dict["val_json_path"] = data_dict["val_json_path"]
+            updated_data_dict["train_image_dir"] = data_dict["train_image_dir"]
+            updated_data_dict["val_image_dir"] = data_dict["val_image_dir"]
+        with open(data, 'w') as f:
+            yaml.dump(updated_data_dict, f)
 
         w = save_dir / 'data' / 'coco'  # coco dir
         w.mkdir(parents=True, exist_ok=True)  # make dir
@@ -81,9 +98,9 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         # copy train.json/val.json and coco_data.yml into data/coco/ folder
         copyfile(data, str(w / Path(data).name))
         if "train_json_path" in data_dict and Path(data_dict["train_json_path"]).is_file():
-            copyfile(data_dict["train_json_path"], str(w / Path(data_dict["train_json_path"]).name))
+            copyfile(data_dict["train_json_path"], str(w / "train.json"))
         if "val_json_path" in data_dict and Path(data_dict["val_json_path"]).is_file():
-            copyfile(data_dict["val_json_path"], str(w / Path(data_dict["val_json_path"]).name))
+            copyfile(data_dict["val_json_path"], str(w / "val.json"))
 
     # Directories
     w = save_dir / 'weights'  # weights dir
@@ -114,6 +131,22 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     names = ['item'] if single_cls and len(data_dict['names']) != 1 else data_dict['names']  # class names
     assert len(names) == nc, f'{len(names)} names found for nc={nc} dataset in {data}'  # check
     is_coco = data.endswith('coco.yaml') and nc == 80  # COCO dataset
+
+    # upload dataset to s3
+    if opt.upload_dataset and opt.s3_upload_dir:
+        with open(data, errors='ignore') as f:
+            data_dict = yaml.safe_load(f)  # load data dict
+        # upload yolo formatted data to s3
+        s3_folder = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / 'data')
+        LOGGER.info(f"{colorstr('aws:')} Uploading yolo formatted dataset to {s3_folder}")
+        s3_file = s3_folder + "/data.yaml"
+        result = upload_file_to_s3(local_file=opt.data, s3_file=s3_file)
+        s3_folder_train = s3_folder + "/train/"
+        result = upload_folder_to_s3(local_folder=data_dict["train"], s3_folder=s3_folder_train)
+        s3_folder_val = s3_folder + "/val/"
+        result = upload_folder_to_s3(local_folder=data_dict["val"], s3_folder=s3_folder_val)
+        if result:
+            LOGGER.info(f"{colorstr('aws:')} Dataset has been successfully uploaded to {s3_folder}")
 
     # Loggers
     if RANK in [-1, 0]:
@@ -418,13 +451,12 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 del ckpt
 
                 # upload best model to aws s3
-                if opt.s3_dir:
-                    s3_file = str(Path(best.parents[1].name) / "weights" / "best.pt")
+                if opt.s3_upload_dir:
+                    s3_file = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / "weights" / "best.pt")
                     LOGGER.info(f"{colorstr('aws:')} Uploading best weight to AWS S3...")
-                    result = upload_file_to_s3(local_file=str(best), s3_dir=opt.s3_dir, s3_file=s3_file)
-                    s3_path = str(Path(opt.s3_dir) / s3_file)
+                    result = upload_file_to_s3(local_file=str(best), s3_file=s3_file)
                     if result:
-                        LOGGER.info(f"{colorstr('aws:')} Best weight has been successfully uploaded to {s3_path}")
+                        LOGGER.info(f"{colorstr('aws:')} Best weight has been successfully uploaded to {s3_file}")
 
                 callbacks.run('on_model_save', last, epoch, final_epoch, best_fitness, fi)
 
@@ -468,14 +500,13 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                         callbacks.run('on_fit_epoch_end', list(mloss) + list(results) + lr, epoch, best_fitness, fi)
 
         # upload best model to aws s3
-        if opt.s3_dir:
-            s3_dir = opt.s3_dir
-            s3_file = str(Path(best.parents[1].name) / "weights" / "best.pt")
+        if opt.s3_upload_dir:
+            s3_file = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / "weights" / "best.pt")
             LOGGER.info(f"{colorstr('aws:')} Uploading best weight to AWS S3...")
-            result = upload_file_to_s3(local_file=str(best), s3_dir=s3_dir, s3_file=s3_file)
-            s3_path = "s3://" + str(Path(s3_dir.replace("s3://","")) / s3_file)
+            result = upload_file_to_s3(local_file=str(best), s3_file=s3_file)
+            
             if result:
-                LOGGER.info(f"{colorstr('aws:')} Best weight has been successfully uploaded to {s3_path}")
+                LOGGER.info(f"{colorstr('aws:')} Best weight has been successfully uploaded to {s3_file}")
 
         callbacks.run('on_train_end', last, best, plots, epoch, results)
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}")
@@ -532,7 +563,7 @@ def parse_opt(known=False):
     parser.add_argument('--neptune_project', type=str, default="", help='https://docs.neptune.ai/api-reference/neptune')
 
     # AWS arguments
-    parser.add_argument('--s3_dir', type=str, default="", help='aws s3 folder directory to upload best weight and dataset')
+    parser.add_argument('--s3_upload_dir', type=str, default="", help='aws s3 folder directory to upload best weight and dataset')
     parser.add_argument('--upload_dataset', action='store_true', help='upload dataset to aws s3')
 
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
