@@ -199,7 +199,7 @@ export AWS_SECRET_ACCESS_KEY=YOUR_KEY
 ```
 
 ```bash
-$ yolov5 train --data data.yaml --weights yolov5s.pt --s3_upload_dir YOUR_S3_FOLDER_DIRECTORY
+$ yolov5 train --data data.yaml --weights yolov5s.pt --s3_upload_dir YOUR_S3_FOLDER_DIRECTORY --upload_dataset
 ```
 
 - Add `yolo_s3_data_dir` into `data.yaml` to match Neptune dataset with a present dataset in S3.
