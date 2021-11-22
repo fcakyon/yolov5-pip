@@ -25,6 +25,7 @@ class NeptuneLogger:
             if self.job_type == 'Training':
                 if not opt.resume:
                     self.neptune_run["opt"] = vars(opt)
+                    self.track_dataset(opt)
                 self.data_dict = self.setup_training(data_dict)
             prefix = colorstr('neptune: ')
             print(f"{prefix}NeptuneAI logging initiated successfully.")
@@ -33,6 +34,21 @@ class NeptuneLogger:
             #print(
             #    f"{prefix}Install NeptuneAI for YOLOv5 logging with 'pip install neptune-client' (recommended)")
             pass
+
+    def track_dataset(self, opt):
+        has_yolo_s3_data_dir = False
+        with open(opt.data, errors='ignore') as f:
+            data_dict = yaml.safe_load(f)  # load data dict
+            if data_dict.get("yolo_s3_data_dir") is not None:
+                has_yolo_s3_data_dir = True 
+
+        if has_yolo_s3_data_dir:
+            yolo_s3_data_dir = data_dict["yolo_s3_data_dir"]
+        elif opt.upload_dataset and opt.s3_upload_dir:
+            yolo_s3_data_dir = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / Path(opt.save_dir).name / 'data')
+
+        self.neptune_run["data"].track_files(yolo_s3_data_dir)
+
 
     def setup_training(self, data_dict):
         self.log_dict, self.current_epoch = {}, 0  # Logging Constants

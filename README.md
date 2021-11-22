@@ -185,13 +185,13 @@ val_image_dir: "val_image_dir/"
 $ yolov5 train --data data.yaml --weights yolov5s.pt
 ```
 
-- Visualize your experiments via [Neptune.AI](https://neptune.ai/):
+- Visualize your experiments via [Neptune.AI](https://neptune.ai/) (neptune-client>=0.10.10 required):
 
 ```bash
 $ yolov5 train --data data.yaml --weights yolov5s.pt --neptune_project NAMESPACE/PROJECT_NAME --neptune_token YOUR_NEPTUNE_TOKEN
 ```
 
-- Automatically upload weights to AWS S3 (with Neptune.AI artifact tracking integration):
+- Automatically upload weights and datasets to AWS S3 (with Neptune.AI artifact tracking integration):
 
 ```bash
 export AWS_ACCESS_KEY_ID=YOUR_KEY
@@ -199,7 +199,18 @@ export AWS_SECRET_ACCESS_KEY=YOUR_KEY
 ```
 
 ```bash
-$ yolov5 train --data data.yaml --weights yolov5s.pt --s3_dir YOUR_S3_FOLDER_DIRECTORY
+$ yolov5 train --data data.yaml --weights yolov5s.pt --s3_upload_dir YOUR_S3_FOLDER_DIRECTORY
+```
+
+- Add `yolo_s3_data_dir` into `data.yaml` to match Neptune dataset with a present dataset in S3.
+
+```yaml
+# data.yml
+train_json_path: "train.json"
+train_image_dir: "train_image_dir/"
+val_json_path: "val.json"
+val_image_dir: "val_image_dir/"
+yolo_s3_data_dir: s3://bucket_name/data_dir/
 ```
 
 </details>
