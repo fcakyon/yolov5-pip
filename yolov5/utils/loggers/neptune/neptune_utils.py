@@ -47,8 +47,8 @@ class NeptuneLogger:
             yolo_s3_data_dir = data_dict["yolo_s3_data_dir"]
         elif opt.upload_dataset and opt.s3_upload_dir:
             yolo_s3_data_dir = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / Path(opt.save_dir).name / 'data').replace(os.sep, '/')
-
-        self.neptune_run["data"].track_files(yolo_s3_data_dir)
+        if yolo_s3_data_dir:
+            self.neptune_run["data"].track_files(yolo_s3_data_dir)
 
 
     def setup_training(self, data_dict):
