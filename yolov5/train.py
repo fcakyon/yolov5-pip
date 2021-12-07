@@ -565,11 +565,11 @@ def parse_opt(known=False):
     parser.add_argument('--artifact_alias', type=str, default='latest', help='W&B: Version of dataset artifact to use')
 
     # Neptune AI arguments
-    parser.add_argument('--neptune_token', type=str, default="", help='neptune.ai api token')
-    parser.add_argument('--neptune_project', type=str, default="", help='https://docs.neptune.ai/api-reference/neptune')
+    parser.add_argument('--neptune_token', type=str, default=None, help='neptune.ai api token')
+    parser.add_argument('--neptune_project', type=str, default=None, help='https://docs.neptune.ai/api-reference/neptune')
 
     # AWS arguments
-    parser.add_argument('--s3_upload_dir', type=str, default="", help='aws s3 folder directory to upload best weight and dataset')
+    parser.add_argument('--s3_upload_dir', type=str, default=None, help='aws s3 folder directory to upload best weight and dataset')
     parser.add_argument('--upload_dataset', action='store_true', help='upload dataset to aws s3')
 
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
