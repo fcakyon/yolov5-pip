@@ -6,10 +6,10 @@ import wandb
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[3]  # YOLOv5 root directory
 
-from yolov5.train import train, parse_opt
+from yolov5.train import parse_opt, train
+from yolov5.utils.callbacks import Callbacks
 from yolov5.utils.general import increment_path
 from yolov5.utils.torch_utils import select_device
-from yolov5.utils.callbacks import Callbacks
 
 
 def sweep():

@@ -13,8 +13,7 @@ from tqdm import tqdm
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[3]  # YOLOv5 root directory
 
-from yolov5.utils.datasets import LoadImagesAndLabels
-from yolov5.utils.datasets import img2label_paths
+from yolov5.utils.datasets import LoadImagesAndLabels, img2label_paths
 from yolov5.utils.general import check_dataset, check_file
 
 RANK = int(os.getenv('RANK', -1))

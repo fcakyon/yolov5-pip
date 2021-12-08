@@ -1,13 +1,14 @@
-import os
 import concurrent.futures
-from pathlib import Path
 import logging
+import os
+from pathlib import Path
+
 import boto3
+import numpy as np
 from botocore.exceptions import NoCredentialsError
 from tqdm import tqdm
-import numpy as np
-from yolov5.utils.general import colorstr
 
+from yolov5.utils.general import colorstr
 
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")

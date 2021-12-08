@@ -17,7 +17,8 @@ import seaborn as sn
 import torch
 from PIL import Image, ImageDraw, ImageFont
 
-from yolov5.utils.general import user_config_dir, is_ascii, is_chinese, xywh2xyxy, xyxy2xywh
+from yolov5.utils.general import (is_ascii, is_chinese, user_config_dir,
+                                  xywh2xyxy, xyxy2xywh)
 from yolov5.utils.metrics import fitness
 
 # Settings

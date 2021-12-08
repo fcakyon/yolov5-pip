@@ -12,6 +12,7 @@ import platform
 import random
 import re
 import signal
+import sys
 import time
 import urllib
 from itertools import repeat
@@ -27,7 +28,6 @@ import pkg_resources as pkg
 import torch
 import torchvision
 import yaml
-import sys
 
 from yolov5.utils.downloads import gsutil_getsize
 from yolov5.utils.metrics import box_iou, fitness

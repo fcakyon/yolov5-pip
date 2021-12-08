@@ -12,7 +12,7 @@ import random
 import shutil
 import time
 from itertools import repeat
-from multiprocessing.pool import ThreadPool, Pool
+from multiprocessing.pool import Pool, ThreadPool
 from pathlib import Path
 from threading import Thread
 from zipfile import ZipFile
@@ -22,13 +22,17 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import yaml
-from PIL import Image, ExifTags
+from PIL import ExifTags, Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from yolov5.utils.augmentations import Albumentations, augment_hsv, copy_paste, letterbox, mixup, random_perspective
-from yolov5.utils.general import check_dataset, check_requirements, check_yaml, clean_str, segments2boxes, \
-    xywh2xyxy, xywhn2xyxy, xyxy2xywhn, xyn2xy, yolov5_in_syspath
+from yolov5.utils.augmentations import (Albumentations, augment_hsv,
+                                        copy_paste, letterbox, mixup,
+                                        random_perspective)
+from yolov5.utils.general import (check_dataset, check_requirements,
+                                  check_yaml, clean_str, segments2boxes,
+                                  xyn2xy, xywh2xyxy, xywhn2xyxy, xyxy2xywhn,
+                                  yolov5_in_syspath)
 from yolov5.utils.torch_utils import torch_distributed_zero_first
 
 # Parameters

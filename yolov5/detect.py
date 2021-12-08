@@ -21,9 +21,13 @@ ROOT = FILE.parents[0]  # YOLOv5 root directory
 
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.datasets import LoadImages, LoadStreams
-from yolov5.utils.general import apply_classifier, check_img_size, check_imshow, check_requirements, check_suffix, colorstr, \
-    increment_path, non_max_suppression, print_args, save_one_box, scale_coords, set_logging, \
-    strip_optimizer, xyxy2xywh, yolov5_in_syspath
+from yolov5.utils.general import (apply_classifier, check_img_size,
+                                  check_imshow, check_requirements,
+                                  check_suffix, colorstr, increment_path,
+                                  non_max_suppression, print_args,
+                                  save_one_box, scale_coords, set_logging,
+                                  strip_optimizer, xyxy2xywh,
+                                  yolov5_in_syspath)
 from yolov5.utils.plots import Annotator, colors
 from yolov5.utils.torch_utils import load_classifier, select_device, time_sync
 

@@ -39,8 +39,9 @@ from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import Detect
 from yolov5.utils.activations import SiLU
 from yolov5.utils.datasets import LoadImages
-from yolov5.utils.general import colorstr, check_dataset, check_img_size, check_requirements, file_size, print_args, \
-    set_logging, url2file
+from yolov5.utils.general import (check_dataset, check_img_size,
+                                  check_requirements, colorstr, file_size,
+                                  print_args, set_logging, url2file)
 from yolov5.utils.torch_utils import select_device
 
 
@@ -131,8 +132,8 @@ def export_saved_model(model, im, file, dynamic,
     keras_model = None
     try:
         import tensorflow as tf
+        from models.tf import TFDetect, TFModel
         from tensorflow import keras
-        from models.tf import TFModel, TFDetect
 
         print(f'\n{prefix} starting export with tensorflow {tf.__version__}...')
         f = str(file).replace('.pt', '_saved_model')
@@ -159,7 +160,8 @@ def export_pb(keras_model, im, file, prefix=colorstr('TensorFlow GraphDef:')):
     # YOLOv5 TensorFlow GraphDef *.pb export https://github.com/leimao/Frozen_Graph_TensorFlow
     try:
         import tensorflow as tf
-        from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
+        from tensorflow.python.framework.convert_to_constants import \
+            convert_variables_to_constants_v2
 
         print(f'\n{prefix} starting export with tensorflow {tf.__version__}...')
         f = file.with_suffix('.pb')
@@ -212,6 +214,7 @@ def export_tfjs(keras_model, im, file, prefix=colorstr('TensorFlow.js:')):
     try:
         #check_requirements(('tensorflowjs',))
         import re
+
         import tensorflowjs as tfjs
 
         print(f'\n{prefix} starting export with tensorflowjs {tfjs.__version__}...')
