@@ -4,8 +4,8 @@ Logging utils
 """
 
 import os
-from pathlib import Path
 import warnings
+from pathlib import Path
 from threading import Thread
 
 import pkg_resources as pkg
@@ -13,8 +13,8 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from yolov5.utils.general import colorstr, emojis
-from yolov5.utils.loggers.wandb.wandb_utils import WandbLogger
 from yolov5.utils.loggers.neptune.neptune_utils import NeptuneLogger
+from yolov5.utils.loggers.wandb.wandb_utils import WandbLogger
 from yolov5.utils.plots import plot_images, plot_results
 from yolov5.utils.torch_utils import de_parallel
 

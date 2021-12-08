@@ -24,7 +24,7 @@ import torch.nn as nn
 import yaml
 from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.optim import Adam, SGD, lr_scheduler
+from torch.optim import SGD, Adam, lr_scheduler
 from tqdm import tqdm
 
 FILE = Path(__file__).resolve()
@@ -34,20 +34,26 @@ import yolov5.val as val  # for end-of-epoch mAP
 from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import Model
 from yolov5.utils.autoanchor import check_anchors
-from yolov5.utils.datasets import create_dataloader
-from yolov5.utils.general import labels_to_class_weights, increment_path, labels_to_image_weights, init_seeds, \
-    strip_optimizer, get_latest_run, check_dataset, check_git_status, check_img_size, check_requirements, \
-    check_file, check_yaml, check_suffix, print_args, print_mutation, set_logging, one_cycle, colorstr, methods, yolov5_in_syspath
-from yolov5.utils.downloads import attempt_download
-from yolov5.utils.loss import ComputeLoss
-from yolov5.utils.plots import plot_labels, plot_evolve
-from yolov5.utils.torch_utils import EarlyStopping, ModelEMA, de_parallel, intersect_dicts, select_device, \
-    torch_distributed_zero_first
-from yolov5.utils.loggers.wandb.wandb_utils import check_wandb_resume
-from yolov5.utils.metrics import fitness
-from yolov5.utils.loggers import Loggers
-from yolov5.utils.callbacks import Callbacks
 from yolov5.utils.aws import upload_file_to_s3, upload_folder_to_s3
+from yolov5.utils.callbacks import Callbacks
+from yolov5.utils.datasets import create_dataloader
+from yolov5.utils.downloads import attempt_download
+from yolov5.utils.general import (check_dataset, check_file, check_git_status,
+                                  check_img_size, check_requirements,
+                                  check_suffix, check_yaml, colorstr,
+                                  get_latest_run, increment_path, init_seeds,
+                                  labels_to_class_weights,
+                                  labels_to_image_weights, methods, one_cycle,
+                                  print_args, print_mutation, set_logging,
+                                  strip_optimizer, yolov5_in_syspath)
+from yolov5.utils.loggers import Loggers
+from yolov5.utils.loggers.wandb.wandb_utils import check_wandb_resume
+from yolov5.utils.loss import ComputeLoss
+from yolov5.utils.metrics import fitness
+from yolov5.utils.plots import plot_evolve, plot_labels
+from yolov5.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel,
+                                      intersect_dicts, select_device,
+                                      torch_distributed_zero_first)
 
 LOGGER = logging.getLogger(__name__)
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html

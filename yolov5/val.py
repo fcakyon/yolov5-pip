@@ -14,22 +14,25 @@ from pathlib import Path
 from threading import Thread
 
 import numpy as np
+import pandas as pd
 import torch
 from tqdm import tqdm
-import pandas as pd
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
 
 from yolov5.models.experimental import attempt_load
+from yolov5.utils.callbacks import Callbacks
 from yolov5.utils.datasets import create_dataloader
-from yolov5.utils.general import coco80_to_coco91_class, check_dataset, check_img_size, check_requirements, \
-    check_suffix, check_yaml, box_iou, non_max_suppression, scale_coords, xyxy2xywh, xywh2xyxy, set_logging, \
-    increment_path, colorstr, print_args
-from yolov5.utils.metrics import ap_per_class, ConfusionMatrix
+from yolov5.utils.general import (box_iou, check_dataset, check_img_size,
+                                  check_requirements, check_suffix, check_yaml,
+                                  coco80_to_coco91_class, colorstr,
+                                  increment_path, non_max_suppression,
+                                  print_args, scale_coords, set_logging,
+                                  xywh2xyxy, xyxy2xywh)
+from yolov5.utils.metrics import ConfusionMatrix, ap_per_class
 from yolov5.utils.plots import output_to_target, plot_images, plot_val_study
 from yolov5.utils.torch_utils import select_device, time_sync
-from yolov5.utils.callbacks import Callbacks
 
 
 def save_one_txt(predn, save_conf, shape, file):

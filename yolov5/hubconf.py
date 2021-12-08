@@ -27,10 +27,11 @@ def _create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbo
     """
     from pathlib import Path
 
-    from yolov5.models.yolo import Model
     from yolov5.models.experimental import attempt_load
-    from yolov5.utils.general import check_requirements, set_logging, yolov5_in_syspath
+    from yolov5.models.yolo import Model
     from yolov5.utils.downloads import attempt_download
+    from yolov5.utils.general import (check_requirements, set_logging,
+                                      yolov5_in_syspath)
     from yolov5.utils.torch_utils import select_device
 
     file = Path(__file__).resolve()
@@ -126,10 +127,11 @@ if __name__ == '__main__':
     # model = custom(path='path/to/model.pt')  # custom
 
     # Verify inference
+    from pathlib import Path
+
     import cv2
     import numpy as np
     from PIL import Image
-    from pathlib import Path
 
     imgs = ['data/images/zidane.jpg',  # filename
             Path('data/images/zidane.jpg'),  # Path

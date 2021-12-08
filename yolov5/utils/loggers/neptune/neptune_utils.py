@@ -1,8 +1,9 @@
+import os
 from pathlib import Path
 
-from yolov5.utils.general import colorstr
 import yaml
-import os
+
+from yolov5.utils.general import colorstr
 
 try:
     import neptune.new as neptune

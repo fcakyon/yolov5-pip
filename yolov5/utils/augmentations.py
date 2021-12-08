@@ -10,7 +10,8 @@ import random
 import cv2
 import numpy as np
 
-from yolov5.utils.general import colorstr, segment2box, resample_segments, check_version
+from yolov5.utils.general import (check_version, colorstr, resample_segments,
+                                  segment2box)
 from yolov5.utils.metrics import bbox_ioa
 
 

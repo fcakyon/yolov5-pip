@@ -8,8 +8,8 @@ import torch
 import torch.nn as nn
 
 from yolov5.models.common import Conv
-from yolov5.utils.general import yolov5_in_syspath
 from yolov5.utils.downloads import attempt_download
+from yolov5.utils.general import yolov5_in_syspath
 
 
 class CrossConv(nn.Module):

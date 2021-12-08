@@ -25,11 +25,12 @@ import torch
 import torch.nn as nn
 from tensorflow import keras
 
-from yolov5.models.common import Bottleneck, BottleneckCSP, Concat, Conv, C3, DWConv, Focus, SPP, SPPF, autopad
+from yolov5.models.common import (C3, SPP, SPPF, Bottleneck, BottleneckCSP,
+                                  Concat, Conv, DWConv, Focus, autopad)
 from yolov5.models.experimental import CrossConv, MixConv2d, attempt_load
 from yolov5.models.yolo import Detect
-from yolov5.utils.general import make_divisible, print_args, set_logging
 from yolov5.utils.activations import SiLU
+from yolov5.utils.general import make_divisible, print_args, set_logging
 
 LOGGER = logging.getLogger(__name__)
 
