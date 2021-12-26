@@ -18,7 +18,7 @@ from yolov5.models.common import *
 from yolov5.models.experimental import *
 from yolov5.utils.autoanchor import check_anchor_order
 from yolov5.utils.general import (check_yaml, make_divisible, print_args,
-                                  set_logging)
+                                  set_logging, check_version)
 from yolov5.utils.plots import feature_visualization
 from yolov5.utils.torch_utils import (copy_attr, fuse_conv_and_bn,
                                       initialize_weights, model_info,
