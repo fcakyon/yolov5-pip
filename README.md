@@ -70,7 +70,7 @@ results = model(img, augment=True)
 
 # parse results
 predictions = results.pred[0]
-boxes = predictions[:, :4] # x1, x2, y1, y2
+boxes = predictions[:, :4] # x1, y1, x2, y2
 scores = predictions[:, 4]
 categories = predictions[:, 5]
 
@@ -115,7 +115,7 @@ results = yolov5.predict([image1, image2], size=1280, augment=True)
 
 # parse results
 predictions = results.pred[0]
-boxes = predictions[:, :4] # x1, x2, y1, y2
+boxes = predictions[:, :4] # x1, y1, x2, y2
 scores = predictions[:, 4]
 categories = predictions[:, 5]
 
