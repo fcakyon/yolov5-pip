@@ -5,20 +5,18 @@ Logging utils
 
 import os
 import warnings
-from pathlib import Path
 from threading import Thread
 
 import pkg_resources as pkg
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from yolov5.utils.general import colorstr, emojis
-from yolov5.utils.loggers.neptune.neptune_utils import NeptuneLogger
-from yolov5.utils.loggers.wandb.wandb_utils import WandbLogger
-from yolov5.utils.plots import plot_images, plot_results
-from yolov5.utils.torch_utils import de_parallel
+from utils.general import colorstr, emojis
+from utils.loggers.wandb.wandb_utils import WandbLogger
+from utils.plots import plot_images, plot_results
+from utils.torch_utils import de_parallel
 
-LOGGERS = ('csv', 'tb', 'wandb', 'neptune')  # text-file, TensorBoard, Weights & Biases
+LOGGERS = ('csv', 'tb', 'wandb')  # text-file, TensorBoard, Weights & Biases
 RANK = int(os.getenv('RANK', -1))
 
 try:
@@ -26,55 +24,38 @@ try:
 
     assert hasattr(wandb, '__version__')  # verify package import not local dir
     if pkg.parse_version(wandb.__version__) >= pkg.parse_version('0.12.2') and RANK in [0, -1]:
-        wandb_login_success = wandb.login(timeout=30)
+        try:
+            wandb_login_success = wandb.login(timeout=30)
+        except wandb.errors.UsageError:  # known non-TTY terminal issue
+            wandb_login_success = False
         if not wandb_login_success:
             wandb = None
 except (ImportError, AssertionError):
     wandb = None
 
-try:
-    import neptune.new as neptune
-except ImportError:
-    neptune = None
 
 class Loggers():
     # YOLOv5 Loggers class
-    def __init__(self, save_dir=None, weights=None, opt=None, hyp=None, logger=None, include=LOGGERS, mmdet_keys=False, class_names=None):
+    def __init__(self, save_dir=None, weights=None, opt=None, hyp=None, logger=None, include=LOGGERS):
         self.save_dir = save_dir
         self.weights = weights
         self.opt = opt
         self.hyp = hyp
         self.logger = logger  # for printing results to console
         self.include = include
-        if not mmdet_keys:
-            self.keys = ['train/box_loss', 'train/obj_loss', 'train/cls_loss',  # train loss
-                        'metrics/precision', 'metrics/recall', 'metrics/mAP_0.5', 'metrics/mAP_0.5:0.95',  # metrics
-                        'val/box_loss', 'val/obj_loss', 'val/cls_loss',  # val loss
-                        'x/lr0', 'x/lr1', 'x/lr2']  # params
-        else:
-            self.keys = ['train/loss_bbox', 'train/loss_obj', 'train/loss_cls',  # train loss
-                        'val/precision', 'val/recall', 'val/bbox_mAP_50', 'val/bbox_mAP',
-                        'val/loss_bbox', 'val/loss_obj', 'val/loss_cls',  # val loss
-                        'learning_rate_0', 'learning_rate_1', 'learning_rate_2']
+        self.keys = ['train/box_loss', 'train/obj_loss', 'train/cls_loss',  # train loss
+                     'metrics/precision', 'metrics/recall', 'metrics/mAP_0.5', 'metrics/mAP_0.5:0.95',  # metrics
+                     'val/box_loss', 'val/obj_loss', 'val/cls_loss',  # val loss
+                     'x/lr0', 'x/lr1', 'x/lr2']  # params
+        self.best_keys = ['best/epoch', 'best/precision', 'best/recall', 'best/mAP_0.5', 'best/mAP_0.5:0.95',]
         for k in LOGGERS:
             setattr(self, k, None)  # init empty logger dictionary
         self.csv = True  # always log to csv
-        self.class_names = class_names
-        if not mmdet_keys:
-            self.class_name_keys = ['metrics/' + name + '_mAP_50' for name in class_names]
-        else:
-            self.class_name_keys = ['val/' + name + '_mAP_50' for name in class_names]
-        self.s3_weight_folder = None if not opt.s3_upload_dir else "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / "weights").replace(os.sep, '/')
-        
+
         # Message
         if not wandb:
             prefix = colorstr('Weights & Biases: ')
-            s = f"{prefix}run 'pip install wandb' to automatically track and visualize YOLOv5 🚀 runs"
-            print(emojis(s))
-
-        if not neptune:
-            prefix = colorstr('Neptune AI: ')
-            s = f"{prefix}run 'pip install neptune-client' to automatically track and visualize YOLOv5 🚀 runs"
+            s = f"{prefix}run 'pip install wandb' to automatically track and visualize YOLOv5 🚀 runs (RECOMMENDED)"
             print(emojis(s))
 
         # TensorBoard
@@ -92,12 +73,6 @@ class Loggers():
             self.wandb = WandbLogger(self.opt, run_id)
         else:
             self.wandb = None
-
-        # Neptune
-        if neptune and 'neptune' in self.include:
-            self.neptune = NeptuneLogger(self.opt)
-        else:
-            self.neptune = None
 
     def on_pretrain_routine_end(self):
         # Callback runs on pre-train routine end
@@ -124,8 +99,6 @@ class Loggers():
         # Callback runs on train epoch end
         if self.wandb:
             self.wandb.current_epoch = epoch + 1
-        if self.neptune and self.neptune.neptune_run:
-            self.neptune.current_epoch = epoch + 1
 
     def on_val_image_end(self, pred, predn, path, names, im):
         # Callback runs on val image end
@@ -140,11 +113,11 @@ class Loggers():
 
     def on_fit_epoch_end(self, vals, epoch, best_fitness, fi):
         # Callback runs at the end of each fit (train+val) epoch
-        x = {k: v for k, v in zip(self.keys + self.class_name_keys, vals)}  # dict
+        x = {k: v for k, v in zip(self.keys, vals)}  # dict
         if self.csv:
             file = self.save_dir / 'results.csv'
             n = len(x) + 1  # number of cols
-            s = '' if file.exists() else (('%20s,' * n % tuple(['epoch'] + self.keys + self.class_name_keys)).rstrip(',') + '\n')  # add header
+            s = '' if file.exists() else (('%20s,' * n % tuple(['epoch'] + self.keys)).rstrip(',') + '\n')  # add header
             with open(file, 'a') as f:
                 f.write(s + ('%20.5g,' * n % tuple([epoch] + vals)).rstrip(',') + '\n')
 
@@ -153,44 +126,34 @@ class Loggers():
                 self.tb.add_scalar(k, v, epoch)
 
         if self.wandb:
+            if best_fitness == fi:
+                best_results = [epoch] + vals[3:7]
+                for i, name in enumerate(self.best_keys):
+                    self.wandb.wandb_run.summary[name] = best_results[i]  # log best results in the summary
             self.wandb.log(x)
             self.wandb.end_epoch(best_result=best_fitness == fi)
-
-        if self.neptune and self.neptune.neptune_run:
-            self.neptune.log(x)
-            self.neptune.end_epoch()
 
     def on_model_save(self, last, epoch, final_epoch, best_fitness, fi):
         # Callback runs on model save event
         if self.wandb:
             if ((epoch + 1) % self.opt.save_period == 0 and not final_epoch) and self.opt.save_period != -1:
                 self.wandb.log_model(last.parent, self.opt, epoch, fi, best_model=best_fitness == fi)
-        if self.neptune and self.neptune.neptune_run and self.s3_weight_folder is not None:
-            if not final_epoch and best_fitness == fi:
-                self.neptune.neptune_run["weights"].track_files(self.s3_weight_folder)
 
     def on_train_end(self, last, best, plots, epoch, results):
         # Callback runs on training end
         if plots:
             plot_results(file=self.save_dir / 'results.csv')  # save results.png
-        files = ['results.png', 'confusion_matrix.png', *[f'{x}_curve.png' for x in ('F1', 'PR', 'P', 'R')], "results.html"]
+        files = ['results.png', 'confusion_matrix.png', *(f'{x}_curve.png' for x in ('F1', 'PR', 'P', 'R'))]
         files = [(self.save_dir / f) for f in files if (self.save_dir / f).exists()]  # filter
 
         if self.tb:
             import cv2
             for f in files:
-                if f.suffix != ".html":
-                    self.tb.add_image(f.stem, cv2.imread(str(f))[..., ::-1], epoch, dataformats='HWC')
+                self.tb.add_image(f.stem, cv2.imread(str(f))[..., ::-1], epoch, dataformats='HWC')
 
         if self.wandb:
-            results = []
-            for f in files:
-                if f.suffix == ".html":
-                    results.append(wandb.Html(str(f)))
-                else:
-                    results.append(wandb.Image(str(f), caption=f.name))
-                    
-            self.wandb.log({"Results": results})
+            self.wandb.log({k: v for k, v in zip(self.keys[3:10], results)})  # log best.pt val results
+            self.wandb.log({"Results": [wandb.Image(str(f), caption=f.name) for f in files]})
             # Calling wandb.log. TODO: Refactor this into WandbLogger.log_model
             if not self.opt.evolve:
                 wandb.log_artifact(str(best if best.exists() else last), type='model',
@@ -201,14 +164,8 @@ class Loggers():
                 self.wandb.finish_run()
                 self.wandb = WandbLogger(self.opt)
 
-        if self.neptune and self.neptune.neptune_run:
-            for f in files:
-                if f.suffix == ".html":
-                    self.neptune.neptune_run['Results/{}'.format(f)].upload(neptune.types.File(str(f)))
-                else:
-                    self.neptune.neptune_run['Results/{}'.format(f)].log(neptune.types.File(str(f)))
-
-            if self.s3_weight_folder is not None:
-                self.neptune.neptune_run["weights"].track_files(self.s3_weight_folder)
-
-            self.neptune.finish_run()
+    def on_params_update(self, params):
+        # Update hyperparams or configs of the experiment
+        # params: A dict containing {param: value} pairs
+        if self.wandb:
+            self.wandb.wandb_run.config.update(params, allow_val_change=True)

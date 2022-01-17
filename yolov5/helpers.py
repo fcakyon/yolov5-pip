@@ -2,8 +2,9 @@ from pathlib import Path
 
 from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import Model
+from yolov5.models.common import AutoShape
 from yolov5.utils.general import set_logging, yolov5_in_syspath
-from yolov5.utils.google_utils import attempt_download
+from yolov5.utils.downloads import attempt_download
 from yolov5.utils.torch_utils import select_device, torch
 
 
@@ -45,7 +46,7 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
     model = hub_model
 
     if autoshape:
-        model = model.autoshape()
+        model = AutoShape(model)
 
     return model.to(device)
 
@@ -56,7 +57,9 @@ class YOLOv5:
         self.device = device
         if load_on_init:
             Path(model_path).parents[0].mkdir(parents=True, exist_ok=True)
-            self.model = load_model(model_path=model_path, device=device, autoshape=True)
+            self.model = load_model(
+                model_path=model_path, device=device, autoshape=True
+            )
         else:
             self.model = None
 
@@ -65,7 +68,9 @@ class YOLOv5:
         Load yolov5 weight.
         """
         Path(self.model_path).parents[0].mkdir(parents=True, exist_ok=True)
-        self.model = load_model(model_path=self.model_path, device=self.device, autoshape=True)
+        self.model = load_model(
+            model_path=self.model_path, device=self.device, autoshape=True
+        )
 
     def predict(self, image_list, size=640, augment=False):
         """
@@ -77,11 +82,13 @@ class YOLOv5:
         results = self.model(imgs=image_list, size=size, augment=augment)
         return results
 
+
 if __name__ == "__main__":
     model_path = "yolov5/weights/yolov5s.pt"
     device = "cuda"
     model = load_model(model_path=model_path, config_path=None, device=device)
 
     from PIL import Image
+
     imgs = [Image.open(x) for x in Path("yolov5/data/images").glob("*.jpg")]
     results = model(imgs)

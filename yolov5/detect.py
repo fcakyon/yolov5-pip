@@ -2,8 +2,26 @@
 """
 Run inference on images, videos, directories, streams, etc.
 
-Usage:
-    $ python path/to/detect.py --source path/to/img.jpg --weights yolov5s.pt --img 640
+Usage - sources:
+    $ python path/to/detect.py --weights yolov5s.pt --source 0              # webcam
+                                                             img.jpg        # image
+                                                             vid.mp4        # video
+                                                             path/          # directory
+                                                             path/*.jpg     # glob
+                                                             'https://youtu.be/Zgi9g1ksQHc'  # YouTube
+                                                             'rtsp://example.com/media.mp4'  # RTSP, RTMP, HTTP stream
+
+Usage - formats:
+    $ python path/to/detect.py --weights yolov5s.pt                 # PyTorch
+                                         yolov5s.torchscript        # TorchScript
+                                         yolov5s.onnx               # ONNX Runtime or OpenCV DNN with --dnn
+                                         yolov5s.xml                # OpenVINO
+                                         yolov5s.engine             # TensorRT
+                                         yolov5s.mlmodel            # CoreML (MacOS-only)
+                                         yolov5s_saved_model        # TensorFlow SavedModel
+                                         yolov5s.pb                 # TensorFlow GraphDef
+                                         yolov5s.tflite             # TensorFlow Lite
+                                         yolov5s_edgetpu.tflite     # TensorFlow Edge TPU
 """
 
 import argparse
@@ -12,30 +30,28 @@ import sys
 from pathlib import Path
 
 import cv2
-import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
+ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
-from yolov5.models.experimental import attempt_load
-from yolov5.utils.datasets import LoadImages, LoadStreams
-from yolov5.utils.general import (apply_classifier, check_img_size,
-                                  check_imshow, check_requirements,
-                                  check_suffix, colorstr, increment_path,
-                                  non_max_suppression, print_args,
-                                  save_one_box, scale_coords, set_logging,
-                                  strip_optimizer, xyxy2xywh,
-                                  yolov5_in_syspath)
-from yolov5.utils.plots import Annotator, colors
-from yolov5.utils.torch_utils import load_classifier, select_device, time_sync
+from models.common import DetectMultiBackend
+from utils.datasets import IMG_FORMATS, VID_FORMATS, LoadImages, LoadStreams
+from utils.general import (LOGGER, check_file, check_img_size, check_imshow, check_requirements, colorstr,
+                           increment_path, non_max_suppression, print_args, scale_coords, strip_optimizer, xyxy2xywh)
+from utils.plots import Annotator, colors, save_one_box
+from utils.torch_utils import select_device, time_sync
 
 
 @torch.no_grad()
-def run(weights='yolov5s.pt',  # model.pt path(s)
+def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
         source=ROOT / 'data/images',  # file/dir/URL/glob, 0 for webcam
-        imgsz=640,  # inference size (pixels)
+        data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
+        imgsz=(640, 640),  # inference size (height, width)
         conf_thres=0.25,  # confidence threshold
         iou_thres=0.45,  # NMS IOU threshold
         max_det=1000,  # maximum detections per image
@@ -50,7 +66,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
         augment=False,  # augmented inference
         visualize=False,  # visualize features
         update=False,  # update all models
-        project='runs/detect',  # save results to project/name
+        project=ROOT / 'runs/detect',  # save results to project/name
         name='exp',  # save results to project/name
         exist_ok=False,  # existing project/name ok, do not increment
         line_thickness=3,  # bounding box thickness (pixels)
@@ -61,65 +77,26 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
         ):
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
-    webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
-        ('rtsp://', 'rtmp://', 'http://', 'https://'))
+    is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
+    is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
+    webcam = source.isnumeric() or source.endswith('.txt') or (is_url and not is_file)
+    if is_url and is_file:
+        source = check_file(source)  # download
 
-    if isinstance(imgsz, int):
-        imgsz = [imgsz, imgsz]
     # Directories
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
 
-    # Initialize
-    set_logging()
-    device = select_device(device)
-    half &= device.type != 'cpu'  # half precision only supported on CUDA
-
     # Load model
-    w = str(weights[0] if isinstance(weights, list) else weights)
-    classify, suffix, suffixes = False, Path(w).suffix.lower(), ['.pt', '.onnx', '.tflite', '.pb', '']
-    check_suffix(w, suffixes)  # check weights have acceptable suffix
-    pt, onnx, tflite, pb, saved_model = (suffix == x for x in suffixes)  # backend booleans
-    stride, names = 64, [f'class{i}' for i in range(1000)]  # assign defaults
-    with yolov5_in_syspath():
-        if pt:
-            model = torch.jit.load(w) if 'torchscript' in w else attempt_load(weights, map_location=device)
-            stride = int(model.stride.max())  # model stride
-            names = model.module.names if hasattr(model, 'module') else model.names  # get class names
-            if half:
-                model.half()  # to FP16
-            if classify:  # second-stage classifier
-                modelc = load_classifier(name='resnet50', n=2)  # initialize
-                modelc.load_state_dict(torch.load('resnet50.pt', map_location=device)['model']).to(device).eval()
-        elif onnx:
-            if dnn:
-                # check_requirements(('opencv-python>=4.5.4',))
-                net = cv2.dnn.readNetFromONNX(w)
-            else:
-                check_requirements(('onnx', 'onnxruntime-gpu' if torch.has_cuda else 'onnxruntime'))
-                import onnxruntime
-                session = onnxruntime.InferenceSession(w, None)
-        else:  # TensorFlow models
-            check_requirements(('tensorflow>=2.4.1',))
-            import tensorflow as tf
-            if pb:  # https://www.tensorflow.org/guide/migrate#a_graphpb_or_graphpbtxt
-                def wrap_frozen_graph(gd, inputs, outputs):
-                    x = tf.compat.v1.wrap_function(lambda: tf.compat.v1.import_graph_def(gd, name=""), [])  # wrapped import
-                    return x.prune(tf.nest.map_structure(x.graph.as_graph_element, inputs),
-                                tf.nest.map_structure(x.graph.as_graph_element, outputs))
-
-                graph_def = tf.Graph().as_graph_def()
-                graph_def.ParseFromString(open(w, 'rb').read())
-                frozen_func = wrap_frozen_graph(gd=graph_def, inputs="x:0", outputs="Identity:0")
-            elif saved_model:
-                model = tf.keras.models.load_model(w)
-            elif tflite:
-                interpreter = tf.lite.Interpreter(model_path=w)  # load TFLite model
-                interpreter.allocate_tensors()  # allocate
-                input_details = interpreter.get_input_details()  # inputs
-                output_details = interpreter.get_output_details()  # outputs
-                int8 = input_details[0]['dtype'] == np.uint8  # is TFLite quantized uint8 model
+    device = select_device(device)
+    model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data)
+    stride, names, pt, jit, onnx, engine = model.stride, model.names, model.pt, model.jit, model.onnx, model.engine
     imgsz = check_img_size(imgsz, s=stride)  # check image size
+
+    # Half
+    half &= (pt or jit or onnx or engine) and device.type != 'cpu'  # FP16 supported on limited backends with CUDA
+    if pt or jit:
+        model.model.half() if half else model.model.float()
 
     # Dataloader
     if webcam:
@@ -133,53 +110,21 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
     vid_path, vid_writer = [None] * bs, [None] * bs
 
     # Run inference
-    if pt and device.type != 'cpu':
-        model(torch.zeros(1, 3, *imgsz).to(device).type_as(next(model.parameters())))  # run once
+    model.warmup(imgsz=(1, 3, *imgsz), half=half)  # warmup
     dt, seen = [0.0, 0.0, 0.0], 0
-    for path, img, im0s, vid_cap in dataset:
+    for path, im, im0s, vid_cap, s in dataset:
         t1 = time_sync()
-        if onnx:
-            img = img.astype('float32')
-        else:
-            img = torch.from_numpy(img).to(device)
-            img = img.half() if half else img.float()  # uint8 to fp16/32
-        img /= 255.0  # 0 - 255 to 0.0 - 1.0
-        if len(img.shape) == 3:
-            img = img[None]  # expand for batch dim
+        im = torch.from_numpy(im).to(device)
+        im = im.half() if half else im.float()  # uint8 to fp16/32
+        im /= 255  # 0 - 255 to 0.0 - 1.0
+        if len(im.shape) == 3:
+            im = im[None]  # expand for batch dim
         t2 = time_sync()
         dt[0] += t2 - t1
 
         # Inference
-        if pt:
-            visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if visualize else False
-            pred = model(img, augment=augment, visualize=visualize)[0]
-        elif onnx:
-            if dnn:
-                net.setInput(img)
-                pred = torch.tensor(net.forward())
-            else:
-                pred = torch.tensor(session.run([session.get_outputs()[0].name], {session.get_inputs()[0].name: img}))
-        else:  # tensorflow model (tflite, pb, saved_model)
-            imn = img.permute(0, 2, 3, 1).cpu().numpy()  # image in numpy
-            if pb:
-                pred = frozen_func(x=tf.constant(imn)).numpy()
-            elif saved_model:
-                pred = model(imn, training=False).numpy()
-            elif tflite:
-                if int8:
-                    scale, zero_point = input_details[0]['quantization']
-                    imn = (imn / scale + zero_point).astype(np.uint8)  # de-scale
-                interpreter.set_tensor(input_details[0]['index'], imn)
-                interpreter.invoke()
-                pred = interpreter.get_tensor(output_details[0]['index'])
-                if int8:
-                    scale, zero_point = output_details[0]['quantization']
-                    pred = (pred.astype(np.float32) - zero_point) * scale  # re-scale
-            pred[..., 0] *= imgsz[1]  # x
-            pred[..., 1] *= imgsz[0]  # y
-            pred[..., 2] *= imgsz[1]  # w
-            pred[..., 3] *= imgsz[0]  # h
-            pred = torch.tensor(pred)
+        visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if visualize else False
+        pred = model(im, augment=augment, visualize=visualize)
         t3 = time_sync()
         dt[1] += t3 - t2
 
@@ -188,27 +133,27 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
         dt[2] += time_sync() - t3
 
         # Second-stage classifier (optional)
-        if classify:
-            pred = apply_classifier(pred, modelc, img, im0s)
+        # pred = utils.general.apply_classifier(pred, classifier_model, im, im0s)
 
         # Process predictions
         for i, det in enumerate(pred):  # per image
             seen += 1
             if webcam:  # batch_size >= 1
-                p, s, im0, frame = path[i], f'{i}: ', im0s[i].copy(), dataset.count
+                p, im0, frame = path[i], im0s[i].copy(), dataset.count
+                s += f'{i}: '
             else:
-                p, s, im0, frame = path, '', im0s.copy(), getattr(dataset, 'frame', 0)
+                p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
 
             p = Path(p)  # to Path
-            save_path = str(save_dir / p.name)  # img.jpg
-            txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
-            s += '%gx%g ' % img.shape[2:]  # print string
+            save_path = str(save_dir / p.name)  # im.jpg
+            txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # im.txt
+            s += '%gx%g ' % im.shape[2:]  # print string
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             imc = im0.copy() if save_crop else im0  # for save_crop
             annotator = Annotator(im0, line_width=line_thickness, example=str(names))
             if len(det):
                 # Rescale boxes from img_size to im0 size
-                det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
+                det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
 
                 # Print results
                 for c in det[:, -1].unique():
@@ -231,7 +176,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                             save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
 
             # Print time (inference-only)
-            print(f'{s}Done. ({t3 - t2:.3f}s)')
+            LOGGER.info(f'{s}Done. ({t3 - t2:.3f}s)')
 
             # Stream results
             im0 = annotator.result()
@@ -260,18 +205,19 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
 
     # Print results
     t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
-    print(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
+    LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
     if save_txt or save_img:
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
-        print(f"Results saved to {colorstr('bold', save_dir)}{s}")
+        LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
     if update:
         strip_optimizer(weights)  # update model (to fix SourceChangeWarning)
 
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model path(s)')
+    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'yolov5s.pt', help='model path(s)')
     parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob, 0 for webcam')
+    parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='(optional) dataset.yaml path')
     parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640], help='inference size h,w')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='NMS IoU threshold')
@@ -287,7 +233,7 @@ def parse_opt():
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     parser.add_argument('--visualize', action='store_true', help='visualize features')
     parser.add_argument('--update', action='store_true', help='update all models')
-    parser.add_argument('--project', default='runs/detect', help='save results to project/name')
+    parser.add_argument('--project', default=ROOT / 'runs/detect', help='save results to project/name')
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--line-thickness', default=3, type=int, help='bounding box thickness (pixels)')
@@ -301,11 +247,11 @@ def parse_opt():
     return opt
 
 
-def main():
-    opt = parse_opt()
-    #check_requirements(exclude=('tensorboard', 'thop'))
+def main(opt):
+    check_requirements(exclude=('tensorboard', 'thop'))
     run(**vars(opt))
 
 
 if __name__ == "__main__":
-    main()
+    opt = parse_opt()
+    main(opt)
