@@ -35,3 +35,9 @@ seaborn>=0.11.0
 # pycocotools>=2.0  # COCO mAP
 # roboflow
 thop  # FLOPs computation
+# CLI
+fire
+# AWS
+boto3>=1.19.1
+# coco to yolov5 conversion
+sahi>=0.8.9
