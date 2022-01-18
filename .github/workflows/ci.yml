@@ -66,13 +66,13 @@ jobs:
           # detect
           python yolov5/detect.py --weights yolov5/weights/yolov5n.pt --device $di
           yolov5 detect --weights yolov5/weights/yolov5n.pt --device $di
-          python yolov5/detect.py --weights runs/train/exp/weights/last.pt --device $di
-          yolov5 detect --weights runs/train/exp/weights/last.pt --device $di
+          python yolov5/detect.py --weights yolov5/runs/train/exp/weights/last.pt --device $di
+          yolov5 detect --weights yolov5/runs/train/exp/weights/last.pt --device $di
           # val
           python yolov5/val.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --device $di
           yolov5 val --data yolov5/data/coco128.yaml --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --device $di
-          python yolov5/val.py --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
-          yolov5 val --data yolov5/data/coco128.yaml --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
+          python yolov5/val.py --img 128 --batch 16 --weights yolov5/runs/train/exp/weights/last.pt --device $di
+          yolov5 val --data yolov5/data/coco128.yaml --img 128 --batch 16 --weights yolov5/runs/train/exp/weights/last.pt --device $di
           # export
           pip install onnx onnx-simplifier tensorflowjs
           python yolov5/export.py --weights yolov5/weights/yolov5n.pt --device $di --include 'torchscript,onnx,tflite'
