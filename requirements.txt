@@ -27,6 +27,7 @@ seaborn>=0.11.0
 # scikit-learn==0.19.2  # CoreML quantization
 # tensorflow>=2.4.1  # TFLite export
 # tensorflowjs>=3.9.0  # TF.js export
+# openvino-dev  # OpenVINO export
 
 # Extras --------------------------------------
 # albumentations>=1.0.3
@@ -34,9 +35,3 @@ seaborn>=0.11.0
 # pycocotools>=2.0  # COCO mAP
 # roboflow
 thop  # FLOPs computation
-# CLI
-fire
-# AWS
-boto3>=1.19.1
-# coco to yolov5 conversion
-sahi>=0.8.9
