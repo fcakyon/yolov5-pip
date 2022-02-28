@@ -6,7 +6,7 @@ import yaml
 from yolov5.utils.general import colorstr
 
 try:
-    import neptune.new as neptune
+    import yolov5.neptune.new as neptune
 except ImportError:
     neptune = None
 

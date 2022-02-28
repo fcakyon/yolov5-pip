@@ -10,25 +10,7 @@ from yolov5.utils.torch_utils import select_device, torch
 from pathlib import Path
 
 
-#def load_model(model_path, device=None, autoshape=True, verbose=False):
 def _create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbose=False, device=None):
-    """
-    Creates a specified YOLOv5 model
-
-    Arguments:
-        model_path (str): path of the model
-        config_path (str): path of the config file
-        device (str): select device that model will be loaded (cpu, cuda)
-        pretrained (bool): load pretrained weights into the model
-        autoshape (bool): make model ready for inference
-        verbose (bool): if False, yolov5 logs will be silent
-
-    Returns:
-        pytorch model
-
-    (Adapted from yolov5.hubconf.create)
-    """
-
     if not verbose:
         LOGGER.setLevel(logging.WARNING)
     check_requirements(exclude=('tensorboard', 'thop', 'opencv-python'))
@@ -87,10 +69,12 @@ class YOLOv5:
         results = self.model(imgs=image_list, size=size, augment=augment)
         return results
 
+
 if __name__ == "__main__":
     model_path = "yolov5/weights/yolov5s.pt"
     model = _create(name=model_path)
 
     from PIL import Image
+
     imgs = [Image.open(x) for x in Path(".").resolve().joinpath("data/images").glob("*.jpg")]
     results = model(imgs)

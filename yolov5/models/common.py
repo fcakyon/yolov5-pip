@@ -22,8 +22,7 @@ from PIL import Image
 from torch.cuda import amp
 
 from yolov5.utils.datasets import exif_transpose, letterbox
-from yolov5.utils.general import (LOGGER, check_requirements, check_suffix, check_version, colorstr, increment_path,
-                           make_divisible, non_max_suppression, scale_coords, xywh2xyxy, xyxy2xywh)
+from yolov5.utils.general import (LOGGER, check_requirements, check_suffix, check_version, colorstr, increment_path, make_divisible, non_max_suppression, scale_coords, xywh2xyxy, xyxy2xywh)
 from yolov5.utils.plots import Annotator, colors, save_one_box
 from yolov5.utils.torch_utils import copy_attr, time_sync
 
@@ -465,7 +464,7 @@ class DetectMultiBackend(nn.Module):
     @staticmethod
     def model_type(p='path/to/model.pt'):
         # Return model type from model path, i.e. path='path/to/model.onnx' -> type=onnx
-        from export import export_formats
+        from yolov5.export import export_formats
         suffixes = list(export_formats().Suffix) + ['.xml']  # export suffixes
         check_suffix(p, suffixes)  # checks
         p = Path(p).name  # eliminate trailing separators

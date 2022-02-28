@@ -37,10 +37,11 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 # ROOT = ROOT.relative_to(Path.cwd())  # relative
 
-import export
-import val
-from utils import notebook_init
-from utils.general import LOGGER, print_args
+from yolov5.export import export_formats
+from yolov5.export import run as exprun
+from yolov5.val import run as valrun
+from yolov5.utils import notebook_init
+from yolov5.utils.general import LOGGER, print_args
 
 
 def run(weights=ROOT / 'yolov5s.pt',  # weights path
@@ -49,12 +50,12 @@ def run(weights=ROOT / 'yolov5s.pt',  # weights path
         data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
         ):
     y, t = [], time.time()
-    formats = export.export_formats()
+    formats = export_formats()
     for i, (name, f, suffix) in formats.iterrows():  # index, (name, file, suffix)
         try:
-            w = weights if f == '-' else export.run(weights=weights, imgsz=[imgsz], include=[f], device='cpu')[-1]
+            w = weights if f == '-' else exprun(weights=weights, imgsz=[imgsz], include=[f], device='cpu')[-1]
             assert suffix in str(w), 'export failed'
-            result = val.run(data, w, batch_size, imgsz=imgsz, plots=False, device='cpu', task='benchmark')
+            result = valrun(data, w, batch_size, imgsz=imgsz, plots=False, device='cpu', task='benchmark')
             metrics = result[0]  # metrics (mp, mr, map50, map, *losses(box, obj, cls))
             speeds = result[2]  # times (preprocess, inference, postprocess)
             y.append([name, metrics[3], speeds[1]])  # mAP, t_inference
