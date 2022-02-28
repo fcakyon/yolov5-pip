@@ -10,7 +10,7 @@ class TestYolov5(unittest.TestCase):
         # init model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
         device = "cpu"
-        yolov5 = YOLOv5(model_path, device, load_on_init=False)
+        yolov5 = YOLOv5(model_path, load_on_init=False)
         yolov5.load_model()
 
         # check if loaded
@@ -23,7 +23,7 @@ class TestYolov5(unittest.TestCase):
         # init model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
         device = "cpu"
-        yolov5 = YOLOv5(model_path, device, load_on_init=True)
+        yolov5 = YOLOv5(model_path, load_on_init=True)
 
         # check if loaded
         self.assertNotEqual(yolov5.model, None)
@@ -35,7 +35,7 @@ class TestYolov5(unittest.TestCase):
         # init yolov5s model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
         device = "cpu"
-        yolov5 = YOLOv5(model_path, device, load_on_init=True)
+        yolov5 = YOLOv5(model_path, load_on_init=True)
 
         # prepare image
         image_path = TestConstants.ZIDANE_IMAGE_PATH
@@ -47,8 +47,8 @@ class TestYolov5(unittest.TestCase):
         # compare
         self.assertEqual(results.n, 1)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 3)
-        
+        self.assertEqual(len(results.pred[0]), 4)
+
         # prepare image
         image = image_path
 
@@ -58,12 +58,12 @@ class TestYolov5(unittest.TestCase):
         # compare
         self.assertEqual(results.n, 1)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 3)
-        
+        self.assertEqual(len(results.pred[0]), 4)
+
         # init yolov5l model
         model_path = TestConstants.YOLOV5L_MODEL_PATH
         device = "cpu"
-        yolov5 = YOLOv5(model_path, device, load_on_init=True)
+        yolov5 = YOLOv5(model_path, load_on_init=True)
 
         # prepare image
         image_path = TestConstants.BUS_IMAGE_PATH
@@ -74,8 +74,8 @@ class TestYolov5(unittest.TestCase):
         # compare
         self.assertEqual(results.n, 1)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 8)
-        
+        self.assertEqual(len(results.pred[0]), 6)
+
         # prepare image
         image = image_path
 
@@ -85,12 +85,12 @@ class TestYolov5(unittest.TestCase):
         # compare
         self.assertEqual(results.n, 1)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 8)
+        self.assertEqual(len(results.pred[0]), 6)
 
         # init yolov5s model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
         device = "cpu"
-        yolov5 = YOLOv5(model_path, device, load_on_init=True)
+        yolov5 = YOLOv5(model_path, load_on_init=True)
 
         # prepare images
         image_path1 = TestConstants.ZIDANE_IMAGE_PATH
@@ -104,8 +104,8 @@ class TestYolov5(unittest.TestCase):
         # compare
         self.assertEqual(results.n, 2)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 3)
-        self.assertEqual(len(results.pred[1]), 7)
+        self.assertEqual(len(results.pred[0]), 4)
+        self.assertEqual(len(results.pred[1]), 5)
 
         # prepare image
         image_path1 = TestConstants.ZIDANE_IMAGE_PATH
@@ -119,9 +119,9 @@ class TestYolov5(unittest.TestCase):
         # compare
         self.assertEqual(results.n, 2)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 3)
-        self.assertEqual(len(results.pred[1]), 7)
-        
+        self.assertEqual(len(results.pred[0]), 4)
+        self.assertEqual(len(results.pred[1]), 5)
+
     def test_hublike_load_model(self):
         import yolov5
 
@@ -150,8 +150,8 @@ class TestYolov5(unittest.TestCase):
         # compare
         self.assertEqual(results.n, 1)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 3)
-        
+        self.assertEqual(len(results.pred[0]), 4)
+
         # init yolov5l model
         model_path = TestConstants.YOLOV5L_MODEL_PATH
         model = yolov5.load(model_path)
@@ -159,13 +159,14 @@ class TestYolov5(unittest.TestCase):
         # prepare image
         image_path = TestConstants.BUS_IMAGE_PATH
         image = Image.open(image_path)
+
         # perform inference
         results = model(image, size=1280, augment=False)
 
         # compare
         self.assertEqual(results.n, 1)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 8)
+        self.assertEqual(len(results.pred[0]), 6)
 
         # init yolov5s model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
@@ -183,9 +184,8 @@ class TestYolov5(unittest.TestCase):
         # compare
         self.assertEqual(results.n, 2)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 3)
-        self.assertEqual(len(results.pred[1]), 7)
-
+        self.assertEqual(len(results.pred[0]), 4)
+        self.assertEqual(len(results.pred[1]), 5)
 
 
 if __name__ == "__main__":

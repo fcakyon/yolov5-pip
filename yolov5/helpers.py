@@ -1,13 +1,17 @@
 from pathlib import Path
 
 from yolov5.models.experimental import attempt_load
+from yolov5.models.common import AutoShape, DetectMultiBackend
 from yolov5.models.yolo import Model
-from yolov5.utils.general import set_logging, yolov5_in_syspath
-from yolov5.utils.google_utils import attempt_download
+from yolov5.utils.general import LOGGER, check_requirements, intersect_dicts, logging, yolov5_in_syspath
+from yolov5.utils.downloads import attempt_download
 from yolov5.utils.torch_utils import select_device, torch
 
+from pathlib import Path
 
-def load_model(model_path, device=None, autoshape=True, verbose=False):
+
+#def load_model(model_path, device=None, autoshape=True, verbose=False):
+def _create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbose=False, device=None):
     """
     Creates a specified YOLOv5 model
 
@@ -24,30 +28,36 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
 
     (Adapted from yolov5.hubconf.create)
     """
-    # set logging
-    set_logging(verbose=verbose)
 
-    # set device if not given
-    if device is None:
-        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    if not verbose:
+        LOGGER.setLevel(logging.WARNING)
+    check_requirements(exclude=('tensorboard', 'thop', 'opencv-python'))
+    name = Path(name)
+    path = name.with_suffix('.pt') if name.suffix == '' else name  # checkpoint path
+    try:
+        device = select_device(('0' if torch.cuda.is_available() else 'cpu') if device is None else device)
 
-    attempt_download(model_path)  # download if not found locally
-    with yolov5_in_syspath():
-        model = torch.load(model_path, map_location=torch.device(device))
-    if isinstance(model, dict):
-        model = model["model"]  # load model
-    hub_model = Model(model.yaml)  # create
-    msd = model.state_dict()  # model state_dict
-    csd = model.float().state_dict()  # checkpoint state_dict as FP32
-    csd = {k: v for k, v in csd.items() if msd[k].shape == v.shape}  # filter
-    hub_model.load_state_dict(csd, strict=False)  # load
-    hub_model.names = model.names  # class names
-    model = hub_model
+        if pretrained and channels == 3 and classes == 80:
+            model = DetectMultiBackend(path, device=device)  # download/load FP32 model
+            # model = models.experimental.attempt_load(path, map_location=device)  # download/load FP32 model
+        else:
+            cfg = list((Path(__file__).parent / 'models').rglob(f'{path.stem}.yaml'))[0]  # model.yaml path
+            model = Model(cfg, channels, classes)  # create model
+            if pretrained:
+                ckpt = torch.load(attempt_download(path), map_location=device)  # load
+                csd = ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
+                csd = intersect_dicts(csd, model.state_dict(), exclude=['anchors'])  # intersect
+                model.load_state_dict(csd, strict=False)  # load
+                if len(ckpt['model'].names) == classes:
+                    model.names = ckpt['model'].names  # set class names attribute
+        if autoshape:
+            model = AutoShape(model)  # for file/URI/PIL/cv2/np inputs and NMS
+        return model.to(device)
 
-    if autoshape:
-        model = model.autoshape()
-
-    return model.to(device)
+    except Exception as e:
+        help_url = 'https://github.com/ultralytics/yolov5/issues/36'
+        s = f'{e}. Cache may be out of date, try `force_reload=True` or see {help_url} for help.'
+        raise Exception(s) from e
 
 
 class YOLOv5:
@@ -56,7 +66,7 @@ class YOLOv5:
         self.device = device
         if load_on_init:
             Path(model_path).parents[0].mkdir(parents=True, exist_ok=True)
-            self.model = load_model(model_path=model_path, device=device, autoshape=True)
+            self.model = _create(name=model_path)
         else:
             self.model = None
 
@@ -65,7 +75,7 @@ class YOLOv5:
         Load yolov5 weight.
         """
         Path(self.model_path).parents[0].mkdir(parents=True, exist_ok=True)
-        self.model = load_model(model_path=self.model_path, device=self.device, autoshape=True)
+        self.model = _create(name=self.model_path)
 
     def predict(self, image_list, size=640, augment=False):
         """
@@ -79,9 +89,8 @@ class YOLOv5:
 
 if __name__ == "__main__":
     model_path = "yolov5/weights/yolov5s.pt"
-    device = "cuda"
-    model = load_model(model_path=model_path, config_path=None, device=device)
+    model = _create(name=model_path)
 
     from PIL import Image
-    imgs = [Image.open(x) for x in Path("yolov5/data/images").glob("*.jpg")]
+    imgs = [Image.open(x) for x in Path(".").resolve().joinpath("data/images").glob("*.jpg")]
     results = model(imgs)
