@@ -233,8 +233,11 @@ class LoadImages:
         # Convert
         img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
         img = np.ascontiguousarray(img)
-
-        return path, img, img0, self.cap, s, timestamp
+        
+        if self.mode == "video":
+            return path, img, img0, self.cap, s, timestamp
+        else:
+            return path, img, img0, self.cap, s
 
     def new_video(self, path):
         self.frame = 0
