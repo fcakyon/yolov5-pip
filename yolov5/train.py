@@ -82,10 +82,10 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     is_coco_data = False
     has_yolo_s3_data_dir = False
     with open(opt.data, errors='ignore') as f:
-        data_dict = yaml.safe_load(f)  # load data dict
-        if data_dict.get("train_json_path") is not None:
+        data_info = yaml.safe_load(f)  # load data dict
+        if data_info.get("train_json_path") is not None:
             is_coco_data = True
-        if data_dict.get("yolo_s3_data_dir") is not None:
+        if data_info.get("yolo_s3_data_dir") is not None:
             has_yolo_s3_data_dir = True 
 
     if has_yolo_s3_data_dir and opt.upload_dataset:
@@ -98,26 +98,26 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
         # add coco fields to data.yaml
         with open(data, errors='ignore') as f:
-            updated_data_dict = yaml.safe_load(f)  # load data dict
-            updated_data_dict["train_json_path"] = data_dict["train_json_path"]
-            updated_data_dict["val_json_path"] = data_dict["val_json_path"]
-            updated_data_dict["train_image_dir"] = data_dict["train_image_dir"]
-            updated_data_dict["val_image_dir"] = data_dict["val_image_dir"]
-            if data_dict.get("yolo_s3_data_dir")is not None:
-                updated_data_dict["yolo_s3_data_dir"] = data_dict["yolo_s3_data_dir"]
-            if data_dict.get("coco_s3_data_dir")is not None:
-                updated_data_dict["coco_s3_data_dir"] = data_dict["coco_s3_data_dir"]
+            updated_data_info = yaml.safe_load(f)  # load data dict
+            updated_data_info["train_json_path"] = data_info["train_json_path"]
+            updated_data_info["val_json_path"] = data_info["val_json_path"]
+            updated_data_info["train_image_dir"] = data_info["train_image_dir"]
+            updated_data_info["val_image_dir"] = data_info["val_image_dir"]
+            if data_info.get("yolo_s3_data_dir")is not None:
+                updated_data_info["yolo_s3_data_dir"] = data_info["yolo_s3_data_dir"]
+            if data_info.get("coco_s3_data_dir")is not None:
+                updated_data_info["coco_s3_data_dir"] = data_info["coco_s3_data_dir"]
         with open(data, 'w') as f:
-            yaml.dump(updated_data_dict, f)
+            yaml.dump(updated_data_info, f)
 
         w = save_dir / 'data' / 'coco'  # coco dir
         w.mkdir(parents=True, exist_ok=True)  # make dir
 
         # copy train.json/val.json and coco_data.yml into data/coco/ folder
-        if "train_json_path" in data_dict and Path(data_dict["train_json_path"]).is_file():
-            copyfile(data_dict["train_json_path"], str(w / "train.json"))
-        if "val_json_path" in data_dict and Path(data_dict["val_json_path"]).is_file():
-            copyfile(data_dict["val_json_path"], str(w / "val.json"))
+        if "train_json_path" in data_info and Path(data_info["train_json_path"]).is_file():
+            copyfile(data_info["train_json_path"], str(w / "train.json"))
+        if "val_json_path" in data_info and Path(data_info["val_json_path"]).is_file():
+            copyfile(data_info["val_json_path"], str(w / "val.json"))
 
     # Directories
     w = save_dir / 'weights'  # weights dir
@@ -142,28 +142,12 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     cuda = device.type != 'cpu'
     init_seeds(1 + RANK)
     with torch_distributed_zero_first(LOCAL_RANK):
-        data_dict = data_dict or check_dataset(data)  # check if None
+        data_dict = check_dataset(data)
     train_path, val_path = data_dict['train'], data_dict['val']
     nc = 1 if single_cls else int(data_dict['nc'])  # number of classes
     names = ['item'] if single_cls and len(data_dict['names']) != 1 else data_dict['names']  # class names
     assert len(names) == nc, f'{len(names)} names found for nc={nc} dataset in {data}'  # check
     is_coco = isinstance(val_path, str) and val_path.endswith('coco/val2017.txt')  # COCO dataset
-
-    # upload dataset to s3
-    if opt.upload_dataset and opt.s3_upload_dir:
-        with open(data, errors='ignore') as f:
-            data_dict = yaml.safe_load(f)  # load data dict
-        # upload yolo formatted data to s3
-        s3_folder = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / 'data').replace(os.sep, '/')
-        LOGGER.info(f"{colorstr('aws:')} Uploading yolo formatted dataset to {s3_folder}")
-        s3_file = s3_folder + "/data.yaml"
-        result = upload_file_to_s3(local_file=opt.data, s3_file=s3_file)
-        s3_folder_train = s3_folder + "/train/"
-        result = upload_folder_to_s3(local_folder=data_dict["train"], s3_folder=s3_folder_train)
-        s3_folder_val = s3_folder + "/val/"
-        result = upload_folder_to_s3(local_folder=data_dict["val"], s3_folder=s3_folder_val)
-        if result:
-            LOGGER.info(f"{colorstr('aws:')} Dataset has been successfully uploaded to {s3_folder}")
 
     # Loggers
     data_dict = None
@@ -177,6 +161,23 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         # Register actions
         for k in methods(loggers):
             callbacks.register_action(k, callback=getattr(loggers, k))
+
+    # upload dataset to s3
+    if opt.upload_dataset and opt.s3_upload_dir:
+        with open(data, errors='ignore') as f:
+            data_info = yaml.safe_load(f)  # load data dict
+        # upload yolo formatted data to s3
+        s3_folder = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / 'data').replace(os.sep, '/')
+        LOGGER.info(f"{colorstr('aws:')} Uploading yolo formatted dataset to {s3_folder}")
+        s3_file = s3_folder + "/data.yaml"
+        result = upload_file_to_s3(local_file=opt.data, s3_file=s3_file)
+        s3_folder_train = s3_folder + "/train/"
+        result = upload_folder_to_s3(local_folder=data_info["train"], s3_folder=s3_folder_train)
+        s3_folder_val = s3_folder + "/val/"
+        result = upload_folder_to_s3(local_folder=data_info["val"], s3_folder=s3_folder_val)
+        if result:
+            LOGGER.info(f"{colorstr('aws:')} Dataset has been successfully uploaded to {s3_folder}")
+
     # Model
     check_suffix(weights, '.pt')  # check weights
     pretrained = weights.endswith('.pt')
