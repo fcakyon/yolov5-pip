@@ -150,7 +150,6 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     is_coco = isinstance(val_path, str) and val_path.endswith('coco/val2017.txt')  # COCO dataset
 
     # Loggers
-    data_dict = None
     if RANK in [-1, 0]:
         loggers = Loggers(save_dir, weights, opt, hyp, LOGGER, mmdet_keys=opt.mmdet_tags, class_names=names)  # loggers instance
         if loggers.wandb:
