@@ -5,20 +5,24 @@ General utils
 
 import contextlib
 import glob
+import inspect
 import logging
 import math
 import os
 import platform
 import random
 import re
+import shutil
 import signal
 import sys
 import time
 import urllib
+from datetime import datetime
 from itertools import repeat
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from subprocess import check_output
+from typing import Optional
 from zipfile import ZipFile
 
 import cv2
@@ -28,19 +32,77 @@ import pkg_resources as pkg
 import torch
 import torchvision
 import yaml
-
 from yolov5.utils.downloads import gsutil_getsize
 from yolov5.utils.metrics import box_iou, fitness
 
 # Settings
+FILE = Path(__file__).resolve()
+ROOT = FILE.parents[1]  # YOLOv5 root directory
+DATASETS_DIR = ROOT.parent / 'datasets'  # YOLOv5 datasets directory
+NUM_THREADS = min(8, max(1, os.cpu_count() - 1))  # number of YOLOv5 multiprocessing threads
+VERBOSE = str(os.getenv('YOLOv5_VERBOSE', True)).lower() == 'true'  # global verbose mode
+FONT = 'Arial.ttf'  # https://ultralytics.com/assets/Arial.ttf
+
 torch.set_printoptions(linewidth=320, precision=5, profile='long')
 np.set_printoptions(linewidth=320, formatter={'float_kind': '{:11.5g}'.format})  # format short g, %precision=5
 pd.options.display.max_columns = 10
 cv2.setNumThreads(0)  # prevent OpenCV from multithreading (incompatible with PyTorch DataLoader)
-os.environ['NUMEXPR_MAX_THREADS'] = str(min(os.cpu_count(), 8))  # NumExpr max threads
+os.environ['NUMEXPR_MAX_THREADS'] = str(NUM_THREADS)  # NumExpr max threads
+os.environ['OMP_NUM_THREADS'] = str(NUM_THREADS)  # OpenMP max threads (PyTorch and SciPy)
 
-FILE = Path(__file__).resolve()
-ROOT = FILE.parents[1]  # YOLOv5 root directory
+
+def is_kaggle():
+    # Is environment a Kaggle Notebook?
+    try:
+        assert os.environ.get('PWD') == '/kaggle/working'
+        assert os.environ.get('KAGGLE_URL_BASE') == 'https://www.kaggle.com'
+        return True
+    except AssertionError:
+        return False
+
+
+def is_writeable(dir, test=False):
+    # Return True if directory has write permissions, test opening a file with write permissions if test=True
+    if test:  # method 1
+        file = Path(dir) / 'tmp.txt'
+        try:
+            with open(file, 'w'):  # open file with write permissions
+                pass
+            file.unlink()  # remove file
+            return True
+        except OSError:
+            return False
+    else:  # method 2
+        return os.access(dir, os.R_OK)  # possible issues on Windows
+
+
+def set_logging(name=None, verbose=VERBOSE):
+    # Sets level and returns logger
+    if is_kaggle():
+        for h in logging.root.handlers:
+            logging.root.removeHandler(h)  # remove all handlers associated with the root logger object
+    rank = int(os.getenv('RANK', -1))  # rank in world for Multi-GPU trainings
+    logging.basicConfig(format="%(message)s", level=logging.INFO if (verbose and rank in (-1, 0)) else logging.WARNING)
+    return logging.getLogger(name)
+
+
+LOGGER = set_logging('yolov5')  # define globally (used in train.py, val.py, detect.py, etc.)
+
+
+def user_config_dir(dir='Ultralytics', env_var='YOLOV5_CONFIG_DIR'):
+    # Return path of user configuration directory. Prefer environment variable if exists. Make dir if required.
+    env = os.getenv(env_var)
+    if env:
+        path = Path(env)  # use environment variable
+    else:
+        cfg = {'Windows': 'AppData/Roaming', 'Linux': '.config', 'Darwin': 'Library/Application Support'}  # 3 OS dirs
+        path = Path.home() / cfg.get(platform.system(), '')  # OS-specific config dir
+        path = (path if is_writeable(path) else Path('/tmp')) / dir  # GCP and AWS lambda fix, only /tmp is writeable
+    path.mkdir(exist_ok=True)  # make if required
+    return path
+
+
+CONFIG_DIR = user_config_dir()  # Ultralytics settings dir
 
 
 class Profile(contextlib.ContextDecorator):
@@ -63,13 +125,28 @@ class Timeout(contextlib.ContextDecorator):
         raise TimeoutError(self.timeout_message)
 
     def __enter__(self):
-        signal.signal(signal.SIGALRM, self._timeout_handler)  # Set handler for SIGALRM
-        signal.alarm(self.seconds)  # start countdown for SIGALRM to be raised
+        if platform.system() != 'Windows':  # not supported on Windows
+            signal.signal(signal.SIGALRM, self._timeout_handler)  # Set handler for SIGALRM
+            signal.alarm(self.seconds)  # start countdown for SIGALRM to be raised
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        signal.alarm(0)  # Cancel SIGALRM if it's scheduled
-        if self.suppress and exc_type is TimeoutError:  # Suppress TimeoutError
-            return True
+        if platform.system() != 'Windows':
+            signal.alarm(0)  # Cancel SIGALRM if it's scheduled
+            if self.suppress and exc_type is TimeoutError:  # Suppress TimeoutError
+                return True
+
+
+class WorkingDirectory(contextlib.ContextDecorator):
+    # Usage: @WorkingDirectory(dir) decorator or 'with WorkingDirectory(dir):' context manager
+    def __init__(self, new_dir):
+        self.dir = new_dir  # new dir
+        self.cwd = Path.cwd().resolve()  # current dir
+
+    def __enter__(self):
+        os.chdir(self.dir)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        os.chdir(self.cwd)
 
 
 def try_except(func):
@@ -88,15 +165,15 @@ def methods(instance):
     return [f for f in dir(instance) if callable(getattr(instance, f)) and not f.startswith("__")]
 
 
-def set_logging(rank=-1, verbose=True):
-    logging.basicConfig(
-        format="%(message)s",
-        level=logging.INFO if (verbose and rank in [-1, 0]) else logging.WARN)
-
-
-def print_args(name, opt):
-    # Print argparser arguments
-    print(colorstr(f'{name}: ') + ', '.join(f'{k}={v}' for k, v in vars(opt).items()))
+def print_args(args: Optional[dict] = None, show_file=True, show_fcn=False):
+    # Print function arguments (optional args dict)
+    x = inspect.currentframe().f_back  # previous frame
+    file, _, fcn, _, _ = inspect.getframeinfo(x)
+    if args is None:  # get args automatically
+        args, _, _, frm = inspect.getargvalues(x)
+        args = {k: v for k, v in frm.items() if k in args}
+    s = (f'{Path(file).stem}: ' if show_file else '') + (f'{fcn}: ' if show_fcn else '')
+    LOGGER.info(colorstr(s) + ', '.join(f'{k}={v}' for k, v in args.items()))
 
 
 def init_seeds(seed=0):
@@ -109,38 +186,15 @@ def init_seeds(seed=0):
     cudnn.benchmark, cudnn.deterministic = (False, True) if seed == 0 else (True, False)
 
 
+def intersect_dicts(da, db, exclude=()):
+    # Dictionary intersection of matching keys and shapes, omitting 'exclude' keys, using da values
+    return {k: v for k, v in da.items() if k in db and not any(x in k for x in exclude) and v.shape == db[k].shape}
+
+
 def get_latest_run(search_dir='.'):
     # Return path to most recent 'last.pt' in /runs (i.e. to --resume from)
     last_list = glob.glob(f'{search_dir}/**/last*.pt', recursive=True)
     return max(last_list, key=os.path.getctime) if last_list else ''
-
-
-def user_config_dir(dir='Ultralytics', env_var='YOLOV5_CONFIG_DIR'):
-    # Return path of user configuration directory. Prefer environment variable if exists. Make dir if required.
-    env = os.getenv(env_var)
-    if env:
-        path = Path(env)  # use environment variable
-    else:
-        cfg = {'Windows': 'AppData/Roaming', 'Linux': '.config', 'Darwin': 'Library/Application Support'}  # 3 OS dirs
-        path = Path.home() / cfg.get(platform.system(), '')  # OS-specific config dir
-        path = (path if is_writeable(path) else Path('/tmp')) / dir  # GCP and AWS lambda fix, only /tmp is writeable
-    path.mkdir(exist_ok=True)  # make if required
-    return path
-
-
-def is_writeable(dir, test=False):
-    # Return True if directory has write permissions, test opening a file with write permissions if test=True
-    if test:  # method 1
-        file = Path(dir) / 'tmp.txt'
-        try:
-            with open(file, 'w'):  # open file with write permissions
-                pass
-            file.unlink()  # remove file
-            return True
-        except IOError:
-            return False
-    else:  # method 2
-        return os.access(dir, os.R_OK)  # possible issues on Windows
 
 
 def is_docker():
@@ -170,7 +224,7 @@ def is_ascii(s=''):
 
 def is_chinese(s='人工智能'):
     # Is string composed of any Chinese characters?
-    return re.search('[\u4e00-\u9fff]', s)
+    return True if re.search('[\u4e00-\u9fff]', str(s)) else False
 
 
 def emojis(str=''):
@@ -178,13 +232,26 @@ def emojis(str=''):
     return str.encode().decode('ascii', 'ignore') if platform.system() == 'Windows' else str
 
 
+def file_age(path=__file__):
+    # Return days since last file update
+    dt = (datetime.now() - datetime.fromtimestamp(Path(path).stat().st_mtime))  # delta
+    return dt.days  # + dt.seconds / 86400  # fractional days
+
+
+def file_update_date(path=__file__):
+    # Return human-readable file modification date, i.e. '2021-3-26'
+    t = datetime.fromtimestamp(Path(path).stat().st_mtime)
+    return f'{t.year}-{t.month}-{t.day}'
+
+
 def file_size(path):
     # Return file/dir size (MB)
+    mb = 1 << 20  # bytes to MiB (1024 ** 2)
     path = Path(path)
     if path.is_file():
-        return path.stat().st_size / 1E6
+        return path.stat().st_size / mb
     elif path.is_dir():
-        return sum(f.stat().st_size for f in path.glob('**/*') if f.is_file()) / 1E6
+        return sum(f.stat().st_size for f in path.glob('**/*') if f.is_file()) / mb
     else:
         return 0.0
 
@@ -199,29 +266,38 @@ def check_online():
         return False
 
 
+def git_describe(path=ROOT):  # path must be a directory
+    # Return human-readable git description, i.e. v5.0-5-g3e25f1e https://git-scm.com/docs/git-describe
+    try:
+        return check_output(f'git -C {path} describe --tags --long --always', shell=True).decode()[:-1]
+    except Exception:
+        return ''
+
+
 @try_except
+@WorkingDirectory(ROOT)
 def check_git_status():
     # Recommend 'git pull' if code is out of date
     msg = ', for updates see https://github.com/ultralytics/yolov5'
-    print(colorstr('github: '), end='')
-    assert Path('.git').exists(), 'skipping check (not a git repository)' + msg
-    assert not is_docker(), 'skipping check (Docker image)' + msg
-    assert check_online(), 'skipping check (offline)' + msg
+    s = colorstr('github: ')  # string
+    assert Path('.git').exists(), s + 'skipping check (not a git repository)' + msg
+    assert not is_docker(), s + 'skipping check (Docker image)' + msg
+    assert check_online(), s + 'skipping check (offline)' + msg
 
     cmd = 'git fetch && git config --get remote.origin.url'
     url = check_output(cmd, shell=True, timeout=5).decode().strip().rstrip('.git')  # git fetch
     branch = check_output('git rev-parse --abbrev-ref HEAD', shell=True).decode().strip()  # checked out
     n = int(check_output(f'git rev-list {branch}..origin/master --count', shell=True))  # commits behind
     if n > 0:
-        s = f"⚠️ YOLOv5 is out of date by {n} commit{'s' * (n > 1)}. Use `git pull` or `git clone {url}` to update."
+        s += f"⚠️ YOLOv5 is out of date by {n} commit{'s' * (n > 1)}. Use `git pull` or `git clone {url}` to update."
     else:
-        s = f'up to date with {url} ✅'
-    print(emojis(s))  # emoji-safe
+        s += f'up to date with {url} ✅'
+    LOGGER.info(emojis(s))  # emoji-safe
 
 
-def check_python(minimum='3.6.2'):
+def check_python(minimum='3.7.0'):
     # Check current python version vs. required python version
-    check_version(platform.python_version(), minimum, name='Python ')
+    check_version(platform.python_version(), minimum, name='Python ', hard=True)
 
 
 def check_version(current='0.0.0', minimum='0.0.0', name='version ', pinned=False, hard=False, verbose=False):
@@ -237,14 +313,15 @@ def check_version(current='0.0.0', minimum='0.0.0', name='version ', pinned=Fals
 
 
 @try_except
-def check_requirements(requirements=ROOT.parents[0] / 'requirements.txt', exclude=(), install=True):
+def check_requirements(requirements=ROOT / 'requirements.txt', exclude=(), install=True):
     # Check installed dependencies meet requirements (pass *.txt file or list of packages)
     prefix = colorstr('red', 'bold', 'requirements:')
     check_python()  # check python version
     if isinstance(requirements, (str, Path)):  # requirements.txt file
         file = Path(requirements)
         assert file.exists(), f"{prefix} {file.resolve()} not found, check failed."
-        requirements = [f'{x.name}{x.specifier}' for x in pkg.parse_requirements(file.open()) if x.name not in exclude]
+        with file.open() as f:
+            requirements = [f'{x.name}{x.specifier}' for x in pkg.parse_requirements(f) if x.name not in exclude]
     else:  # list or tuple of packages
         requirements = [x for x in requirements if x not in exclude]
 
@@ -252,24 +329,24 @@ def check_requirements(requirements=ROOT.parents[0] / 'requirements.txt', exclud
     for r in requirements:
         try:
             pkg.require(r)
-        except Exception as e:  # DistributionNotFound or VersionConflict if requirements not met
+        except Exception:  # DistributionNotFound or VersionConflict if requirements not met
             s = f"{prefix} {r} not found and is required by YOLOv5"
             if install:
-                print(f"{s}, attempting auto-update...")
+                LOGGER.info(f"{s}, attempting auto-update...")
                 try:
                     assert check_online(), f"'pip install {r}' skipped (offline)"
-                    print(check_output(f"pip install '{r}'", shell=True).decode())
+                    LOGGER.info(check_output(f"pip install '{r}'", shell=True).decode())
                     n += 1
                 except Exception as e:
-                    print(f'{prefix} {e}')
+                    LOGGER.warning(f'{prefix} {e}')
             else:
-                print(f'{s}. Please install and rerun your command.')
+                LOGGER.info(f'{s}. Please install and rerun your command.')
 
     if n:  # if packages updated
         source = file.resolve() if 'file' in locals() else requirements
         s = f"{prefix} {n} package{'s' * (n > 1)} updated per {source}\n" \
             f"{prefix} ⚠️ {colorstr('bold', 'Restart runtime or rerun command for updates to take effect')}\n"
-        print(emojis(s))
+        LOGGER.info(emojis(s))
 
 
 def check_img_size(imgsz, s=32, floor=0):
@@ -277,9 +354,10 @@ def check_img_size(imgsz, s=32, floor=0):
     if isinstance(imgsz, int):  # integer i.e. img_size=640
         new_size = max(make_divisible(imgsz, int(s)), floor)
     else:  # list i.e. img_size=[640, 480]
+        imgsz = list(imgsz)  # convert to list if tuple
         new_size = [max(make_divisible(x, int(s)), floor) for x in imgsz]
     if new_size != imgsz:
-        print(f'WARNING: --img-size {imgsz} must be multiple of max stride {s}, updating to {new_size}')
+        LOGGER.warning(f'WARNING: --img-size {imgsz} must be multiple of max stride {s}, updating to {new_size}')
     return new_size
 
 
@@ -294,7 +372,7 @@ def check_imshow():
         cv2.waitKey(1)
         return True
     except Exception as e:
-        print(f'WARNING: Environment does not support cv2.imshow() or PIL Image.show() image displays\n{e}')
+        LOGGER.warning(f'WARNING: Environment does not support cv2.imshow() or PIL Image.show() image displays\n{e}')
         return False
 
 
@@ -323,9 +401,12 @@ def check_file(file, suffix=''):
     elif file.startswith(('http:/', 'https:/')):  # download
         url = str(Path(file)).replace(':/', '://')  # Pathlib turns :// -> :/
         file = Path(urllib.parse.unquote(file).split('?')[0]).name  # '%2F' to '/', split https://url.com/file.txt?auth
-        print(f'Downloading {url} to {file}...')
-        torch.hub.download_url_to_file(url, file)
-        assert Path(file).exists() and Path(file).stat().st_size > 0, f'File download failed: {url}'  # check
+        if Path(file).is_file():
+            LOGGER.info(f'Found {url} locally at {file}')  # file already exists
+        else:
+            LOGGER.info(f'Downloading {url} to {file}...')
+            torch.hub.download_url_to_file(url, file)
+            assert Path(file).exists() and Path(file).stat().st_size > 0, f'File download failed: {url}'  # check
         return file
     else:  # search
         files = []
@@ -336,6 +417,15 @@ def check_file(file, suffix=''):
         return files[0]  # return file
 
 
+def check_font(font=FONT):
+    # Download font to CONFIG_DIR if necessary
+    font = Path(font)
+    if not font.exists() and not (CONFIG_DIR / font.name).exists():
+        url = "https://ultralytics.com/assets/" + font.name
+        LOGGER.info(f'Downloading {url} to {CONFIG_DIR / font.name}...')
+        torch.hub.download_url_to_file(url, str(font), progress=False)
+
+
 def check_dataset(data, autodownload=True):
     # Download and/or unzip dataset if not found locally
     # Usage: https://github.com/ultralytics/yolov5/releases/download/v1.0/coco128_with_yaml.zip
@@ -343,8 +433,8 @@ def check_dataset(data, autodownload=True):
     # Download (optional)
     extract_dir = ''
     if isinstance(data, (str, Path)) and str(data).endswith('.zip'):  # i.e. gs://bucket/dir/coco128.zip
-        download(data, dir='../datasets', unzip=True, delete=False, curl=False, threads=1)
-        data = next((Path('../datasets') / Path(data).stem).rglob('*.yaml'))
+        download(data, dir=DATASETS_DIR, unzip=True, delete=False, curl=False, threads=1)
+        data = next((DATASETS_DIR / Path(data).stem).rglob('*.yaml'))
         extract_dir, autodownload = data.parent, False
 
     # Read yaml (optional)
@@ -352,38 +442,44 @@ def check_dataset(data, autodownload=True):
         with open(data, errors='ignore') as f:
             data = yaml.safe_load(f)  # dictionary
 
-    # Parse yaml
-    path = extract_dir or Path(data.get('path') or '')  # optional 'path' default to '.'
+    # Resolve paths
+    path = Path(extract_dir or data.get('path') or '')  # optional 'path' default to '.'
+    if not path.is_absolute():
+        path = (ROOT / path).resolve()
     for k in 'train', 'val', 'test':
         if data.get(k):  # prepend path
             data[k] = str(path / data[k]) if isinstance(data[k], str) else [str(path / x) for x in data[k]]
 
+    # Parse yaml
     assert 'nc' in data, "Dataset 'nc' key missing."
     if 'names' not in data:
         data['names'] = [f'class{i}' for i in range(data['nc'])]  # assign class names if missing
-    train, val, test, s = [data.get(x) for x in ('train', 'val', 'test', 'download')]
+    train, val, test, s = (data.get(x) for x in ('train', 'val', 'test', 'download'))
     if val:
         val = [Path(x).resolve() for x in (val if isinstance(val, list) else [val])]  # val path
         if not all(x.exists() for x in val):
-            print('\nWARNING: Dataset not found, nonexistent paths: %s' % [str(x) for x in val if not x.exists()])
+            LOGGER.info(emojis('\nDataset not found ⚠️, missing paths %s' % [str(x) for x in val if not x.exists()]))
             if s and autodownload:  # download script
+                t = time.time()
                 root = path.parent if 'path' in data else '..'  # unzip directory i.e. '../'
                 if s.startswith('http') and s.endswith('.zip'):  # URL
                     f = Path(s).name  # filename
-                    print(f'Downloading {s} to {f}...')
+                    LOGGER.info(f'Downloading {s} to {f}...')
                     torch.hub.download_url_to_file(s, f)
                     Path(root).mkdir(parents=True, exist_ok=True)  # create root
                     ZipFile(f).extractall(path=root)  # unzip
                     Path(f).unlink()  # remove zip
                     r = None  # success
                 elif s.startswith('bash '):  # bash script
-                    print(f'Running {s} ...')
+                    LOGGER.info(f'Running {s} ...')
                     r = os.system(s)
                 else:  # python script
                     r = exec(s, {'yaml': data})  # return None
-                print(f"Dataset autodownload {f'success, saved to {root}' if r in (0, None) else 'failure'}\n")
+                dt = f'({round(time.time() - t, 1)}s)'
+                s = f"success ✅ {dt}, saved to {colorstr('bold', root)}" if r in (0, None) else f"failure {dt} ❌"
+                LOGGER.info(emojis(f"Dataset download {s}"))
             else:
-                raise Exception('Dataset not found.')
+                raise Exception(emojis('Dataset not found ❌'))
 
     return data  # dictionary
 
@@ -403,13 +499,13 @@ def download(url, dir='.', unzip=True, delete=True, curl=False, threads=1):
         if Path(url).is_file():  # exists in current path
             Path(url).rename(f)  # move to dir
         elif not f.exists():
-            print(f'Downloading {url} to {f}...')
+            LOGGER.info(f'Downloading {url} to {f}...')
             if curl:
                 os.system(f"curl -L '{url}' -o '{f}' --retry 9 -C -")  # curl download, retry and resume on fail
             else:
-                torch.hub.download_url_to_file(url, f, progress=True)  # torch download
+                torch.hub.download_url_to_file(url, f, progress=threads == 1)  # torch download
         if unzip and f.suffix in ('.zip', '.gz'):
-            print(f'Unzipping {f}...')
+            LOGGER.info(f'Unzipping {f}...')
             if f.suffix == '.zip':
                 ZipFile(f).extractall(path=dir)  # unzip
             elif f.suffix == '.gz':
@@ -430,7 +526,9 @@ def download(url, dir='.', unzip=True, delete=True, curl=False, threads=1):
 
 
 def make_divisible(x, divisor):
-    # Returns x evenly divisible by divisor
+    # Returns nearest x divisible by divisor
+    if isinstance(divisor, torch.Tensor):
+        divisor = int(divisor.max())  # to int
     return math.ceil(x / divisor) * divisor
 
 
@@ -447,25 +545,26 @@ def one_cycle(y1=0.0, y2=1.0, steps=100):
 def colorstr(*input):
     # Colors a string https://en.wikipedia.org/wiki/ANSI_escape_code, i.e.  colorstr('blue', 'hello world')
     *args, string = input if len(input) > 1 else ('blue', 'bold', input[0])  # color arguments, string
-    colors = {'black': '\033[30m',  # basic colors
-              'red': '\033[31m',
-              'green': '\033[32m',
-              'yellow': '\033[33m',
-              'blue': '\033[34m',
-              'magenta': '\033[35m',
-              'cyan': '\033[36m',
-              'white': '\033[37m',
-              'bright_black': '\033[90m',  # bright colors
-              'bright_red': '\033[91m',
-              'bright_green': '\033[92m',
-              'bright_yellow': '\033[93m',
-              'bright_blue': '\033[94m',
-              'bright_magenta': '\033[95m',
-              'bright_cyan': '\033[96m',
-              'bright_white': '\033[97m',
-              'end': '\033[0m',  # misc
-              'bold': '\033[1m',
-              'underline': '\033[4m'}
+    colors = {
+        'black': '\033[30m',  # basic colors
+        'red': '\033[31m',
+        'green': '\033[32m',
+        'yellow': '\033[33m',
+        'blue': '\033[34m',
+        'magenta': '\033[35m',
+        'cyan': '\033[36m',
+        'white': '\033[37m',
+        'bright_black': '\033[90m',  # bright colors
+        'bright_red': '\033[91m',
+        'bright_green': '\033[92m',
+        'bright_yellow': '\033[93m',
+        'bright_blue': '\033[94m',
+        'bright_magenta': '\033[95m',
+        'bright_cyan': '\033[96m',
+        'bright_white': '\033[97m',
+        'end': '\033[0m',  # misc
+        'bold': '\033[1m',
+        'underline': '\033[4m'}
     return ''.join(colors[x] for x in args) + f'{string}' + colors['end']
 
 
@@ -502,9 +601,10 @@ def coco80_to_coco91_class():  # converts 80-index (val2014) to 91-index (paper)
     # b = np.loadtxt('data/coco_paper.names', dtype='str', delimiter='\n')
     # x1 = [list(a[i] == b).index(True) + 1 for i in range(80)]  # darknet to coco
     # x2 = [list(b[i] == a).index(True) if any(b[i] == a) else None for i in range(91)]  # coco to darknet
-    x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34,
-         35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
-         64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
+    x = [
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34,
+        35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+        64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
     return x
 
 
@@ -612,14 +712,21 @@ def clip_coords(boxes, shape):
         boxes[:, [1, 3]] = boxes[:, [1, 3]].clip(0, shape[0])  # y1, y2
 
 
-def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, multi_label=False,
-                        labels=(), max_det=300):
-    """Runs Non-Maximum Suppression (NMS) on inference results
+def non_max_suppression(prediction,
+                        conf_thres=0.25,
+                        iou_thres=0.45,
+                        classes=None,
+                        agnostic=False,
+                        multi_label=False,
+                        labels=(),
+                        max_det=300):
+    """Non-Maximum Suppression (NMS) on inference results to reject overlapping bounding boxes
 
     Returns:
          list of detections, on (n,6) tensor per image [xyxy, conf, cls]
     """
 
+    bs = prediction.shape[0]  # batch size
     nc = prediction.shape[2] - 5  # number of classes
     xc = prediction[..., 4] > conf_thres  # candidates
 
@@ -628,15 +735,16 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
     assert 0 <= iou_thres <= 1, f'Invalid IoU {iou_thres}, valid values are between 0.0 and 1.0'
 
     # Settings
-    min_wh, max_wh = 2, 4096  # (pixels) minimum and maximum box width and height
+    # min_wh = 2  # (pixels) minimum box width and height
+    max_wh = 7680  # (pixels) maximum box width and height
     max_nms = 30000  # maximum number of boxes into torchvision.ops.nms()
-    time_limit = 10.0  # seconds to quit after
+    time_limit = 0.1 + 0.03 * bs  # seconds to quit after
     redundant = True  # require redundant detections
     multi_label &= nc > 1  # multiple labels per box (adds 0.5ms/img)
     merge = False  # use merge-NMS
 
     t = time.time()
-    output = [torch.zeros((0, 6), device=prediction.device)] * prediction.shape[0]
+    output = [torch.zeros((0, 6), device=prediction.device)] * bs
     for xi, x in enumerate(prediction):  # image index, image inference
         # Apply constraints
         # x[((x[..., 2:4] < min_wh) | (x[..., 2:4] > max_wh)).any(1), 4] = 0  # width-height
@@ -644,11 +752,11 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
 
         # Cat apriori labels if autolabelling
         if labels and len(labels[xi]):
-            l = labels[xi]
-            v = torch.zeros((len(l), nc + 5), device=x.device)
-            v[:, :4] = l[:, 1:5]  # box
+            lb = labels[xi]
+            v = torch.zeros((len(lb), nc + 5), device=x.device)
+            v[:, :4] = lb[:, 1:5]  # box
             v[:, 4] = 1.0  # conf
-            v[range(len(l)), l[:, 0].long() + 5] = 1.0  # cls
+            v[range(len(lb)), lb[:, 0].long() + 5] = 1.0  # cls
             x = torch.cat((x, v), 0)
 
         # If none remain process next image
@@ -700,7 +808,7 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
 
         output[xi] = x[i]
         if (time.time() - t) > time_limit:
-            print(f'WARNING: NMS time limit {time_limit}s exceeded')
+            LOGGER.warning(f'WARNING: NMS time limit {time_limit:.3f}s exceeded')
             break  # time limit exceeded
 
     return output
@@ -711,7 +819,7 @@ def strip_optimizer(f='best.pt', s=''):  # from utils.general import *; strip_op
     x = torch.load(f, map_location=torch.device('cpu'))
     if x.get('ema'):
         x['model'] = x['ema']  # replace model with ema
-    for k in 'optimizer', 'training_results', 'wandb_id', 'ema', 'updates', 'neptune_id':  # keys
+    for k in 'optimizer', 'best_fitness', 'wandb_id', 'ema', 'updates':  # keys
         x[k] = None
     x['epoch'] = -1
     x['model'].half()  # to FP16
@@ -719,13 +827,14 @@ def strip_optimizer(f='best.pt', s=''):  # from utils.general import *; strip_op
         p.requires_grad = False
     torch.save(x, s or f)
     mb = os.path.getsize(s or f) / 1E6  # filesize
-    print(f"Optimizer stripped from {f},{(' saved as %s,' % s) if s else ''} {mb:.1f}MB")
+    LOGGER.info(f"Optimizer stripped from {f},{(' saved as %s,' % s) if s else ''} {mb:.1f}MB")
 
 
-def print_mutation(results, hyp, save_dir, bucket):
-    evolve_csv, results_csv, evolve_yaml = save_dir / 'evolve.csv', save_dir / 'results.csv', save_dir / 'hyp_evolve.yaml'
-    keys = ('metrics/precision', 'metrics/recall', 'metrics/mAP_0.5', 'metrics/mAP_0.5:0.95',
-            'val/box_loss', 'val/obj_loss', 'val/cls_loss') + tuple(hyp.keys())  # [results + hyps]
+def print_mutation(results, hyp, save_dir, bucket, prefix=colorstr('evolve: ')):
+    evolve_csv = save_dir / 'evolve.csv'
+    evolve_yaml = save_dir / 'hyp_evolve.yaml'
+    keys = ('metrics/precision', 'metrics/recall', 'metrics/mAP_0.5', 'metrics/mAP_0.5:0.95', 'val/box_loss',
+            'val/obj_loss', 'val/cls_loss') + tuple(hyp.keys())  # [results + hyps]
     keys = tuple(x.strip() for x in keys)
     vals = results + tuple(hyp.values())
     n = len(keys)
@@ -733,7 +842,7 @@ def print_mutation(results, hyp, save_dir, bucket):
     # Download (optional)
     if bucket:
         url = f'gs://{bucket}/evolve.csv'
-        if gsutil_getsize(url) > (os.path.getsize(evolve_csv) if os.path.exists(evolve_csv) else 0):
+        if gsutil_getsize(url) > (evolve_csv.stat().st_size if evolve_csv.exists() else 0):
             os.system(f'gsutil cp {url} {save_dir}')  # download evolve.csv if larger than local
 
     # Log to evolve.csv
@@ -741,28 +850,29 @@ def print_mutation(results, hyp, save_dir, bucket):
     with open(evolve_csv, 'a') as f:
         f.write(s + ('%20.5g,' * n % vals).rstrip(',') + '\n')
 
-    # Print to screen
-    print(colorstr('evolve: ') + ', '.join(f'{x.strip():>20s}' for x in keys))
-    print(colorstr('evolve: ') + ', '.join(f'{x:20.5g}' for x in vals), end='\n\n\n')
-
     # Save yaml
     with open(evolve_yaml, 'w') as f:
         data = pd.read_csv(evolve_csv)
         data = data.rename(columns=lambda x: x.strip())  # strip keys
-        i = np.argmax(fitness(data.values[:, :7]))  #
-        f.write('# YOLOv5 Hyperparameter Evolution Results\n' +
-                f'# Best generation: {i}\n' +
-                f'# Last generation: {len(data)}\n' +
-                '# ' + ', '.join(f'{x.strip():>20s}' for x in keys[:7]) + '\n' +
-                '# ' + ', '.join(f'{x:>20.5g}' for x in data.values[i, :7]) + '\n\n')
-        yaml.safe_dump(hyp, f, sort_keys=False)
+        i = np.argmax(fitness(data.values[:, :4]))  #
+        generations = len(data)
+        f.write('# YOLOv5 Hyperparameter Evolution Results\n' + f'# Best generation: {i}\n' +
+                f'# Last generation: {generations - 1}\n' + '# ' + ', '.join(f'{x.strip():>20s}' for x in keys[:7]) +
+                '\n' + '# ' + ', '.join(f'{x:>20.5g}' for x in data.values[i, :7]) + '\n\n')
+        yaml.safe_dump(data.loc[i][7:].to_dict(), f, sort_keys=False)
+
+    # Print to screen
+    LOGGER.info(prefix + f'{generations} generations finished, current result:\n' + prefix +
+                ', '.join(f'{x.strip():>20s}' for x in keys) + '\n' + prefix + ', '.join(f'{x:20.5g}'
+                                                                                         for x in vals) + '\n\n')
 
     if bucket:
         os.system(f'gsutil cp {evolve_csv} {evolve_yaml} gs://{bucket}')  # upload
 
 
 def apply_classifier(x, model, img, im0):
-    # Apply a second stage classifier to yolo outputs
+    # Apply a second stage classifier to YOLO outputs
+    # Example model = torchvision.models.__dict__['efficientnet_b0'](pretrained=True).to(device).eval()
     im0 = [im0] if isinstance(im0, np.ndarray) else im0
     for i, d in enumerate(x):  # per image
         if d is not None and len(d):
@@ -787,7 +897,7 @@ def apply_classifier(x, model, img, im0):
 
                 im = im[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
                 im = np.ascontiguousarray(im, dtype=np.float32)  # uint8 to float32
-                im /= 255.0  # 0 - 255 to 0.0 - 1.0
+                im /= 255  # 0 - 255 to 0.0 - 1.0
                 ims.append(im)
 
             pred_cls2 = model(torch.Tensor(ims).to(d.device)).argmax(1)  # classifier prediction
@@ -796,35 +906,18 @@ def apply_classifier(x, model, img, im0):
     return x
 
 
-def save_one_box(xyxy, im, file='image.jpg', gain=1.02, pad=10, square=False, BGR=False, save=True):
-    # Save image crop as {file} with crop size multiple {gain} and {pad} pixels. Save and/or return crop
-    xyxy = torch.tensor(xyxy).view(-1, 4)
-    b = xyxy2xywh(xyxy)  # boxes
-    if square:
-        b[:, 2:] = b[:, 2:].max(1)[0].unsqueeze(1)  # attempt rectangle to square
-    b[:, 2:] = b[:, 2:] * gain + pad  # box wh * gain + pad
-    xyxy = xywh2xyxy(b).long()
-    clip_coords(xyxy, im.shape)
-    crop = im[int(xyxy[0, 1]):int(xyxy[0, 3]), int(xyxy[0, 0]):int(xyxy[0, 2]), ::(1 if BGR else -1)]
-    if save:
-        cv2.imwrite(str(increment_path(file, mkdir=True).with_suffix('.jpg')), crop)
-    return crop
-
-
 def increment_path(path, exist_ok=False, sep='', mkdir=False):
     # Increment file or directory path, i.e. runs/exp --> runs/exp{sep}2, runs/exp{sep}3, ... etc.
     path = Path(path)  # os-agnostic
     if path.exists() and not exist_ok:
-        suffix = path.suffix
-        path = path.with_suffix('')
+        path, suffix = (path.with_suffix(''), path.suffix) if path.is_file() else (path, '')
         dirs = glob.glob(f"{path}{sep}*")  # similar paths
         matches = [re.search(rf"%s{sep}(\d+)" % path.stem, d) for d in dirs]
         i = [int(m.groups()[0]) for m in matches if m]  # indices
         n = max(i) + 1 if i else 2  # increment number
-        path = Path(f"{path}{sep}{n}{suffix}")  # update path
-    dir = path if path.suffix == '' else path.parent  # directory
-    if not dir.exists() and mkdir:
-        dir.mkdir(parents=True, exist_ok=True)  # make directory
+        path = Path(f"{path}{sep}{n}{suffix}")  # increment path
+    if mkdir:
+        path.mkdir(parents=True, exist_ok=True)  # make directory
     return path
 
 @contextlib.contextmanager
@@ -843,3 +936,29 @@ def yolov5_in_syspath():
         yield
     finally:
         sys.path.remove(yolov5_folder_dir)
+
+
+# OpenCV Chinese-friendly functions ------------------------------------------------------------------------------------
+imshow_ = cv2.imshow  # copy to avoid recursion errors
+
+
+def imread(path):
+    return cv2.imdecode(np.fromfile(path, np.uint8), cv2.IMREAD_COLOR)
+
+
+def imwrite(path, im):
+    try:
+        cv2.imencode(Path(path).suffix, im)[1].tofile(path)
+        return True
+    except Exception:
+        return False
+
+
+def imshow(path, im):
+    imshow_(path.encode('unicode_escape').decode(), im)
+
+
+cv2.imread, cv2.imwrite, cv2.imshow = imread, imwrite, imshow  # redefine
+
+# Variables ------------------------------------------------------------------------------------------------------------
+NCOLS = 0 if is_docker() else shutil.get_terminal_size().columns  # terminal window size for tqdm

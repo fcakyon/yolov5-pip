@@ -1,10 +1,11 @@
 from pathlib import Path
 
+from yolov5.models.common import AutoShape, DetectMultiBackend
 from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import Model
-from yolov5.utils.general import set_logging, yolov5_in_syspath
+from yolov5.utils.general import LOGGER, logging, yolov5_in_syspath
 from yolov5.utils.google_utils import attempt_download
-from yolov5.utils.torch_utils import select_device, torch
+from yolov5.utils.torch_utils import torch
 
 
 def load_model(model_path, device=None, autoshape=True, verbose=False):
@@ -13,7 +14,6 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
 
     Arguments:
         model_path (str): path of the model
-        config_path (str): path of the config file
         device (str): select device that model will be loaded (cpu, cuda)
         pretrained (bool): load pretrained weights into the model
         autoshape (bool): make model ready for inference
@@ -25,28 +25,19 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
     (Adapted from yolov5.hubconf.create)
     """
     # set logging
-    set_logging(verbose=verbose)
+    if not verbose:
+        LOGGER.setLevel(logging.WARNING)
 
     # set device if not given
     if device is None:
-        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    elif type(device) is str:
+        device = torch.device(device)
 
-    attempt_download(model_path)  # download if not found locally
-    with yolov5_in_syspath():
-        model = torch.load(model_path, map_location=torch.device(device))
-    if isinstance(model, dict):
-        model = model["model"]  # load model
-    hub_model = Model(model.yaml)  # create
-    msd = model.state_dict()  # model state_dict
-    csd = model.float().state_dict()  # checkpoint state_dict as FP32
-    csd = {k: v for k, v in csd.items() if msd[k].shape == v.shape}  # filter
-    hub_model.load_state_dict(csd, strict=False)  # load
-    hub_model.names = model.names  # class names
-    model = hub_model
+    model = DetectMultiBackend(model_path, device=device)
 
     if autoshape:
-        model = model.autoshape()
-
+        model = AutoShape(model)  # for file/URI/PIL/cv2/np inputs and NMS
     return model.to(device)
 
 
