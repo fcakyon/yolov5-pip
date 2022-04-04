@@ -450,6 +450,10 @@ def run(
         conf_thres=0.25,  # TF.js NMS: confidence threshold
 ):
     t = time.time()
+
+    if isinstance(include, str):
+        include = include.split(',')
+
     include = [x.lower() for x in include]  # to lowercase
     formats = tuple(export_formats()['Argument'][1:])  # --include arguments
     flags = [x in include for x in formats]
