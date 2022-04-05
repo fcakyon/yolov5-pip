@@ -19,13 +19,16 @@
 
 <div align="center">
 You can finally install <a href="https://github.com/ultralytics/yolov5">YOLOv5 object detector</a> using <a href="https://pypi.org/project/yolov5/">pip</a> and integrate into your project easily.
-</p>
 <img src="https://user-images.githubusercontent.com/26833433/136901921-abcfcd9d-f978-4942-9b97-0e3f202907df.png" width="1000">
 <br>
 This yolov5 package contains everything from ultralytics/yolov5 <a href="https://github.com/ultralytics/yolov5/commit/ea72b84f5e690cb516642ce2d9ae200145b0af34">at this commit</a> plus:
+<br>
 1. NeptuneAI logger support (metric, model and dataset logging)
+<br>
 2. S3 support (model and dataset upload)
+<br>
 3. Classwise AP logging during experiment
+<br>
 4. COCO dataset format support (for training)
 </div>
 
