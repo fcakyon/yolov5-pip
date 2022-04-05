@@ -451,7 +451,7 @@ def run(
 ):
     t = time.time()
 
-    # handle fire args include=['torchscript,onnx,tflite']
+    # handle fire args as: include=['torchscript,onnx,tflite']
     if isinstance(include, list) and (',' in include[0]):
         include = include[0].split(',')
 
