@@ -25,11 +25,11 @@ This yolov5 package contains everything from ultralytics/yolov5 <a href="https:/
 <br>
 1. Easy installation via pip: `pip install yolov5`
 <br>
-2. Full CLI integration with [Fire](https://github.com/google/python-fire) package
+2. Full CLI integration with <a href="https://github.com/google/python-fire">fire</a> package
 <br>
-3. NeptuneAI logger support (metric, model and dataset logging)
+3. <a href="https://neptune.ai/">NeptuneAI</a> logger support (metric, model and dataset logging)
 <br>
-4. S3 support (model and dataset upload)
+4. <a href="https://aws.amazon.com/s3/">S3</a> support (model and dataset upload)
 <br>
 5. Classwise AP logging during experiment
 <br>
