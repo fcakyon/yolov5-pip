@@ -23,13 +23,17 @@ You can finally install <a href="https://github.com/ultralytics/yolov5">YOLOv5 o
 <br>
 This yolov5 package contains everything from ultralytics/yolov5 <a href="https://github.com/ultralytics/yolov5/commit/ea72b84f5e690cb516642ce2d9ae200145b0af34">at this commit</a> plus:
 <br>
-1. NeptuneAI logger support (metric, model and dataset logging)
+1. Easy installation via pip: `pip install yolov5`
 <br>
-2. S3 support (model and dataset upload)
+2. Full CLI integration with [Fire](https://github.com/google/python-fire) package
 <br>
-3. Classwise AP logging during experiment
+3. NeptuneAI logger support (metric, model and dataset logging)
 <br>
-4. COCO dataset format support (for training)
+4. S3 support (model and dataset upload)
+<br>
+5. Classwise AP logging during experiment
+<br>
+6. COCO dataset format support (for training)
 </div>
 
 
