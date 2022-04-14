@@ -9,8 +9,9 @@
 <div align="center">
   <a href="https://pepy.tech/project/yolov5"><img src="https://pepy.tech/badge/yolov5" alt="total downloads"></a>
   <a href="https://pepy.tech/project/yolov5"><img src="https://pepy.tech/badge/yolov5/month" alt="monthly downloads"></a>
-  <a href="https://badge.fury.io/py/yolov5"><img src="https://badge.fury.io/py/yolov5.svg" alt="pypi version"></a>
+  <a href="https://twitter.com/fcakyon"><img src="https://img.shields.io/twitter/follow/fcakyon?color=blue&logo=twitter&style=flat" alt="fcakyon twitter"></a>
   <br>
+  <a href="https://badge.fury.io/py/yolov5"><img src="https://badge.fury.io/py/yolov5.svg" alt="pypi version"></a>
   <a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/ci.yml"><img src="https://github.com/fcakyon/yolov5-pip/actions/workflows/ci.yml/badge.svg" alt="ci testing"></a>
   <a href="https://github.com/fcakyon/yolov5-pip/actions/workflows/package_testing.yml"><img src="https://github.com/fcakyon/yolov5-pip/actions/workflows/package_testing.yml/badge.svg" alt="package testing"></a>
 </div>
@@ -27,13 +28,13 @@ This yolov5 package contains everything from ultralytics/yolov5 <a href="https:/
 <br>
 2. Full CLI integration with <a href="https://github.com/google/python-fire">fire</a> package
 <br>
-3. <a href="https://neptune.ai/">NeptuneAI</a> logger support (metric, model and dataset logging)
+3. COCO dataset format support (for training)
 <br>
 4. <a href="https://aws.amazon.com/s3/">S3</a> support (model and dataset upload)
 <br>
-5. Classwise AP logging during experiment
+5. <a href="https://neptune.ai/">NeptuneAI</a> logger support (metric, model and dataset logging)
 <br>
-6. COCO dataset format support (for training)
+6. Classwise AP logging during experiments
 </div>
 
 
