@@ -28,13 +28,13 @@ This yolov5 package contains everything from ultralytics/yolov5 <a href="https:/
 <br>
 2. Full CLI integration with <a href="https://github.com/google/python-fire">fire</a> package
 <br>
-3. <a href="https://neptune.ai/">NeptuneAI</a> logger support (metric, model and dataset logging)
+3. COCO dataset format support (for training)
 <br>
 4. <a href="https://aws.amazon.com/s3/">S3</a> support (model and dataset upload)
 <br>
-5. Classwise AP logging during experiment
+5. <a href="https://neptune.ai/">NeptuneAI</a> logger support (metric, model and dataset logging)
 <br>
-6. COCO dataset format support (for training)
+6. Classwise AP logging during experiments
 </div>
 
 
