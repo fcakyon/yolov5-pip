@@ -1060,7 +1060,8 @@ def dataset_stats(path='coco128.yaml', autodownload=False, verbose=False, profil
             t1 = time.time()
             np.save(file, stats)
             t2 = time.time()
-            x = np.load(file, allow_pickle=True)
+            with yolov5_in_syspath():
+                x = np.load(file, allow_pickle=True)
             print(f'stats.npy times: {time.time() - t2:.3f}s read, {t2 - t1:.3f}s write')
 
             file = stats_path.with_suffix('.json')
