@@ -40,6 +40,7 @@ HELP_URL = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'
 IMG_FORMATS = 'bmp', 'dng', 'jpeg', 'jpg', 'mpo', 'png', 'tif', 'tiff', 'webp'  # include image suffixes
 VID_FORMATS = 'asf', 'avi', 'gif', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'ts', 'wmv'  # include video suffixes
 BAR_FORMAT = '{l_bar}{bar:10}{r_bar}{bar:-10b}'  # tqdm bar format
+LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 
 # Get orientation exif tag
 for orientation in ExifTags.TAGS.keys():
@@ -149,6 +150,7 @@ class InfiniteDataLoader(dataloader.DataLoader):
 
     Uses same syntax as vanilla DataLoader
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         object.__setattr__(self, 'batch_sampler', _RepeatSampler(self.batch_sampler))
@@ -168,6 +170,7 @@ class _RepeatSampler:
     Args:
         sampler (Sampler)
     """
+
     def __init__(self, sampler):
         self.sampler = sampler
 
@@ -448,8 +451,7 @@ class LoadImagesAndLabels(Dataset):
         self.label_files = img2label_paths(self.im_files)  # labels
         cache_path = (p if p.is_file() else Path(self.label_files[0]).parent).with_suffix('.cache')
         try:
-            with yolov5_in_syspath():
-                cache, exists = np.load(cache_path, allow_pickle=True).item(), True  # load dict
+            cache, exists = np.load(cache_path, allow_pickle=True).item(), True  # load dict
             assert cache['version'] == self.cache_version  # same version
             assert cache['hash'] == get_hash(self.label_files + self.im_files)  # same hash
         except Exception:
@@ -457,7 +459,7 @@ class LoadImagesAndLabels(Dataset):
 
         # Display cache
         nf, nm, ne, nc, n = cache.pop('results')  # found, missing, empty, corrupt, total
-        if exists:
+        if exists and LOCAL_RANK in (-1, 0):
             d = f"Scanning '{cache_path}' images and labels... {nf} found, {nm} missing, {ne} empty, {nc} corrupt"
             tqdm(None, desc=prefix + d, total=n, initial=n, bar_format=BAR_FORMAT)  # display cache results
             if cache['msgs']:
@@ -524,7 +526,7 @@ class LoadImagesAndLabels(Dataset):
             self.im_hw0, self.im_hw = [None] * n, [None] * n
             fcn = self.cache_images_to_disk if cache_images == 'disk' else self.load_image
             results = ThreadPool(NUM_THREADS).imap(fcn, range(n))
-            pbar = tqdm(enumerate(results), total=n, bar_format=BAR_FORMAT)
+            pbar = tqdm(enumerate(results), total=n, bar_format=BAR_FORMAT, disable=LOCAL_RANK > 0)
             for i, x in pbar:
                 if cache_images == 'disk':
                     gb += self.npy_files[i].stat().st_size
@@ -983,6 +985,7 @@ def dataset_stats(path='coco128.yaml', autodownload=False, verbose=False, profil
         autodownload:   Attempt to download dataset if not found locally
         verbose:        Print stats dictionary
     """
+
     def round_labels(labels):
         # Update labels to integer class and 6 decimal place floats
         return [[int(c), *(round(x, 4) for x in points)] for c, *points in labels]
@@ -1057,7 +1060,8 @@ def dataset_stats(path='coco128.yaml', autodownload=False, verbose=False, profil
             t1 = time.time()
             np.save(file, stats)
             t2 = time.time()
-            x = np.load(file, allow_pickle=True)
+            with yolov5_in_syspath():
+                x = np.load(file, allow_pickle=True)
             print(f'stats.npy times: {time.time() - t2:.3f}s read, {t2 - t1:.3f}s write')
 
             file = stats_path.with_suffix('.json')
