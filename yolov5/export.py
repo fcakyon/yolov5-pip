@@ -468,6 +468,11 @@ def run(
         conf_thres=0.25,  # TF.js NMS: confidence threshold
 ):
     t = time.time()
+
+    # handle fire args as: include=['torchscript,onnx,tflite']
+    if isinstance(include, list) and (',' in include[0]):
+        include = include[0].split(',')
+
     include = [x.lower() for x in include]  # to lowercase
     formats = tuple(export_formats()['Argument'][1:])  # --include arguments
     flags = [x in include for x in formats]
