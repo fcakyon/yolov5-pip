@@ -299,14 +299,13 @@ class DetectMultiBackend(nn.Module):
         super().__init__()
         w = str(weights[0] if isinstance(weights, list) else weights)
         pt, jit, onnx, xml, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs = self.model_type(w)  # get backend
-        stride, names = 64, [f'class{i}' for i in range(1000)]  # assign defaults
+        stride, names = 32, [f'class{i}' for i in range(1000)]  # assign defaults
         w = attempt_download(w)  # download if not local
         fp16 &= (pt or jit or onnx or engine) and device.type != 'cpu'  # FP16
         if data:  # data.yaml path (optional)
             with open(data, errors='ignore') as f:
                 names = yaml.safe_load(f)['names']  # class names
 
-        
         if pt:  # PyTorch
             model = attempt_load(weights if isinstance(weights, list) else w, map_location=device)
             stride = max(int(model.stride.max()), 32)  # model stride
@@ -335,6 +334,9 @@ class DetectMultiBackend(nn.Module):
             providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if cuda else ['CPUExecutionProvider']
             with yolov5_in_syspath():
                 session = onnxruntime.InferenceSession(w, providers=providers)
+                meta = session.get_modelmeta().custom_metadata_map  # metadata
+            if 'stride' in meta:
+                stride, names = int(meta['stride']), eval(meta['names'])
         elif xml:  # OpenVINO
             LOGGER.info(f'Loading {w} for OpenVINO inference...')
             check_requirements(('openvino-dev',))  # requires openvino-dev: https://pypi.org/project/openvino-dev/
@@ -390,7 +392,8 @@ class DetectMultiBackend(nn.Module):
 
                 gd = tf.Graph().as_graph_def()  # graph_def
                 with yolov5_in_syspath():
-                    gd.ParseFromString(open(w, 'rb').read())
+                    with open(w, 'rb') as f:
+                        gd.ParseFromString(f.read())
                     frozen_func = wrap_frozen_graph(gd, inputs="x:0", outputs="Identity:0")
             elif tflite or edgetpu:  # https://www.tensorflow.org/lite/guide/python#install_tensorflow_lite_for_python
                 try:  # https://coral.ai/docs/edgetpu/tflite-python/#update-existing-tf-lite-code-for-the-edge-tpu
@@ -542,7 +545,7 @@ class AutoShape(nn.Module):
         #   multiple:        = [Image.open('image1.jpg'), Image.open('image2.jpg'), ...]  # list of images
 
         t = [time_sync()]
-        p = next(self.model.parameters()) if self.pt else torch.zeros(1)  # for device and type
+        p = next(self.model.parameters()) if self.pt else torch.zeros(1, device=self.model.device)  # for device, type
         autocast = self.amp and (p.device.type != 'cpu')  # Automatic Mixed Precision (AMP) inference
         if isinstance(imgs, torch.Tensor):  # torch
             with amp.autocast(autocast):
@@ -640,7 +643,7 @@ class Detections:
 
             im = Image.fromarray(im.astype(np.uint8)) if isinstance(im, np.ndarray) else im  # from np
             if pprint:
-                LOGGER.info(s.rstrip(', '))
+                print(s.rstrip(', '))
             if show:
                 im.show(self.files[i])  # show
             if save:
@@ -657,8 +660,7 @@ class Detections:
 
     def print(self):
         self.display(pprint=True)  # print results
-        LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {tuple(self.s)}' %
-                    self.t)
+        print(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {tuple(self.s)}' % self.t)
 
     def show(self, labels=True):
         self.display(show=True, labels=labels)  # show results
@@ -695,7 +697,11 @@ class Detections:
         return x
 
     def __len__(self):
-        return self.n
+        return self.n  # override len(results)
+
+    def __str__(self):
+        self.print()  # override print(results)
+        return ''
 
 
 class Classify(nn.Module):

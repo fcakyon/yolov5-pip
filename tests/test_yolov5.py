@@ -2,6 +2,7 @@ import unittest
 
 from tests.test_utils import TestConstants
 
+DEVICE = "cpu"
 
 class TestYolov5(unittest.TestCase):
     def test_load_model(self):
@@ -9,21 +10,18 @@ class TestYolov5(unittest.TestCase):
 
         # init model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
-        device = "cpu"
-        yolov5 = YOLOv5(model_path, device, load_on_init=False)
+        yolov5 = YOLOv5(model_path, DEVICE, load_on_init=False)
         yolov5.load_model()
 
         # check if loaded
         self.assertNotEqual(yolov5.model, None)
 
     def test_load_model_on_init(self):
-        from PIL import Image
         from yolov5 import YOLOv5
 
         # init model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
-        device = "cpu"
-        yolov5 = YOLOv5(model_path, device, load_on_init=True)
+        yolov5 = YOLOv5(model_path, DEVICE, load_on_init=True)
 
         # check if loaded
         self.assertNotEqual(yolov5.model, None)
@@ -34,8 +32,7 @@ class TestYolov5(unittest.TestCase):
 
         # init yolov5s model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
-        device = "cpu"
-        yolov5 = YOLOv5(model_path, device, load_on_init=True)
+        yolov5 = YOLOv5(model_path, DEVICE, load_on_init=True)
 
         # prepare image
         image_path = TestConstants.ZIDANE_IMAGE_PATH
@@ -62,8 +59,7 @@ class TestYolov5(unittest.TestCase):
         
         # init yolov5l model
         model_path = TestConstants.YOLOV5L_MODEL_PATH
-        device = "cpu"
-        yolov5 = YOLOv5(model_path, device, load_on_init=True)
+        yolov5 = YOLOv5(model_path, DEVICE, load_on_init=True)
 
         # prepare image
         image_path = TestConstants.BUS_IMAGE_PATH
@@ -89,8 +85,7 @@ class TestYolov5(unittest.TestCase):
 
         # init yolov5s model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
-        device = "cpu"
-        yolov5 = YOLOv5(model_path, device, load_on_init=True)
+        yolov5 = YOLOv5(model_path, DEVICE, load_on_init=True)
 
         # prepare images
         image_path1 = TestConstants.ZIDANE_IMAGE_PATH
@@ -127,7 +122,7 @@ class TestYolov5(unittest.TestCase):
 
         # init model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
-        model = yolov5.load(model_path)
+        model = yolov5.load(model_path, device=DEVICE)
 
         # check if loaded
         self.assertNotEqual(model, None)
@@ -138,7 +133,8 @@ class TestYolov5(unittest.TestCase):
 
         # init yolov5s model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
-        model = yolov5.load(model_path)
+        #model_path = '/home/fatihakyon/dev/obss/ml/drone-tracking/drone-detection/[coco-bb]_33k_yolov5m6_1344input/weights/best.pt'
+        model = yolov5.load(model_path, device=DEVICE)
 
         # prepare image
         image_path = TestConstants.ZIDANE_IMAGE_PATH
@@ -154,7 +150,7 @@ class TestYolov5(unittest.TestCase):
         
         # init yolov5l model
         model_path = TestConstants.YOLOV5L_MODEL_PATH
-        model = yolov5.load(model_path)
+        model = yolov5.load(model_path, device=DEVICE)
 
         # prepare image
         image_path = TestConstants.BUS_IMAGE_PATH
@@ -169,7 +165,7 @@ class TestYolov5(unittest.TestCase):
 
         # init yolov5s model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
-        model = yolov5.load(model_path)
+        model = yolov5.load(model_path, device=DEVICE)
 
         # prepare images
         image_path1 = TestConstants.ZIDANE_IMAGE_PATH
