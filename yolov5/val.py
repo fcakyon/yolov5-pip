@@ -3,7 +3,7 @@
 Validate a trained YOLOv5 model accuracy on a custom dataset
 
 Usage:
-    $ yolov5 val -weights yolov5s.pt --data coco128.yaml --img 640
+    $ yolov5 val --weights yolov5s.pt --data coco128.yaml --img 640
 
 Usage - formats:
     $ yolov5 val --weights yolov5s.pt                 # PyTorch
