@@ -561,7 +561,11 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                 LOGGER.info(f"{colorstr('aws:')} Best weight has been successfully uploaded to {s3_file}")
 
         callbacks.run('on_train_end', last, best, plots, epoch, results)
-        LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}")
+        LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}"
+                    f"\nDetect:        yolov5 detect --weights {str(best)}"
+                    f"\n\PIP Package:  model = yolov5.load('{str(best)}')"
+                    f"\nValidate:      yolov5 val --weights {str(best)}"
+                    f"\nVisualize:     https://netron.app")
 
     torch.cuda.empty_cache()
     return results

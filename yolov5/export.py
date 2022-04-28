@@ -554,9 +554,9 @@ def run(
     if any(f):
         LOGGER.info(f'\nExport complete ({time.time() - t:.2f}s)'
                     f"\nResults saved to {colorstr('bold', file.parent.resolve())}"
-                    f"\nDetect:          python detect.py --weights {f[-1]}"
-                    f"\nPyTorch Hub:     model = torch.hub.load('ultralytics/yolov5', 'custom', '{f[-1]}')"
-                    f"\nValidate:        python val.py --weights {f[-1]}"
+                    f"\nDetect:          yolov5 detect --weights {f[-1]}"
+                    f"\n\PIP Package:    model = yolov5.load('{f[-1]}')"
+                    f"\nValidate:        yolov5 val --weights {f[-1]}"
                     f"\nVisualize:       https://netron.app")
     return f  # return list of exported files/dirs
 
