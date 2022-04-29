@@ -74,7 +74,7 @@ import yolov5
 # load pretrained model
 model = yolov5.load('yolov5s.pt')
 
-# load custom model
+# or load custom model
 model = yolov5.load('train/best.pt')
   
 # set model parameters
