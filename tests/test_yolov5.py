@@ -50,12 +50,12 @@ class TestYolov5(unittest.TestCase):
         image = image_path
 
         # perform inference
-        results = yolov5.predict(image, size=640, augment=False)
+        results = yolov5.predict(image, size=640, augment=True)
 
         # compare
         self.assertEqual(results.n, 1)
         self.assertEqual(len(results.names), 80)
-        self.assertEqual(len(results.pred[0]), 4)
+        self.assertEqual(len(results.pred[0]), 5)
         
         # init yolov5l model
         model_path = TestConstants.YOLOV5L_MODEL_PATH
