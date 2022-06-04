@@ -71,7 +71,7 @@ class YOLOv5:
 if __name__ == "__main__":
     model_path = "yolov5/weights/yolov5s.pt"
     device = "cuda"
-    model = load_model(model_path=model_path, config_path=None, device=device)
+    model = load_model(model_path=model_path, device=device)
 
     from PIL import Image
     imgs = [Image.open(x) for x in Path("yolov5/data/images").glob("*.jpg")]
