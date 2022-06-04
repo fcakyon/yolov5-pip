@@ -1,10 +1,7 @@
 from pathlib import Path
 
 from yolov5.models.common import AutoShape, DetectMultiBackend
-from yolov5.models.experimental import attempt_load
-from yolov5.models.yolo import Model
-from yolov5.utils.general import LOGGER, logging, yolov5_in_syspath
-from yolov5.utils.google_utils import attempt_download
+from yolov5.utils.general import LOGGER, logging
 from yolov5.utils.torch_utils import torch
 
 
