@@ -1,10 +1,7 @@
 from pathlib import Path
 
 from yolov5.models.common import AutoShape, DetectMultiBackend
-from yolov5.models.experimental import attempt_load
-from yolov5.models.yolo import Model
-from yolov5.utils.general import LOGGER, logging, yolov5_in_syspath
-from yolov5.utils.google_utils import attempt_download
+from yolov5.utils.general import LOGGER, logging
 from yolov5.utils.torch_utils import torch
 
 
@@ -71,7 +68,7 @@ class YOLOv5:
 if __name__ == "__main__":
     model_path = "yolov5/weights/yolov5s.pt"
     device = "cuda"
-    model = load_model(model_path=model_path, config_path=None, device=device)
+    model = load_model(model_path=model_path, device=device)
 
     from PIL import Image
     imgs = [Image.open(x) for x in Path("yolov5/data/images").glob("*.jpg")]
