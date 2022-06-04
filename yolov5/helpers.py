@@ -1,7 +1,7 @@
 from pathlib import Path
 from yolov5.models.common import AutoShape, DetectMultiBackend
 from yolov5.utils.general import LOGGER, logging
-from yolov5.utils.torch_utils import select_device, torch
+from yolov5.utils.torch_utils import torch
 
 def load_model(model_path, device=None, autoshape=True, verbose=False):
     """
@@ -29,7 +29,7 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
     elif type(device) is str:
         device = torch.device(device)
 
-    model = DetectMultiBackend(model_path, device=select_device(device))
+    model = DetectMultiBackend(model_path, device=device)
 
     if autoshape:
         model = AutoShape(model)  # for file/URI/PIL/cv2/np inputs and NMS
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     
     if source in IMG_FORMATS:
         model_path = "yolov5/weights/yolov5s.pt"
-        device = "cpu"
+        device = "cuda"
         model = load_model(model_path=model_path, device=device)
 
         from PIL import Image
