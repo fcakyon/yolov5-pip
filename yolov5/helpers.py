@@ -69,15 +69,12 @@ class YOLOv5:
         from utils.plots import Annotator, colors
         import cv2
 
-        dataset = LoadImages(video_path, img_size)            
+        cap = cv2.VideoCapture(video_path)         
         output = []
-        for path, im, im0s, _, _ in dataset:
-            im = torch.from_numpy(im).to("cpu")
-            im = im.float()  # uint8 to fp16/32
-            im /= 255  # 0 - 255 to 0.0 - 1.0
-            if len(im.shape) == 3:
-                im = im[None]  # expand for batch dim
-
+        while True:
+            _, im = cap.read()
+            im0s = im.copy()
+            im = torch.from_numpy(im).permute(2, 0, 1).float().div(255.0).unsqueeze(0)
             pred = self.model(im)
             pred = non_max_suppression(pred, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False)
             for _, det in enumerate(pred):
@@ -103,20 +100,17 @@ if __name__ == "__main__":
     
     
     path = "yolov5/data/images/zidane.jpg"
+    model_path = "yolov5/weights/yolov5s.pt"
     source = Path(path).suffix[1:]
     
     if source in IMG_FORMATS:
-        model_path = "yolov5/weights/yolov5s.pt"
-        device = "cuda"
-        model = load_model(model_path=model_path, device=device)
-
         from PIL import Image
+        
+        model = load_model(model_path=model_path, device="cpu")
         img = Image.open(path)
         result = model(img)
-    
+
     elif source in VID_FORMATS:                    
-        video_path = "yolov5/test.mp4"
-        model_path = "yolov5/weights/yolov5s.pt"
-        model = YOLOv5(model_path=model_path, device="cuda")
-        result = model.video_predict(video_path=video_path, view_img=True)
+        model = YOLOv5(model_path=model_path, device="cpu")
+        result = model.video_predict(video_path=path, view_img=True)
  
