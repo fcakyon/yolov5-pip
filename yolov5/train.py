@@ -774,6 +774,14 @@ def run(**kwargs):
     main(opt)
     return opt
 
+def run_cli(**kwargs):
+    '''
+    To be called from yolov5.cli
+    '''
+    opt = parse_opt(True)
+    for k, v in kwargs.items():
+        setattr(opt, k, v)
+    main(opt)
 
 if __name__ == "__main__":
     opt = parse_opt()
