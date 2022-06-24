@@ -13,6 +13,7 @@ from tqdm import tqdm
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[3]  # YOLOv5 root directory
 
+from yolov5 import __version__
 from yolov5.utils.datasets import LoadImagesAndLabels, img2label_paths
 from yolov5.utils.general import LOGGER, check_dataset, check_file
 
@@ -185,6 +186,9 @@ class WandbLogger():
             if self.job_type == 'Dataset Creation':
                 self.wandb_run.config.update({"upload_dataset": True})
                 self.data_dict = self.check_and_upload_dataset(opt)
+
+            # log yolov5 package version
+            self.wandb.log({"yolov5-version": __version__})
 
     def check_and_upload_dataset(self, opt):
         """

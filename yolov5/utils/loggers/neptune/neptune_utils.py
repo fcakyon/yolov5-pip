@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 import yaml
-
+from yolov5 import __version__
 from yolov5.utils.general import colorstr
 
 try:
@@ -29,13 +29,11 @@ class NeptuneLogger:
                     self.neptune_run["opt"] = vars(opt)
                     self.track_dataset(opt)
                 self.data_dict = self.setup_training(data_dict)
+            # log yolov5 package version
+            self.neptune_run["yolov5-version"].log(__version__)
+            
             prefix = colorstr('neptune: ')
             print(f"{prefix}NeptuneAI logging initiated successfully.")
-        else:
-            #prefix = colorstr('neptune: ')
-            #print(
-            #    f"{prefix}Install NeptuneAI for YOLOv5 logging with 'pip install neptune-client' (recommended)")
-            pass
 
     def track_dataset(self, opt):
         has_yolo_s3_data_dir = False
