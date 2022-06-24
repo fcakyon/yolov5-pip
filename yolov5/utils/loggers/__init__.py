@@ -84,9 +84,9 @@ class Loggers():
         self.csv = True  # always log to csv
         self.class_names = class_names
         if not mmdet_keys:
-            self.class_name_keys = ['metrics/' + name + '_mAP_50' for name in class_names]
+            self.class_name_keys = ['metrics/' + name + '_mAP' for name in class_names] + ['metrics/' + name + '_mAP_50' for name in class_names]
         else:
-            self.class_name_keys = ['val/' + name + '_mAP_50' for name in class_names]
+            self.class_name_keys = ['val/' + name + '_mAP' for name in class_names] + ['val/' + name + '_mAP_50' for name in class_names]
         self.s3_weight_folder = None if not opt.s3_upload_dir else "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / "weights").replace(os.sep, '/')
 
         # Message
