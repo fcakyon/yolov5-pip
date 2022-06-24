@@ -26,6 +26,7 @@ from pathlib import Path
 from threading import Thread
 
 import numpy as np
+import pandas as pd
 import torch
 from tqdm import tqdm
 
@@ -294,6 +295,19 @@ def run(
         for i, c in enumerate(ap_class):
             LOGGER.info(pf % (names[c], seen, nt[c], p[i], r[i], ap50[i], ap[i]))
 
+    # Export results as html
+    header = "Class Images Labels P R mAP@.5 mAP@.5:.95"
+    headers = header.split()
+    data = []
+    data.append(['all', seen, nt.sum(), f"{float(mp):0.3f}", f"{float(mr):0.3f}", f"{float(map50):0.3f}", f"{float(map):0.3f}"])
+    for i, c in enumerate(ap_class):
+        data.append([names[c], seen, nt[c], f"{float(p[i]):0.3f}", f"{float(r[i]):0.3f}", f"{float(ap50[i]):0.3f}", f"{float(ap[i]):0.3f}"])
+    results_df = pd.DataFrame(data,columns=headers)
+    results_html = results_df.to_html()
+    text_file = open(save_dir / "results.html", "w")
+    text_file.write(results_html)
+    text_file.close()
+
     # Print speeds
     t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
     if not training:
@@ -339,7 +353,10 @@ def run(
     maps = np.zeros(nc) + map
     for i, c in enumerate(ap_class):
         maps[c] = ap[i]
-    return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t
+    map50s = np.zeros(nc) + map50
+    for i, c in enumerate(ap_class):
+        map50s[c] = ap50[i]
+    return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, map50s, t
 
 
 def parse_opt():
