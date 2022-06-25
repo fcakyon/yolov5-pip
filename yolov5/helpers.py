@@ -72,6 +72,7 @@ class YOLOv5:
         output = []
         while True:
             _, im = cap.read()
+            im = cv2.resize(im, (size, size))
             im0s = im.copy()
             im = torch.from_numpy(im).permute(2, 0, 1).float().div(255.0).unsqueeze(0)
             pred = self.model(im, size=size, augment=augment) 
