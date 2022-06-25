@@ -64,35 +64,40 @@ class YOLOv5:
         return results
 
     def video_predict(self, video_path, view_img=True, size=640, augment=False, line_thickness=3):
-        from yolov5.utils.general import non_max_suppression
-        from utils.plots import Annotator, colors
+        from yolov5.utils.datasets import LoadImages
+        from yolov5.utils.general import non_max_suppression, scale_coords
+        from yolov5.utils.plots import Annotator, colors
         import cv2
 
-        cap = cv2.VideoCapture(video_path)         
-        output = []
-        while True:
-            _, im = cap.read()
-            im = cv2.resize(im, (size, size))
-            im0s = im.copy()
-            im = torch.from_numpy(im).permute(2, 0, 1).float().div(255.0).unsqueeze(0)
+        dataset = LoadImages(video_path, size)            
+        for path, im, im0s, vid_cap, s in dataset:
+            im = torch.from_numpy(im).to(self.device)
+            im = im.float()  # uint8 to fp16/32
+            im /= 255  # 0 - 255 to 0.0 - 1.0
+            if len(im.shape) == 3:
+                im = im[None]  # expand for batch dim
+                
             pred = self.model(im, size=size, augment=augment) 
             pred = non_max_suppression(pred, conf_thres=self.model.conf, iou_thres=self.model.iou, classes=self.model.classes, agnostic=self.model.agnostic)
+            
             for _, det in enumerate(pred):
-                for *xyxy, conf, cls in reversed(det):
-                    annotator = Annotator(im0s, line_width=line_thickness, example=str(self.model.names))
-                    output.append({"bbox": xyxy, "conf": conf, "cls": self.model.names[int(cls)]})
-                    if view_img:  # Add bbox to image
+                annotator = Annotator(im0s, line_width=line_thickness, example=str(self.model.names))
+                
+                if len(det):
+                    det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0s.shape).round()
+                    
+                    for *xyxy, conf, cls in reversed(det):
+                        c = int(cls)  # integer class
                         label = "%s %.2f" % (self.model.names[int(cls)], conf)
-                        annotator.box_label(xyxy, label, color=colors(int(cls), True))
+                        annotator.box_label(xyxy, label, color=colors(c, True))
                         
             # Stream results
+            im0 = annotator.result()
+            
             if view_img:
-                im0 = annotator.result()
-                cv2.imshow(str(Path(path).stem), im0)
-                if cv2.waitKey(1) == ord("q"):
-                    break
-        cv2.destroyAllWindows()
-        return output
+                cv2.imshow("YOLOv5", im0)
+                cv2.waitKey(1)  # 1 millisecond
+ 
         
 if __name__ == "__main__":
     IMG_FORMATS = 'bmp', 'dng', 'jpeg', 'jpg', 'mpo', 'png', 'tif', 'tiff', 'webp'  # include image suffixes
