@@ -133,7 +133,6 @@ class TestYolov5(unittest.TestCase):
 
         # init yolov5s model
         model_path = TestConstants.YOLOV5S_MODEL_PATH
-        #model_path = '/home/fatihakyon/dev/obss/ml/drone-tracking/drone-detection/[coco-bb]_33k_yolov5m6_1344input/weights/best.pt'
         model = yolov5.load(model_path, device=DEVICE)
 
         # prepare image
