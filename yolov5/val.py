@@ -389,7 +389,7 @@ def parse_opt():
     return opt
 
 
-def main(opt):
+def main():
     opt = parse_opt()
     #check_requirements(requirements=ROOT / 'requirements.txt', exclude=('tensorboard', 'thop'))
 
