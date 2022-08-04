@@ -11,11 +11,12 @@ def notebook_init(verbose=True):
     import os
     import shutil
 
-    #check_requirements(('psutil', 'IPython'))
+    from utils.general import check_requirements, emojis, is_colab
+    from utils.torch_utils import select_device  # imports
+
+    check_requirements(('psutil', 'IPython'))
     import psutil
     from IPython import display  # to display images and clear console output
-    from yolov5.utils.general import check_requirements, emojis, is_colab
-    from yolov5.utils.torch_utils import select_device  # imports
 
     if is_colab():
         shutil.rmtree('/content/sample_data', ignore_errors=True)  # remove colab /sample_data directory

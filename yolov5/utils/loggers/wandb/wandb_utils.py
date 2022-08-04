@@ -2,7 +2,6 @@
 
 import logging
 import os
-import sys
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Dict
@@ -14,7 +13,7 @@ FILE = Path(__file__).resolve()
 ROOT = FILE.parents[3]  # YOLOv5 root directory
 
 from yolov5 import __version__
-from yolov5.utils.datasets import LoadImagesAndLabels, img2label_paths
+from yolov5.utils.dataloaders import LoadImagesAndLabels, img2label_paths
 from yolov5.utils.general import LOGGER, check_dataset, check_file
 
 try:
