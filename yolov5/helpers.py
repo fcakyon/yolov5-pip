@@ -1,8 +1,9 @@
 from pathlib import Path
 
 from yolov5.models.common import AutoShape, DetectMultiBackend
+from yolov5.models.experimental import attempt_load
 from yolov5.utils.general import LOGGER, logging
-from yolov5.utils.torch_utils import torch
+from yolov5.utils.torch_utils import select_device
 
 
 def load_model(model_path, device=None, autoshape=True, verbose=False):
@@ -25,16 +26,19 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
     if not verbose:
         LOGGER.setLevel(logging.WARNING)
 
-    # set device if not given
-    if device is None:
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    elif type(device) is str:
-        device = torch.device(device)
+    # set device
+    device = select_device(device)
 
-    model = DetectMultiBackend(model_path, device=device)
+    try:
+        model = DetectMultiBackend(model_path, device=device, fuse=autoshape)  # detection model
+        if autoshape:
+            model = AutoShape(model)  # for file/URI/PIL/cv2/np inputs and NMS
+    except Exception:
+        model = attempt_load(model_path, device=device, fuse=False)  # arbitrary model
 
-    if autoshape:
-        model = AutoShape(model)  # for file/URI/PIL/cv2/np inputs and NMS
+    if not verbose:
+        LOGGER.setLevel(logging.INFO)  # reset to default
+
     return model.to(device)
 
 
