@@ -61,6 +61,7 @@ jobs:
           # train
           python yolov5/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device $di
           yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device $di
+          yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device $di --evolve 2
           # detect
           python yolov5/detect.py --weights yolov5/weights/yolov5n.pt --device $di
           yolov5 detect --weights yolov5/weights/yolov5n.pt --device $di
