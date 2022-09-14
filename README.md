@@ -267,7 +267,7 @@ $ yolov5 detect --source 0  # webcam
 You can export your fine-tuned YOLOv5 weights to any format such as `torchscript`, `onnx`, `coreml`, `pb`, `tflite`, `tfjs`:
 
 ```bash
-$ yolov5 export --weights yolov5s.pt --include 'torchscript,onnx,coreml,pb,tfjs'
+$ yolov5 export --weights yolov5s.pt --include torchscript,onnx,coreml,pb,tfjs
 ```
 
 </details>
