@@ -75,4 +75,4 @@ jobs:
           # export
           pip install onnx onnx-simplifier tensorflowjs
           python yolov5/export.py --weights yolov5/weights/yolov5n.pt --device $di --include 'torchscript,onnx,tflite'
-          yolov5 export --weights yolov5/weights/yolov5n.pt --device $di --simplify --include 'torchscript,onnx,saved_model,pb,tfjs'
+          yolov5 export --weights yolov5/weights/yolov5n.pt --device $di --simplify --include torchscript,onnx,saved_model,pb,tfjs
