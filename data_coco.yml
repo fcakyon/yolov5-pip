@@ -1,0 +1,4 @@
+train_json_path: "/home/fatihakyon/data/witwiser/banned_objects_with_negative_samples/train.json"
+train_image_dir: "/home/fatihakyon/data/witwiser/banned_objects_with_negative_samples"
+val_json_path: "/home/fatihakyon/data/witwiser/banned_objects_with_negative_samples/val.json"
+val_image_dir: "/home/fatihakyon/data/witwiser/banned_objects_with_negative_samples"

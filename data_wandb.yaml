@@ -1,0 +1,13 @@
+names:
+- earphone
+- cable
+- cellphone
+- Headphone
+- calculator
+nc: 5
+train: wandb-artifact://YOLOv5/train
+train_image_dir: /home/fatihakyon/data/witwiser/banned_objects_with_negative_samples
+train_json_path: /home/fatihakyon/data/witwiser/banned_objects_with_negative_samples/train.json
+val: wandb-artifact://YOLOv5/val
+val_image_dir: /home/fatihakyon/data/witwiser/banned_objects_with_negative_samples
+val_json_path: /home/fatihakyon/data/witwiser/banned_objects_with_negative_samples/val.json
