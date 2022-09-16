@@ -49,8 +49,10 @@ from yolov5.val import run as val_det
 
 def run(
         weights='yolov5s.pt',  # weights path
-        imgsz=640,  # inference size (pixels)
-        batch_size=1,  # batch size
+        imgsz=None,  # inference size (pixels)
+        img=None,  # inference size (pixels)
+        batch_size=None,  # batch size
+        batch=None,  # batch size
         data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
         device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         half=False,  # use FP16 half-precision inference
@@ -58,6 +60,15 @@ def run(
         pt_only=False,  # test PyTorch only
         hard_fail=False,  # throw error on benchmark failure
 ):
+    if imgsz is None and img is None:
+        imgsz = 640
+    elif img is not None:
+        imgsz = img
+    if batch_size is None and batch is None:
+        batch_size = 1
+    elif batch is not None:
+        batch_size = batch
+
     y, t = [], time.time()
     device = select_device(device)
     model_type = type(attempt_load(weights, fuse=False))  # DetectionModel, SegmentationModel, etc.
@@ -96,7 +107,7 @@ def run(
 
     # Print results
     LOGGER.info('\n')
-    parse_opt()
+    #parse_opt()
     notebook_init()  # print system info
     c = ['Format', 'Size (MB)', 'mAP50-95', 'Inference time (ms)'] if map else ['Format', 'Export', '', '']
     py = pd.DataFrame(y, columns=c)
