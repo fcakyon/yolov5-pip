@@ -38,8 +38,9 @@ def notebook_init(verbose=True):
     import os
     import shutil
 
-    from utils.general import check_font, check_requirements, emojis, is_colab
-    from utils.torch_utils import select_device  # imports
+    from yolov5.utils.general import (check_font, check_requirements, emojis,
+                                      is_colab)
+    from yolov5.utils.torch_utils import select_device  # imports
 
     check_requirements(('psutil', 'IPython'))
     check_font()
