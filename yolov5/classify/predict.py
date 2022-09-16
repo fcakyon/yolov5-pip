@@ -80,11 +80,12 @@ def run(
         source = check_file(source)  # download
 
     if imgsz is None and img is None:
-        imgsz = (224, 224)
+        imgsz = 224
     elif img is not None:
-        if isinstance(img, int):
-            img = (img, img)
         imgsz = img
+
+    if isinstance(imgsz, int):
+        imgsz = [imgsz, imgsz]
 
     # Directories
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
