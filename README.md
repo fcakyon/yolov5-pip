@@ -25,7 +25,7 @@ You can finally install <a href="https://github.com/ultralytics/yolov5">YOLOv5 o
 </div>
 
 <br>
-This yolov5 package contains everything from ultralytics/yolov5 <a href="https://github.com/ultralytics/yolov5/tree/c7a2d6bcf4f7e88db53f3d09a8484391dac7bc89">at this commit</a> plus:
+This yolov5 package contains everything from ultralytics/yolov5 <a href="https://github.com/ultralytics/yolov5/tree/03f2ca8eff8918b98169256d055353a1f15b8e32">at this commit</a> plus:
 <br>
 1. Easy installation via pip: `pip install yolov5`
 <br>
