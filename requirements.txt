@@ -12,11 +12,12 @@ scipy>=1.4.1
 torch>=1.7.0
 torchvision>=0.8.1
 tqdm>=4.64.0
-protobuf<=3.20.1  # https://github.com/ultralytics/yolov5/issues/8012
+# protobuf<=3.20.1  # https://github.com/ultralytics/yolov5/issues/8012
 
 # Logging -------------------------------------
 tensorboard>=2.4.1
 # wandb
+# clearml
 
 # Plotting ------------------------------------
 pandas>=1.1.4
@@ -46,4 +47,4 @@ fire
 # AWS
 boto3>=1.19.1
 # coco to yolov5 conversion
-sahi>=0.9.1
+sahi>=0.10.5
