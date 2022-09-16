@@ -141,6 +141,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     amp = check_amp(model)  # check AMP
 
     # Freeze
+    if isinstance(freeze, int):
+        freeze = [freeze]
     freeze = [f'model.{x}.' for x in (freeze if len(freeze) > 1 else range(freeze[0]))]  # layers to freeze
     for k, v in model.named_parameters():
         v.requires_grad = True  # train all layers
@@ -679,6 +681,16 @@ def run(**kwargs):
         setattr(opt, k, v)
     main(opt)
     return opt
+
+
+def run_cli(**kwargs):
+    '''
+    To be called from yolov5.cli
+    '''
+    opt = parse_opt(True)
+    for k, v in kwargs.items():
+        setattr(opt, k, v)
+    main(opt)
 
 
 if __name__ == "__main__":
