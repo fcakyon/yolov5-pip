@@ -324,7 +324,7 @@ class DetectMultiBackend(nn.Module):
         #   TensorFlow Lite:                *.tflite
         #   TensorFlow Edge TPU:            *_edgetpu.tflite
         #   PaddlePaddle:                   *_paddle_model
-        from models.experimental import (  # scoped to avoid circular import
+        from yolov5.models.experimental import (  # scoped to avoid circular import
             attempt_download, attempt_load)
 
         super().__init__()
