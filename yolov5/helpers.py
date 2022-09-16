@@ -71,7 +71,7 @@ class YOLOv5:
         Returns results as a yolov5.models.common.Detections object.
         """
         assert self.model is not None, "before predict, you need to call .load_model()"
-        results = self.model(imgs=image_list, size=size, augment=augment)
+        results = self.model(ims=image_list, size=size, augment=augment)
         return results
 
 if __name__ == "__main__":
