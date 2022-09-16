@@ -163,6 +163,8 @@ results.save(save_dir='results/')
 
 ```python
 from yolov5 import train, val, detect, export
+# from yolov5.classify import train, val, predict
+# from yolov5.segment import train, val, predict
 
 train.run(imgsz=640, data='coco128.yaml')
 val.run(imgsz=640, data='coco128.yaml', weights='yolov5s.pt')
@@ -268,6 +270,36 @@ You can export your fine-tuned YOLOv5 weights to any format such as `torchscript
 
 ```bash
 $ yolov5 export --weights yolov5s.pt --include torchscript,onnx,coreml,pb,tfjs
+```
+
+</details>
+
+<details open>
+<summary>Classify</summary>
+
+Train/Val/Predict with YOLOv5 image classifier:
+
+```bash
+$ yolov5 classify train --img 640 --data mnist2560 --weights yolov5s-cls.pt --epochs 1
+```
+
+```bash
+$ yolov5 classify predict --img 640 --weights yolov5s-cls.pt --source images/
+```
+
+</details>
+
+<details open>
+<summary>Segment</summary>
+
+Train/Val/Predict with YOLOv5 instance segmentation model:
+
+```bash
+$ yolov5 segment train --img 640 --weights yolov5s-seg.pt --epochs 1
+```
+
+```bash
+$ yolov5 segment predict --img 640 --weights yolov5s-seg.pt --source images/
 ```
 
 </details>
