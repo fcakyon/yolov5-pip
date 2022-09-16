@@ -152,6 +152,13 @@ def test(
     return py
 
 
+def run_cli(**kwargs):
+    '''
+    To be called from yolov5.cli
+    '''
+    _ = run(**kwargs)
+
+
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default=ROOT / 'yolov5s.pt', help='weights path')
