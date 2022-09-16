@@ -64,7 +64,7 @@ jobs:
           pip install -e .
           # train
           python yolov5/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu
-          yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu
+          yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu --freeze 10
           yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu --evolve 2
           # detect
           python yolov5/detect.py --weights yolov5/weights/yolov5n.pt --device cpu
@@ -88,5 +88,5 @@ jobs:
           yolov5 classify predict --img 224 --weights yolov5s-cls.pt --device cpu  
           # segment
           yolov5 segment train --img 128 --weights yolov5s-seg.pt --epochs 1 --device cpu
-          yolov5 segment val --img 128 --weights yolov5s-seg.pt --device cpu
+          # yolov5 segment val --img 128 --weights yolov5s-seg.pt --device cpu
           yolov5 segment predict --img 128 --weights yolov5s-seg.pt --device cpu
