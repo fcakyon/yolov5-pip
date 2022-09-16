@@ -53,7 +53,7 @@ from yolov5.utils.general import (LOGGER, check_amp, check_dataset, check_file,
                                   labels_to_class_weights,
                                   labels_to_image_weights, one_cycle,
                                   print_args, print_mutation, strip_optimizer,
-                                  yaml_save)
+                                  yaml_save, yolov5_in_syspath)
 from yolov5.utils.loggers import GenericLogger
 from yolov5.utils.plots import plot_evolve, plot_labels
 from yolov5.utils.segment.dataloaders import create_dataloader
@@ -128,7 +128,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     if pretrained:
         with torch_distributed_zero_first(LOCAL_RANK):
             weights = attempt_download(weights)  # download if not found locally
-        ckpt = torch.load(weights, map_location='cpu')  # load checkpoint to CPU to avoid CUDA memory leak
+        with yolov5_in_syspath():
+            ckpt = torch.load(weights, map_location='cpu')  # load checkpoint to CPU to avoid CUDA memory leak
         model = SegmentationModel(cfg or ckpt['model'].yaml, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)
         exclude = ['anchor'] if (cfg or hyp.get('anchors')) and not resume else []  # exclude keys
         csd = ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
@@ -516,6 +517,10 @@ def parse_opt(known=False):
     # Instance Segmentation Args
     parser.add_argument('--mask-ratio', type=int, default=4, help='Downsample the truth masks to saving memory')
     parser.add_argument('--no-overlap', action='store_true', help='Overlap masks train faster at slightly less mAP')
+
+    # Neptune AI arguments
+    parser.add_argument('--neptune_token', type=str, default=None, help='neptune.ai api token')
+    parser.add_argument('--neptune_project', type=str, default=None, help='https://docs.neptune.ai/api-reference/neptune')
 
     # Weights & Biases arguments
     # parser.add_argument('--entity', default=None, help='W&B: Entity')
