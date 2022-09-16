@@ -151,14 +151,14 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
     # Loggers
     if RANK in {-1, 0}:
-        loggers = Loggers(save_dir, weights, opt, hyp, LOGGER, mmdet_keys=opt.mmdet_tags, class_names=names)  # loggers instance
+        loggers = Loggers(save_dir, weights, opt, hyp, LOGGER, mmdet_keys=opt.mmdet_tags, class_names=list(names.values()))  # loggers instance
 
         # Register actions
         for k in methods(loggers):
             callbacks.register_action(k, callback=getattr(loggers, k))
 
         # Process custom dataset artifact link
-        data_dict = loggers.remote_dataset
+        #data_dict = loggers.remote_dataset
         if resume:  # If resuming runs from remote artifact
             weights, epochs, hyp, batch_size = opt.weights, opt.epochs, opt.hyp, opt.batch_size
 
@@ -437,7 +437,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
             if (not nosave) or (final_epoch and not evolve):  # if save
                 # fetch neptune run id
                 try:
-                    if loggers.neptune:
+                    if loggers.neptune and loggers.neptune.neptune_run:
                         neptune_id = loggers.neptune.neptune_run['sys/id'].fetch()
                     else:
                         neptune_id = None
