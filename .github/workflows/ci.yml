@@ -81,4 +81,10 @@ jobs:
           # benckmarks
           yolov5 benchmarks --weights yolov5s.pt --img 640
           # classify
-          yolov5 classify predict --weights yolov5s-cls.pt    
+          yolov5 classify train --img 224 --weights yolov5s-cls.pt
+          yolov5 classify val --img 224 --weights yolov5s-cls.pt   
+          yolov5 classify predict --img 224 --weights yolov5s-cls.pt   
+          # segment
+          yolov5 segment train --img 128 --weights yolov5s-seg.pt
+          yolov5 segment val --img 128 --weights yolov5s-seg.pt
+          yolov5 segment predict --img 128 --weights yolov5s-seg.pt
