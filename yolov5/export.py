@@ -478,6 +478,10 @@ def run(
 ):
     t = time.time()
 
+    # handle fire args as: include=['torchscript,onnx,tflite']
+    if isinstance(include, list) and (',' in include[0]):
+        include = include[0].split(',')
+
     if imgsz is None and img is None:
         imgsz = (640, 640)
     elif img is not None:
