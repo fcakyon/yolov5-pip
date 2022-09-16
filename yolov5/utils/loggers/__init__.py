@@ -392,7 +392,7 @@ class GenericLogger:
         else:
             self.wandb = None
 
-        if neptune and 'neptune' in self.include:
+        if neptune and 'neptune' in self.include and opt.neptune_token is not None:
             self.neptune = neptune.init(api_token=opt.neptune_token,
                                         project=opt.neptune_project,
                                         name=Path(opt.save_dir).stem)

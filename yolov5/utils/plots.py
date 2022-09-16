@@ -448,7 +448,7 @@ def plot_labels(labels, names=(), save_dir=Path('')):
 
 def imshow_cls(im, labels=None, pred=None, names=None, nmax=25, verbose=False, f=Path('images.jpg')):
     # Show classification image grid with labels (optional) and predictions (optional)
-    from utils.augmentations import denormalize
+    from yolov5.utils.augmentations import denormalize
 
     names = names or [f'class{i}' for i in range(1000)]
     blocks = torch.chunk(denormalize(im.clone()).cpu().float(), len(im),

@@ -2,7 +2,7 @@ import fire
 
 from yolov5.benchmarks import run_cli as benchmarks
 from yolov5.classify.predict import run as classify_predict
-from yolov5.classify.train import run as classify_train
+from yolov5.classify.train import run_cli as classify_train
 from yolov5.classify.val import run as classify_val
 from yolov5.detect import run as detect
 from yolov5.export import run as export

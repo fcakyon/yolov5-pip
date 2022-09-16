@@ -252,10 +252,10 @@ def train(opt, device):
     if RANK in {-1, 0} and final_epoch:
         LOGGER.info(f'\nTraining complete ({(time.time() - t0) / 3600:.3f} hours)'
                     f"\nResults saved to {colorstr('bold', save_dir)}"
-                    f"\nPredict:         python classify/predict.py --weights {best} --source im.jpg"
-                    f"\nValidate:        python classify/val.py --weights {best} --data {data_dir}"
-                    f"\nExport:          python export.py --weights {best} --include onnx"
-                    f"\nPyTorch Hub:     model = torch.hub.load('ultralytics/yolov5', 'custom', '{best}')"
+                    f"\nPredict:         yolov5 classify predict --weights {best} --source im.jpg"
+                    f"\nValidate:        yolov5 classify val --weights {best} --data {data_dir}"
+                    f"\nExport:          yolov5 export --weights {best} --include onnx"
+                    f"\nPyPi:            model = yolov5.load('custom.pt')"
                     f"\nVisualize:       https://netron.app\n")
 
         # Plot examples
@@ -293,6 +293,11 @@ def parse_opt(known=False):
     parser.add_argument('--verbose', action='store_true', help='Verbose mode')
     parser.add_argument('--seed', type=int, default=0, help='Global training seed')
     parser.add_argument('--local_rank', type=int, default=-1, help='Automatic DDP Multi-GPU argument, do not modify')
+
+    # Neptune AI arguments
+    parser.add_argument('--neptune_token', type=str, default=None, help='neptune.ai api token')
+    parser.add_argument('--neptune_project', type=str, default=None, help='https://docs.neptune.ai/api-reference/neptune')
+
     return parser.parse_known_args()[0] if known else parser.parse_args()
 
 
@@ -328,6 +333,15 @@ def run(**kwargs):
     main(opt)
     return opt
 
+
+def run_cli(**kwargs):
+    '''
+    To be called from yolov5.cli
+    '''
+    opt = parse_opt(True)
+    for k, v in kwargs.items():
+        setattr(opt, k, v)
+    main(opt)
 
 if __name__ == "__main__":
     opt = parse_opt()
