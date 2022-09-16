@@ -63,32 +63,31 @@ jobs:
       - name: Test scripts
         run: |
           pip install -e .
-          di=cpu # inference devices  # define device
           # train
-          python yolov5/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device $di
-          yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device $di
-          yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device $di --evolve 2
+          python yolov5/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu
+          yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu
+          yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu --evolve 2
           # detect
-          python yolov5/detect.py --weights yolov5/weights/yolov5n.pt --device $di
-          yolov5 detect --weights yolov5/weights/yolov5n.pt --device $di
-          python yolov5/detect.py --weights runs/train/exp/weights/last.pt --device $di
-          yolov5 detect --weights runs/train/exp/weights/last.pt --device $di
+          python yolov5/detect.py --weights yolov5/weights/yolov5n.pt --device cpu
+          yolov5 detect --weights yolov5/weights/yolov5n.pt --device cpu
+          python yolov5/detect.py --weights runs/train/exp/weights/last.pt --device cpu
+          yolov5 detect --weights runs/train/exp/weights/last.pt --device cpu
           # val
-          python yolov5/val.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --device $di
-          yolov5 val --data yolov5/data/coco128.yaml --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --device $di
-          python yolov5/val.py --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
-          yolov5 val --data yolov5/data/coco128.yaml --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device $di
+          python yolov5/val.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --device cpu
+          yolov5 val --data yolov5/data/coco128.yaml --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --device cpu
+          python yolov5/val.py --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device cpu
+          yolov5 val --data yolov5/data/coco128.yaml --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device cpu
           # export
           pip install onnx onnx-simplifier tensorflowjs
-          python yolov5/export.py --weights yolov5/weights/yolov5n.pt --device $di --include torchscript,onnx,tflite
-          yolov5 export --weights yolov5/weights/yolov5n.pt --device $di --simplify --include torchscript,onnx,saved_model,pb,tfjs
+          python yolov5/export.py --weights yolov5/weights/yolov5n.pt --device cpu --include torchscript,onnx,tflite
+          yolov5 export --weights yolov5/weights/yolov5n.pt --device cpu --simplify --include torchscript,onnx,saved_model,pb,tfjs
           # benckmarks
-          yolov5 benchmarks --weights yolov5s.pt --img 640
+          yolov5 benchmarks --weights yolov5s.pt --img 128 --pt-only --device cpu
           # classify
-          yolov5 classify train --img 224 --weights yolov5s-cls.pt --epochs 1
-          yolov5 classify val --img 224 --weights yolov5s-cls.pt   
-          yolov5 classify predict --img 224 --weights yolov5s-cls.pt   
+          yolov5 classify train --img 224 --weights yolov5s-cls.pt --epochs 1 --device cpu
+          yolov5 classify val --img 224 --weights yolov5s-cls.pt --device cpu
+          yolov5 classify predict --img 224 --weights yolov5s-cls.pt --device cpu  
           # segment
-          yolov5 segment train --img 128 --weights yolov5s-seg.pt --epochs 1
-          yolov5 segment val --img 128 --weights yolov5s-seg.pt
-          yolov5 segment predict --img 128 --weights yolov5s-seg.pt
+          yolov5 segment train --img 128 --weights yolov5s-seg.pt --epochs 1 --device cpu
+          yolov5 segment val --img 128 --weights yolov5s-seg.pt --device cpu
+          yolov5 segment predict --img 128 --weights yolov5s-seg.pt --device cpu
