@@ -1,0 +1,5 @@
+names: ['earphone', 'cable', 'cellphone', 'Headphone', 'calculator']
+nc: 5
+train: /home/fatihakyon/dev/fcakyon/yolov5-pip/runs/train/yolo_upload_dataset_test/data/train
+val: /home/fatihakyon/dev/fcakyon/yolov5-pip/runs/train/yolo_upload_dataset_test/data/val
+yolo_s3_data_dir: s3://obss-ml/computer-vision/model/yolov5/yolo_upload_dataset_test2/data/

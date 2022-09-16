@@ -44,6 +44,11 @@ pycocotools/*
 results*.txt
 gcp_test*.sh
 .neptune
+*.bin
+*.pb
+*saved_model
+*.zip
+datasets/
 
 # Datasets -------------------------------------------------------------------------------------------------------------
 coco/

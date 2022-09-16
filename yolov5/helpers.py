@@ -2,6 +2,7 @@ from pathlib import Path
 
 from yolov5.models.common import AutoShape, DetectMultiBackend
 from yolov5.models.experimental import attempt_load
+from yolov5.models.yolo import ClassificationModel
 from yolov5.utils.general import LOGGER, logging
 from yolov5.utils.torch_utils import select_device
 
@@ -32,7 +33,11 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
     try:
         model = DetectMultiBackend(model_path, device=device, fuse=autoshape)  # detection model
         if autoshape:
-            model = AutoShape(model)  # for file/URI/PIL/cv2/np inputs and NMS
+            if model.pt and isinstance(model.model, ClassificationModel):
+                LOGGER.warning('WARNING: ⚠️ YOLOv5 v6.2 ClassificationModel is not yet AutoShape compatible. '
+                            'You must pass torch tensors in BCHW to this model, i.e. shape(1,3,224,224).')
+            else:
+                model = AutoShape(model)  # for file/URI/PIL/cv2/np inputs and NMS
     except Exception:
         model = attempt_load(model_path, device=device, fuse=False)  # arbitrary model
 
@@ -66,7 +71,7 @@ class YOLOv5:
         Returns results as a yolov5.models.common.Detections object.
         """
         assert self.model is not None, "before predict, you need to call .load_model()"
-        results = self.model(imgs=image_list, size=size, augment=augment)
+        results = self.model(ims=image_list, size=size, augment=augment)
         return results
 
 if __name__ == "__main__":
