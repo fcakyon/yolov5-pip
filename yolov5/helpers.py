@@ -76,7 +76,7 @@ class YOLOv5:
 
 if __name__ == "__main__":
     model_path = "yolov5/weights/yolov5s.pt"
-    device = "cuda"
+    device = "cuda:0"
     model = load_model(model_path=model_path, device=device)
 
     from PIL import Image
