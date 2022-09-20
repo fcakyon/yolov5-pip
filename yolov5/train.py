@@ -35,6 +35,7 @@ ROOT = FILE.parents[0]  # YOLOv5 root directory
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 import yolov5.val as val  # for end-of-epoch mAP
+from yolov5 import __version__ as yolov5_version
 from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import Model
 from yolov5.utils.autoanchor import check_anchors
@@ -438,7 +439,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
             if (not nosave) or (final_epoch and not evolve):  # if save
                 # fetch neptune run id
                 try:
-                    if loggers.neptune:
+                    if loggers.neptune and loggers.neptune.neptune_run:
                         neptune_id = loggers.neptune.neptune_run['sys/id'].fetch()
                     else:
                         neptune_id = None
@@ -455,7 +456,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     'wandb_id': loggers.wandb.wandb_run.id if loggers.wandb else None,
                     'neptune_id': neptune_id,
                     'opt': vars(opt),
-                    'date': datetime.now().isoformat()}
+                    'date': datetime.now().isoformat(),
+                    'yolov5_version': yolov5_version}
 
                 # Save last, best and delete
                 with yolov5_in_syspath():
@@ -530,8 +532,8 @@ def parse_opt(known=False):
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default='yolov5s.pt', help='initial weights path')
     parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
-    parser.add_argument('--data', type=str, default='', help='data.yaml path')
-    parser.add_argument('--hyp', type=str, default='', help='hyperparameters path')
+    parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='dataset.yaml path')
+    parser.add_argument('--hyp', type=str, default=ROOT / 'data/hyps/hyp.scratch-low.yaml', help='hyperparameters path')
     parser.add_argument('--epochs', type=int, default=300)
     parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs, -1 for autobatch')
     parser.add_argument('--imgsz', '--img', '--img-size', type=int, default=640, help='train, val image size (pixels)')
@@ -603,9 +605,6 @@ def main(opt, callbacks=Callbacks()):
         if is_url(opt.data):
             opt.data = str(opt_data)  # avoid HUB resume auth timeout
     else:
-        opt.hyp = opt.hyp or str(ROOT / 'data' / 'hyps' / ('hyp.finetune.yaml' if opt.weights else 'hyp.scratch-low.yaml'))
-        opt.data = opt.data or str(ROOT / 'data/coco128.yaml')
-
         opt.data, opt.cfg, opt.hyp, opt.weights, opt.project = \
             check_file(opt.data), check_yaml(opt.cfg), check_yaml(opt.hyp), str(opt.weights), str(opt.project)  # checks
         assert len(opt.cfg) or len(opt.weights), 'either --cfg or --weights must be specified'
