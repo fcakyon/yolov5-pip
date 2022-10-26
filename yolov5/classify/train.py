@@ -3,7 +3,7 @@
 Train a YOLOv5 classifier model on a classification dataset
 
 Usage - Single-GPU training:
-    $ python classify/train.py --model yolov5s-cls.pt --data imagenette160 --epochs 5 --img 128
+    $ python classify/train.py --model yolov5s-cls.pt --data imagenette160 --epochs 5 --img 224
 
 Usage - Multi-GPU DDP training:
     $ python -m torch.distributed.run --nproc_per_node 4 --master_port 1 classify/train.py --model yolov5s-cls.pt --data imagenet --epochs 5 --img 224 --device 0,1,2,3
@@ -32,23 +32,20 @@ from tqdm import tqdm
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
-from yolov5.classify import val as validate
+from classify import val as validate
 from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import ClassificationModel, DetectionModel
 from yolov5.utils.dataloaders import create_classification_dataloader
-from yolov5.utils.general import (DATASETS_DIR, LOGGER, WorkingDirectory,
-                                  check_git_status, check_requirements,
-                                  colorstr, download, increment_path,
-                                  init_seeds, print_args, yaml_save)
+from yolov5.utils.general import (DATASETS_DIR, LOGGER, WorkingDirectory, check_git_status, check_requirements, colorstr,
+                           download, increment_path, init_seeds, print_args, yaml_save)
 from yolov5.utils.loggers import GenericLogger
 from yolov5.utils.plots import imshow_cls
-from yolov5.utils.torch_utils import (ModelEMA, model_info,
-                                      reshape_classifier_output, select_device,
-                                      smart_DDP, smart_optimizer,
-                                      smartCrossEntropyLoss,
-                                      torch_distributed_zero_first)
+from yolov5.utils.torch_utils import (ModelEMA, model_info, reshape_classifier_output, select_device, smart_DDP,
+                               smart_optimizer, smartCrossEntropyLoss, torch_distributed_zero_first)
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -117,7 +114,7 @@ def train(opt, device):
             m = hub.list('ultralytics/yolov5')  # + hub.list('pytorch/vision')  # models
             raise ModuleNotFoundError(f'--model {opt.model} not found. Available models are: \n' + '\n'.join(m))
         if isinstance(model, DetectionModel):
-            LOGGER.warning("WARNING: pass YOLOv5 classifier model with '-cls' suffix, i.e. '--model yolov5s-cls.pt'")
+            LOGGER.warning("WARNING ⚠️ pass YOLOv5 classifier model with '-cls' suffix, i.e. '--model yolov5s-cls.pt'")
             model = ClassificationModel(model=model, nc=nc, cutoff=opt.cutoff or 10)  # convert to classification model
         reshape_classifier_output(model, nc)  # update class count
     for m in model.modules():
@@ -275,7 +272,7 @@ def parse_opt(known=False):
     parser.add_argument('--data', type=str, default='imagenette160', help='cifar10, cifar100, mnist, imagenet, ...')
     parser.add_argument('--epochs', type=int, default=10, help='total training epochs')
     parser.add_argument('--batch-size', type=int, default=64, help='total batch size for all GPUs')
-    parser.add_argument('--imgsz', '--img', '--img-size', type=int, default=128, help='train, val image size (pixels)')
+    parser.add_argument('--imgsz', '--img', '--img-size', type=int, default=224, help='train, val image size (pixels)')
     parser.add_argument('--nosave', action='store_true', help='only save final checkpoint')
     parser.add_argument('--cache', type=str, nargs='?', const='ram', help='--cache images in "ram" (default) or "disk"')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')

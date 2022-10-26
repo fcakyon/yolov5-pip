@@ -7,21 +7,22 @@ Usage:
 
 Usage - formats:
     $ yolov5 val --weights yolov5s.pt                 # PyTorch
-                            yolov5s.torchscript        # TorchScript
-                            yolov5s.onnx               # ONNX Runtime or OpenCV DNN with --dnn
-                            yolov5s.xml                # OpenVINO
-                            yolov5s.engine             # TensorRT
-                            yolov5s.mlmodel            # CoreML (macOS-only)
-                            yolov5s_saved_model        # TensorFlow SavedModel
-                            yolov5s.pb                 # TensorFlow GraphDef
-                            yolov5s.tflite             # TensorFlow Lite
-                            yolov5s_edgetpu.tflite     # TensorFlow Edge TPU
-                            yolov5s_paddle_model       # PaddlePaddle
+                              yolov5s.torchscript        # TorchScript
+                              yolov5s.onnx               # ONNX Runtime or OpenCV DNN with --dnn
+                              yolov5s_openvino_model     # OpenVINO
+                              yolov5s.engine             # TensorRT
+                              yolov5s.mlmodel            # CoreML (macOS-only)
+                              yolov5s_saved_model        # TensorFlow SavedModel
+                              yolov5s.pb                 # TensorFlow GraphDef
+                              yolov5s.tflite             # TensorFlow Lite
+                              yolov5s_edgetpu.tflite     # TensorFlow Edge TPU
+                              yolov5s_paddle_model       # PaddlePaddle
 """
 
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -31,17 +32,16 @@ from tqdm import tqdm
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 from yolov5.models.common import DetectMultiBackend
 from yolov5.utils.callbacks import Callbacks
 from yolov5.utils.dataloaders import create_dataloader
-from yolov5.utils.general import (LOGGER, Profile, check_dataset,
-                                  check_img_size, check_requirements,
-                                  check_yaml, coco80_to_coco91_class, colorstr,
-                                  increment_path, non_max_suppression,
-                                  print_args, scale_coords, xywh2xyxy,
-                                  xyxy2xywh)
+from yolov5.utils.general import (LOGGER, Profile, check_dataset, check_img_size, check_requirements, check_yaml,
+                           coco80_to_coco91_class, colorstr, increment_path, non_max_suppression, print_args,
+                           scale_boxes, xywh2xyxy, xyxy2xywh)
 from yolov5.utils.metrics import ConfusionMatrix, ap_per_class, box_iou
 from yolov5.utils.plots import output_to_target, plot_images, plot_val_study
 from yolov5.utils.torch_utils import select_device, smart_inference_mode
@@ -146,7 +146,6 @@ def run(
         model.half() if half else model.float()
     else:  # called directly
         device = select_device(device, batch_size=batch_size)
-        half &= device.type != 'cpu'  # half precision only supported on CUDA
 
         # Directories
         save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
@@ -170,7 +169,7 @@ def run(
 
     # Configure
     model.eval()
-    half = cuda = device.type != 'cpu'
+    cuda = device.type != 'cpu'
     is_coco = isinstance(data.get('val'), str) and data['val'].endswith(f'coco{os.sep}val2017.txt')  # COCO dataset
     nc = 1 if single_cls else int(data['nc'])  # number of classes
     iouv = torch.linspace(0.5, 0.95, 10, device=device)  # iou vector for mAP@0.5:0.95
@@ -183,8 +182,7 @@ def run(
             assert ncm == nc, f'{weights} ({ncm} classes) trained on different --data than what you passed ({nc} ' \
                               f'classes). Pass correct combination of --weights and --data that are trained together.'
         model.warmup(imgsz=(1 if pt else batch_size, 3, imgsz, imgsz))  # warmup
-        pad = 0.0 if task in ('speed', 'benchmark') else 0.5
-        rect = False if task == 'benchmark' else pt  # square inference for benchmarks
+        pad, rect = (0.0, False) if task == 'speed' else (0.5, pt)  # square inference for benchmarks
         task = task if task in ('train', 'val', 'test') else 'val'  # path to train/val/test images
         dataloader = create_dataloader(data[task],
                                        imgsz,
@@ -258,12 +256,12 @@ def run(
             if single_cls:
                 pred[:, 5] = 0
             predn = pred.clone()
-            scale_coords(im[si].shape[1:], predn[:, :4], shape, shapes[si][1])  # native-space pred
+            scale_boxes(im[si].shape[1:], predn[:, :4], shape, shapes[si][1])  # native-space pred
 
             # Evaluate
             if nl:
                 tbox = xywh2xyxy(labels[:, 1:5])  # target boxes
-                scale_coords(im[si].shape[1:], tbox, shape, shapes[si][1])  # native-space labels
+                scale_boxes(im[si].shape[1:], tbox, shape, shapes[si][1])  # native-space labels
                 labelsn = torch.cat((labels[:, 0:1], tbox), 1)  # native-space labels
                 correct = process_batch(predn, labelsn, iouv)
                 if plots:
@@ -296,7 +294,7 @@ def run(
     pf = '%22s' + '%11i' * 2 + '%11.3g' * 4  # print format
     LOGGER.info(pf % ('all', seen, nt.sum(), mp, mr, map50, map))
     if nt.sum() == 0:
-        LOGGER.warning(f'WARNING: no labels found in {task} set, can not compute metrics without labels ⚠️')
+        LOGGER.warning(f'WARNING ⚠️ no labels found in {task} set, can not compute metrics without labels')
 
     # Print results per class
     if (verbose or (nc < 50 and not training)) and nc > 1 and len(stats):
@@ -405,9 +403,9 @@ def main():
 
     if opt.task in ('train', 'val', 'test'):  # run normally
         if opt.conf_thres > 0.001:  # https://github.com/ultralytics/yolov5/issues/1466
-            LOGGER.info(f'WARNING: confidence threshold {opt.conf_thres} > 0.001 produces invalid results ⚠️')
+            LOGGER.info(f'WARNING ⚠️ confidence threshold {opt.conf_thres} > 0.001 produces invalid results')
         if opt.save_hybrid:
-            LOGGER.info('WARNING: --save-hybrid will return high mAP from hybrid labels, not from predictions alone ⚠️')
+            LOGGER.info('WARNING ⚠️ --save-hybrid will return high mAP from hybrid labels, not from predictions alone')
         run(**vars(opt))
 
     else:

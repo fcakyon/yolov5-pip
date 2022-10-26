@@ -4,20 +4,20 @@ Validate a trained YOLOv5 segment model on a segment dataset
 
 Usage:
     $ bash data/scripts/get_coco.sh --val --segments  # download COCO-segments val split (1G, 5000 images)
-    $ yolov5 segment val --weights yolov5s-seg.pt --data coco.yaml --img 640-  # validate COCO-segments
+    $ yolov5 segment val --weights yolov5s-seg.pt --data coco.yaml --img 640  # validate COCO-segments
 
 Usage - formats:
     $ yolov5 segment val --weights yolov5s-seg.pt                 # PyTorch
-                                    yolov5s-seg.torchscript        # TorchScript
-                                    yolov5s-seg.onnx               # ONNX Runtime or OpenCV DNN with --dnn
-                                    yolov5s-seg.xml                # OpenVINO
-                                    yolov5s-seg.engine             # TensorRT
-                                    yolov5s-seg.mlmodel            # CoreML (macOS-only)
-                                    yolov5s-seg_saved_model        # TensorFlow SavedModel
-                                    yolov5s-seg.pb                 # TensorFlow GraphDef
-                                    yolov5s-seg.tflite             # TensorFlow Lite
-                                    yolov5s-seg_edgetpu.tflite     # TensorFlow Edge TPU
-                                    yolov5s-seg_paddle_model       # PaddlePaddle
+                                      yolov5s-seg.torchscript        # TorchScript
+                                      yolov5s-seg.onnx               # ONNX Runtime or OpenCV DNN with --dnn
+                                      yolov5s-seg.xml                # OpenVINO
+                                      yolov5s-seg.engine             # TensorRT
+                                      yolov5s-seg.mlmodel            # CoreML (macOS-only)
+                                      yolov5s-seg_saved_model        # TensorFlow SavedModel
+                                      yolov5s-seg.pb                 # TensorFlow GraphDef
+                                      yolov5s-seg.tflite             # TensorFlow Lite
+                                      yolov5s-seg_edgetpu.tflite     # TensorFlow Edge TPU
+                                      yolov5s-seg_paddle_model       # PaddlePaddle
 """
 
 import argparse
@@ -33,27 +33,25 @@ from tqdm import tqdm
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 import torch.nn.functional as F
+
 from yolov5.models.common import DetectMultiBackend
 from yolov5.models.yolo import SegmentationModel
 from yolov5.utils.callbacks import Callbacks
-from yolov5.utils.general import (LOGGER, NUM_THREADS, Profile, check_dataset,
-                                  check_img_size, check_requirements,
-                                  check_yaml, coco80_to_coco91_class, colorstr,
-                                  increment_path, non_max_suppression,
-                                  print_args, scale_coords, xywh2xyxy,
-                                  xyxy2xywh)
+from yolov5.utils.general import (LOGGER, NUM_THREADS, Profile, check_dataset, check_img_size, check_requirements, check_yaml,
+                           coco80_to_coco91_class, colorstr, increment_path, non_max_suppression, print_args,
+                           scale_boxes, xywh2xyxy, xyxy2xywh)
 from yolov5.utils.metrics import ConfusionMatrix, box_iou
 from yolov5.utils.plots import output_to_target, plot_val_study
 from yolov5.utils.segment.dataloaders import create_dataloader
-from yolov5.utils.segment.general import (mask_iou, process_mask,
-                                          process_mask_upsample, scale_image)
+from yolov5.utils.segment.general import mask_iou, process_mask, process_mask_upsample, scale_image
 from yolov5.utils.segment.metrics import Metrics, ap_per_class_box_and_mask
 from yolov5.utils.segment.plots import plot_images_and_masks
-from yolov5.utils.torch_utils import (de_parallel, select_device,
-                                      smart_inference_mode)
+from yolov5.utils.torch_utils import de_parallel, select_device, smart_inference_mode
 
 
 def save_one_txt(predn, save_conf, shape, file):
@@ -223,8 +221,7 @@ def run(
             assert ncm == nc, f'{weights} ({ncm} classes) trained on different --data than what you passed ({nc} ' \
                               f'classes). Pass correct combination of --weights and --data that are trained together.'
         model.warmup(imgsz=(1 if pt else batch_size, 3, imgsz, imgsz))  # warmup
-        pad = 0.0 if task in ('speed', 'benchmark') else 0.5
-        rect = False if task == 'benchmark' else pt  # square inference for benchmarks
+        pad, rect = (0.0, False) if task == 'speed' else (0.5, pt)  # square inference for benchmarks
         task = task if task in ('train', 'val', 'test') else 'val'  # path to train/val/test images
         dataloader = create_dataloader(data[task],
                                        imgsz,
@@ -311,12 +308,12 @@ def run(
             if single_cls:
                 pred[:, 5] = 0
             predn = pred.clone()
-            scale_coords(im[si].shape[1:], predn[:, :4], shape, shapes[si][1])  # native-space pred
+            scale_boxes(im[si].shape[1:], predn[:, :4], shape, shapes[si][1])  # native-space pred
 
             # Evaluate
             if nl:
                 tbox = xywh2xyxy(labels[:, 1:5])  # target boxes
-                scale_coords(im[si].shape[1:], tbox, shape, shapes[si][1])  # native-space labels
+                scale_boxes(im[si].shape[1:], tbox, shape, shapes[si][1])  # native-space labels
                 labelsn = torch.cat((labels[:, 0:1], tbox), 1)  # native-space labels
                 correct_bboxes = process_batch(predn, labelsn, iouv)
                 correct_masks = process_batch(predn, labelsn, iouv, pred_masks, gt_masks, overlap=overlap, masks=True)
@@ -358,7 +355,7 @@ def run(
     pf = '%22s' + '%11i' * 2 + '%11.3g' * 8  # print format
     LOGGER.info(pf % ("all", seen, nt.sum(), *metrics.mean_results()))
     if nt.sum() == 0:
-        LOGGER.warning(f'WARNING: no labels found in {task} set, can not compute metrics without labels ⚠️')
+        LOGGER.warning(f'WARNING ⚠️ no labels found in {task} set, can not compute metrics without labels')
 
     # Print results per class
     if (verbose or (nc < 50 and not training)) and nc > 1 and len(stats):
@@ -447,14 +444,13 @@ def parse_opt():
 
 
 def main(opt):
-    opt = parse_opt()
     check_requirements(requirements=ROOT / 'requirements.txt', exclude=('tensorboard', 'thop'))
 
     if opt.task in ('train', 'val', 'test'):  # run normally
         if opt.conf_thres > 0.001:  # https://github.com/ultralytics/yolov5/issues/1466
-            LOGGER.info(f'WARNING: confidence threshold {opt.conf_thres} > 0.001 produces invalid results ⚠️')
+            LOGGER.warning(f'WARNING ⚠️ confidence threshold {opt.conf_thres} > 0.001 produces invalid results')
         if opt.save_hybrid:
-            LOGGER.info('WARNING: --save-hybrid will return high mAP from hybrid labels, not from predictions alone ⚠️')
+            LOGGER.warning('WARNING ⚠️ --save-hybrid returns high mAP from hybrid labels, not from predictions alone')
         run(**vars(opt))
 
     else:

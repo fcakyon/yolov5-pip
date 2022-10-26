@@ -7,8 +7,8 @@ import math
 import numpy as np
 import torch
 import torch.nn as nn
+
 from yolov5.utils.downloads import attempt_download
-from yolov5.utils.general import yolov5_in_syspath
 
 
 class Sum(nn.Module):
@@ -72,13 +72,11 @@ class Ensemble(nn.ModuleList):
 
 def attempt_load(weights, device=None, inplace=True, fuse=True):
     # Loads an ensemble of models weights=[a,b,c] or a single model weights=[a] or weights=a
-    with yolov5_in_syspath():
-        from models.yolo import Detect, Model
+    from models.yolo import Detect, Model
 
     model = Ensemble()
     for w in weights if isinstance(weights, list) else [weights]:
-        with yolov5_in_syspath():
-            ckpt = torch.load(attempt_download(w), map_location='cpu')  # load
+        ckpt = torch.load(attempt_download(w), map_location='cpu')  # load
         ckpt = (ckpt.get('ema') or ckpt['model']).to(device).float()  # FP32 model
 
         # Model compatibility updates
