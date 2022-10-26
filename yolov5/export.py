@@ -614,7 +614,7 @@ def run(
         LOGGER.info(f'\nExport complete ({time.time() - t:.1f}s)'
                     f"\nResults saved to {colorstr('bold', file.parent.resolve())}"
                     f"\nDetect:          yolov5 {'detect' if det else 'predict'} --weights {f[-1]} {h}"
-                    f"\nValidate:        yolov5 val --weights "{f[-1]} {h}"
+                    f"\nValidate:        yolov5 val --weights {f[-1]} {h}"
                     f"\nPython:          model = yolov5.load('{f[-1]}')  {s}"
                     f"\nVisualize:       https://netron.app")
     return f  # return list of exported files/dirs
