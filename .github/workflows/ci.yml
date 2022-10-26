@@ -82,12 +82,12 @@ jobs:
           python yolov5/export.py --weights yolov5/weights/yolov5n.pt --device cpu --include torchscript,onnx,tflite
           yolov5 export --weights yolov5/weights/yolov5n.pt --device cpu --simplify --include torchscript,onnx,saved_model,pb,tfjs
           # benckmarks
-          yolov5 benchmarks --weights yolov5s.pt --img 128 --pt-only --device cpu
+          yolov5 benchmarks --weights yolov5n.pt --img 128 --pt-only --device cpu
           # classify
-          yolov5 classify train --img 32 --data mnist2560 --weights yolov5s-cls.pt --epochs 1 --device cpu
-          yolov5 classify val --img 32 --data datasets/mnist2560 --weights yolov5s-cls.pt --device cpu
-          yolov5 classify predict --img 32 --weights yolov5s-cls.pt --device cpu  
+          yolov5 classify train --img 32 --data mnist2560 --weights yolov5n-cls.pt --epochs 1 --device cpu
+          yolov5 classify val --img 32 --data datasets/mnist2560 --weights yolov5n-cls.pt --device cpu
+          yolov5 classify predict --img 32 --weights yolov5n-cls.pt --device cpu  
           # segment
-          yolov5 segment train --img 128 --weights yolov5s-seg.pt --epochs 1 --device cpu
-          # yolov5 segment val --img 128 --weights yolov5s-seg.pt --device cpu
-          yolov5 segment predict --img 128 --weights yolov5s-seg.pt --device cpu
+          yolov5 segment train --img 128 --weights yolov5n-seg.pt --epochs 1 --device cpu
+          # yolov5 segment val --img 128 --weights yolov5n-seg.pt --device cpu
+          yolov5 segment predict --img 128 --weights yolov5n-seg.pt --device cpu
