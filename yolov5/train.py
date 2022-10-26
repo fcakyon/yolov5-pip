@@ -19,6 +19,7 @@ import argparse
 import math
 import os
 import random
+import sys
 import time
 from copy import deepcopy
 from datetime import datetime
@@ -35,6 +36,8 @@ from tqdm import tqdm
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 import yolov5.val as validate  # for end-of-epoch mAP
@@ -46,25 +49,17 @@ from yolov5.utils.aws import upload_file_to_s3, upload_folder_to_s3
 from yolov5.utils.callbacks import Callbacks
 from yolov5.utils.dataloaders import create_dataloader
 from yolov5.utils.downloads import attempt_download, is_url
-from yolov5.utils.general import (LOGGER, check_amp, check_dataset, check_file,
-                                  check_git_status, check_img_size,
-                                  check_requirements, check_suffix, check_yaml,
-                                  colorstr, get_latest_run, increment_path,
-                                  init_seeds, intersect_dicts,
-                                  labels_to_class_weights,
-                                  labels_to_image_weights, methods, one_cycle,
-                                  print_args, print_mutation, strip_optimizer,
-                                  yaml_save, yolov5_in_syspath)
+from yolov5.utils.general import (LOGGER, check_amp, check_dataset, check_file, check_git_status, check_img_size,
+                           check_requirements, check_suffix, check_yaml, colorstr, get_latest_run, increment_path,
+                           init_seeds, intersect_dicts, labels_to_class_weights, labels_to_image_weights, methods,
+                           one_cycle, print_args, print_mutation, strip_optimizer, yaml_save)
 from yolov5.utils.loggers import Loggers
 from yolov5.utils.loggers.comet.comet_utils import check_comet_resume
-from yolov5.utils.loggers.wandb.wandb_utils import check_wandb_resume
 from yolov5.utils.loss import ComputeLoss
 from yolov5.utils.metrics import fitness
 from yolov5.utils.plots import plot_evolve
-from yolov5.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel,
-                                      select_device, smart_DDP,
-                                      smart_optimizer, smart_resume,
-                                      torch_distributed_zero_first)
+from yolov5.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_device, smart_DDP, smart_optimizer,
+                               smart_resume, torch_distributed_zero_first)
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -137,30 +132,30 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         yaml_save(save_dir / 'hyp.yaml', hyp)
         yaml_save(save_dir / 'opt.yaml', vars(opt))
 
-
-    # Config
-    plots = not evolve and not opt.noplots  # create plots
-    cuda = device.type != 'cpu'
-    init_seeds(opt.seed + 1 + RANK, deterministic=True)
-    with torch_distributed_zero_first(LOCAL_RANK):
-        data_dict = check_dataset(data)  # check if None
-    train_path, val_path = data_dict['train'], data_dict['val']
-    nc = 1 if single_cls else int(data_dict['nc'])  # number of classes
-    names = {0: 'item'} if single_cls and len(data_dict['names']) != 1 else data_dict['names']  # class names
-    is_coco = isinstance(val_path, str) and val_path.endswith('coco/val2017.txt')  # COCO dataset
-
     # Loggers
+    data_dict = None
     if RANK in {-1, 0}:
-        loggers = Loggers(save_dir, weights, opt, hyp, LOGGER, mmdet_keys=opt.mmdet_tags, class_names=list(names.values()))  # loggers instance
+        loggers = Loggers(save_dir, weights, opt, hyp, LOGGER)  # loggers instance
 
         # Register actions
         for k in methods(loggers):
             callbacks.register_action(k, callback=getattr(loggers, k))
 
         # Process custom dataset artifact link
-        #data_dict = loggers.remote_dataset
+        data_dict = loggers.remote_dataset
         if resume:  # If resuming runs from remote artifact
             weights, epochs, hyp, batch_size = opt.weights, opt.epochs, opt.hyp, opt.batch_size
+
+    # Config
+    plots = not evolve and not opt.noplots  # create plots
+    cuda = device.type != 'cpu'
+    init_seeds(opt.seed + 1 + RANK, deterministic=True)
+    with torch_distributed_zero_first(LOCAL_RANK):
+        data_dict = check_dataset(data)
+    train_path, val_path = data_dict['train'], data_dict['val']
+    nc = 1 if single_cls else int(data_dict['nc'])  # number of classes
+    names = {0: 'item'} if single_cls and len(data_dict['names']) != 1 else data_dict['names']  # class names
+    is_coco = isinstance(val_path, str) and val_path.endswith('coco/val2017.txt')  # COCO dataset
 
     # upload dataset to s3
     if opt.upload_dataset and opt.s3_upload_dir:
@@ -184,8 +179,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     if pretrained:
         with torch_distributed_zero_first(LOCAL_RANK):
             weights = attempt_download(weights)  # download if not found locally
-        with yolov5_in_syspath():
-            ckpt = torch.load(weights, map_location='cpu')  # load checkpoint to CPU to avoid CUDA memory leak
+        ckpt = torch.load(weights, map_location='cpu')  # load checkpoint to CPU to avoid CUDA memory leak
         model = Model(cfg or ckpt['model'].yaml, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
         exclude = ['anchor'] if (cfg or hyp.get('anchors')) and not resume else []  # exclude keys
         csd = ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
@@ -241,7 +235,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
     # DP mode
     if cuda and RANK == -1 and torch.cuda.device_count() > 1:
-        LOGGER.warning('WARNING: DP not recommended, use torch.distributed.run for best DDP Multi-GPU results.\n'
+        LOGGER.warning('WARNING ⚠️ DP not recommended, use torch.distributed.run for best DDP Multi-GPU results.\n'
                        'See Multi-GPU Tutorial at https://github.com/ultralytics/yolov5/issues/475 to get started.')
         model = torch.nn.DataParallel(model)
 
@@ -416,16 +410,16 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
             final_epoch = (epoch + 1 == epochs) or stopper.possible_stop
             if not noval or final_epoch:  # Calculate mAP
                 results, maps, map50s, _ = validate.run(data_dict,
-                                            batch_size=batch_size // WORLD_SIZE * 2,
-                                            imgsz=imgsz,
-                                            half=amp,
-                                            model=ema.ema,
-                                            single_cls=single_cls,
-                                            dataloader=val_loader,
-                                            save_dir=save_dir,
-                                            plots=False,
-                                            callbacks=callbacks,
-                                            compute_loss=compute_loss)
+                                                batch_size=batch_size // WORLD_SIZE * 2,
+                                                imgsz=imgsz,
+                                                half=amp,
+                                                model=ema.ema,
+                                                single_cls=single_cls,
+                                                dataloader=val_loader,
+                                                save_dir=save_dir,
+                                                plots=False,
+                                                callbacks=callbacks,
+                                                compute_loss=compute_loss)
 
             # Update best mAP
             fi = fitness(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
@@ -437,15 +431,6 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
             # Save model
             if (not nosave) or (final_epoch and not evolve):  # if save
-                # fetch neptune run id
-                try:
-                    if loggers.neptune and loggers.neptune.neptune_run:
-                        neptune_id = loggers.neptune.neptune_run['sys/id'].fetch()
-                    else:
-                        neptune_id = None
-                except Exception as e:
-                    LOGGER.info(e)
-                    neptune_id = None
                 ckpt = {
                     'epoch': epoch,
                     'best_fitness': best_fitness,
@@ -453,18 +438,15 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     'ema': deepcopy(ema.ema).half(),
                     'updates': ema.updates,
                     'optimizer': optimizer.state_dict(),
-                    'wandb_id': loggers.wandb.wandb_run.id if loggers.wandb else None,
-                    'neptune_id': neptune_id,
                     'opt': vars(opt),
                     'date': datetime.now().isoformat()}
 
                 # Save last, best and delete
-                with yolov5_in_syspath():
-                    torch.save(ckpt, last)
-                    if best_fitness == fi:
-                        torch.save(ckpt, best)
-                    if opt.save_period > 0 and epoch % opt.save_period == 0:
-                        torch.save(ckpt, w / f'epoch{epoch}.pt')
+                torch.save(ckpt, last)
+                if best_fitness == fi:
+                    torch.save(ckpt, best)
+                if opt.save_period > 0 and epoch % opt.save_period == 0:
+                    torch.save(ckpt, w / f'epoch{epoch}.pt')
                 del ckpt
 
                 # upload best model to aws s3
@@ -564,11 +546,12 @@ def parse_opt(known=False):
     parser.add_argument('--seed', type=int, default=0, help='Global training seed')
     parser.add_argument('--local_rank', type=int, default=-1, help='Automatic DDP Multi-GPU argument, do not modify')
     parser.add_argument('--mmdet_tags', action='store_true', help='Log train/val keys in MMDetection format')
-
+    
     # Weights & Biases arguments
-    parser.add_argument('--entity', default=None, help='W&B: Entity')
-    parser.add_argument('--bbox_interval', type=int, default=-1, help='W&B: Set bounding-box image logging interval')
-    parser.add_argument('--artifact_alias', type=str, default='latest', help='W&B: Version of dataset artifact to use')
+    parser.add_argument('--entity', default=None, help='Entity')
+    parser.add_argument('--upload_dataset', nargs='?', const=True, default=False, help='Upload data, "val" option')
+    parser.add_argument('--bbox_interval', type=int, default=-1, help='Set bounding-box image logging interval')
+    parser.add_argument('--artifact_alias', type=str, default='latest', help='Version of dataset artifact to use')
 
     # Neptune AI arguments
     parser.add_argument('--neptune_token', type=str, default=None, help='neptune.ai api token')
@@ -589,7 +572,7 @@ def main(opt, callbacks=Callbacks()):
         check_requirements()
 
     # Resume (from specified or most recent last.pt)
-    if opt.resume and not check_wandb_resume(opt) and not check_comet_resume(opt) and not opt.evolve:
+    if opt.resume and not check_comet_resume(opt) and not opt.evolve:
         last = Path(check_file(opt.resume) if isinstance(opt.resume, str) else get_latest_run())
         opt_yaml = last.parent.parent / 'opt.yaml'  # train options yaml
         opt_data = opt.data  # original dataset
@@ -713,7 +696,9 @@ def main(opt, callbacks=Callbacks()):
             results = train(hyp.copy(), opt, device, callbacks)
             callbacks = Callbacks()
             # Write mutation results
-            print_mutation(results, hyp.copy(), save_dir, opt.bucket)
+            keys = ('metrics/precision', 'metrics/recall', 'metrics/mAP_0.5', 'metrics/mAP_0.5:0.95', 'val/box_loss',
+                    'val/obj_loss', 'val/cls_loss')
+            print_mutation(keys, results, hyp.copy(), save_dir, opt.bucket)
 
         # Plot results
         plot_evolve(evolve_csv)
