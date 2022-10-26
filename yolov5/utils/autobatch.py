@@ -7,6 +7,7 @@ from copy import deepcopy
 
 import numpy as np
 import torch
+
 from yolov5.utils.general import LOGGER, colorstr
 from yolov5.utils.torch_utils import profile
 
@@ -18,10 +19,10 @@ def check_train_batch_size(model, imgsz=640, amp=True):
 
 
 def autobatch(model, imgsz=640, fraction=0.8, batch_size=16):
-    # Automatically estimate best batch size to use `fraction` of available CUDA memory
+    # Automatically estimate best YOLOv5 batch size to use `fraction` of available CUDA memory
     # Usage:
     #     import torch
-    #     from utils.autobatch import autobatch
+    #     from yolov5.utils.autobatch import autobatch
     #     model = torch.hub.load('ultralytics/yolov5', 'yolov5s', autoshape=False)
     #     print(autobatch(model))
 
@@ -31,6 +32,9 @@ def autobatch(model, imgsz=640, fraction=0.8, batch_size=16):
     device = next(model.parameters()).device  # get model device
     if device.type == 'cpu':
         LOGGER.info(f'{prefix}CUDA not detected, using default CPU batch-size {batch_size}')
+        return batch_size
+    if torch.backends.cudnn.benchmark:
+        LOGGER.info(f'{prefix} ⚠️ Requires torch.backends.cudnn.benchmark=False, using default batch-size {batch_size}')
         return batch_size
 
     # Inspect CUDA memory
@@ -61,8 +65,8 @@ def autobatch(model, imgsz=640, fraction=0.8, batch_size=16):
             b = batch_sizes[max(i - 1, 0)]  # select prior safe point
     if b < 1 or b > 1024:  # b outside of safe range
         b = batch_size
-        LOGGER.warning(f'{prefix}WARNING: ⚠️ CUDA anomaly detected, recommend restart environment and retry command.')
+        LOGGER.warning(f'{prefix}WARNING ⚠️ CUDA anomaly detected, recommend restart environment and retry command.')
 
-    fraction = np.polyval(p, b) / t  # actual fraction predicted
+    fraction = (np.polyval(p, b) + r + a) / t  # actual fraction predicted
     LOGGER.info(f'{prefix}Using batch-size {b} for {d} {t * fraction:.2f}G/{t:.2f}G ({fraction * 100:.0f}%) ✅')
     return b

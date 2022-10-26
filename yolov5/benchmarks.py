@@ -35,6 +35,8 @@ import pandas as pd
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
 # ROOT = ROOT.relative_to(Path.cwd())  # relative
 
 import yolov5.export
@@ -74,7 +76,7 @@ def run(
     model_type = type(attempt_load(weights, fuse=False))  # DetectionModel, SegmentationModel, etc.
     for i, (name, f, suffix, cpu, gpu) in yolov5.export.export_formats().iterrows():  # index, (name, file, suffix, CPU, GPU)
         try:
-            assert i not in (9, 10, 11), 'inference not supported'  # Edge TPU, TF.js and Paddle are unsupported
+            assert i not in (9, 10), 'inference not supported'  # Edge TPU and TF.js are unsupported
             assert i != 5 or platform.system() == 'Darwin', 'inference only supported on macOS>=10.13'  # CoreML
             if 'cpu' in device.type:
                 assert cpu, 'inference not supported on CPU'
@@ -90,17 +92,17 @@ def run(
 
             # Validate
             if model_type == SegmentationModel:
-                result = val_seg(data, w, batch_size, imgsz, plots=False, device=device, task='benchmark', half=half)
+                result = val_seg(data, w, batch_size, imgsz, plots=False, device=device, task='speed', half=half)
                 metric = result[0][7]  # (box(p, r, map50, map), mask(p, r, map50, map), *loss(box, obj, cls))
             else:  # DetectionModel:
-                result = val_det(data, w, batch_size, imgsz, plots=False, device=device, task='benchmark', half=half)
+                result = val_det(data, w, batch_size, imgsz, plots=False, device=device, task='speed', half=half)
                 metric = result[0][3]  # (p, r, map50, map, *loss(box, obj, cls))
             speed = result[2][1]  # times (preprocess, inference, postprocess)
             y.append([name, round(file_size(w), 1), round(metric, 4), round(speed, 2)])  # MB, mAP, t_inference
         except Exception as e:
             if hard_fail:
                 assert type(e) is AssertionError, f'Benchmark --hard-fail for {name}: {e}'
-            LOGGER.warning(f'WARNING: Benchmark failure for {name}: {e}')
+            LOGGER.warning(f'WARNING ⚠️ Benchmark failure for {name}: {e}')
             y.append([name, None, None, None])  # mAP, t_inference
         if pt_only and i == 0:
             break  # break after PyTorch

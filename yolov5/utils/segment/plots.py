@@ -99,9 +99,9 @@ def plot_images_and_masks(images, targets, masks, paths=None, fname='images.jpg'
                         if mh != h or mw != w:
                             mask = image_masks[j].astype(np.uint8)
                             mask = cv2.resize(mask, (w, h))
-                            mask = mask.astype(np.bool)
+                            mask = mask.astype(bool)
                         else:
-                            mask = image_masks[j].astype(np.bool)
+                            mask = image_masks[j].astype(bool)
                         with contextlib.suppress(Exception):
                             im[y:y + h, x:x + w, :][mask] = im[y:y + h, x:x + w, :][mask] * 0.4 + np.array(color) * 0.6
                 annotator.fromarray(im)
@@ -109,7 +109,7 @@ def plot_images_and_masks(images, targets, masks, paths=None, fname='images.jpg'
 
 
 def plot_results_with_masks(file="path/to/results.csv", dir="", best=True):
-    # Plot training results.csv. Usage: from utils.plots import *; plot_results('path/to/results.csv')
+    # Plot training results.csv. Usage: from yolov5.utils.plots import *; plot_results('path/to/results.csv')
     save_dir = Path(file).parent if file else Path(dir)
     fig, ax = plt.subplots(2, 8, figsize=(18, 6), tight_layout=True)
     ax = ax.ravel()

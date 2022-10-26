@@ -5,7 +5,7 @@ Models and datasets download automatically from the latest YOLOv5 release.
 
 Usage - Single-GPU training:
     $ yolov5 segment train --data coco128-seg.yaml --weights yolov5s-seg.pt --img 640  # from pretrained (recommended)
-    $ yolov5 segment train --data coco128-seg.yaml --weights '' --cfg yolov5s-seg.yaml --img 640  # from scratch
+    $ yolov5 segment trainy --data coco128-seg.yaml --weights '' --cfg yolov5s-seg.yaml --img 640  # from scratch
 
 Usage - Multi-GPU DDP training:
     $ python -m torch.distributed.run --nproc_per_node 4 --master_port 1 segment/train.py --data coco128-seg.yaml --weights yolov5s-seg.pt --img 640 --device 0,1,2,3
@@ -35,9 +35,10 @@ from tqdm import tqdm
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
-import torch.nn.functional as F
 import yolov5.segment.val as validate  # for end-of-epoch mAP
 from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import SegmentationModel
@@ -45,26 +46,18 @@ from yolov5.utils.autoanchor import check_anchors
 from yolov5.utils.autobatch import check_train_batch_size
 from yolov5.utils.callbacks import Callbacks
 from yolov5.utils.downloads import attempt_download, is_url
-from yolov5.utils.general import (LOGGER, check_amp, check_dataset, check_file,
-                                  check_git_status, check_img_size,
-                                  check_requirements, check_suffix, check_yaml,
-                                  colorstr, get_latest_run, increment_path,
-                                  init_seeds, intersect_dicts,
-                                  labels_to_class_weights,
-                                  labels_to_image_weights, one_cycle,
-                                  print_args, print_mutation, strip_optimizer,
-                                  yaml_save, yolov5_in_syspath)
+from yolov5.utils.general import (LOGGER, check_amp, check_dataset, check_file, check_git_status, check_img_size,
+                           check_requirements, check_suffix, check_yaml, colorstr, get_latest_run, increment_path,
+                           init_seeds, intersect_dicts, labels_to_class_weights, labels_to_image_weights, one_cycle,
+                           print_args, print_mutation, strip_optimizer, yaml_save)
 from yolov5.utils.loggers import GenericLogger
 from yolov5.utils.plots import plot_evolve, plot_labels
 from yolov5.utils.segment.dataloaders import create_dataloader
 from yolov5.utils.segment.loss import ComputeLoss
 from yolov5.utils.segment.metrics import KEYS, fitness
-from yolov5.utils.segment.plots import (plot_images_and_masks,
-                                        plot_results_with_masks)
-from yolov5.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel,
-                                      select_device, smart_DDP,
-                                      smart_optimizer, smart_resume,
-                                      torch_distributed_zero_first)
+from yolov5.utils.segment.plots import plot_images_and_masks, plot_results_with_masks
+from yolov5.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_device, smart_DDP, smart_optimizer,
+                               smart_resume, torch_distributed_zero_first)
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -98,17 +91,6 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     data_dict = None
     if RANK in {-1, 0}:
         logger = GenericLogger(opt=opt, console_logger=LOGGER)
-        # loggers = Loggers(save_dir, weights, opt, hyp, LOGGER)  # loggers instance
-        # if loggers.clearml:
-        #     data_dict = loggers.clearml.data_dict  # None if no ClearML dataset or filled in by ClearML
-        # if loggers.wandb:
-        #     data_dict = loggers.wandb.data_dict
-        #     if resume:
-        #         weights, epochs, hyp, batch_size = opt.weights, opt.epochs, opt.hyp, opt.batch_size
-        #
-        # # Register actions
-        # for k in methods(loggers):
-        #     callbacks.register_action(k, callback=getattr(loggers, k))
 
     # Config
     plots = not evolve and not opt.noplots  # create plots
@@ -128,8 +110,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     if pretrained:
         with torch_distributed_zero_first(LOCAL_RANK):
             weights = attempt_download(weights)  # download if not found locally
-        with yolov5_in_syspath():
-            ckpt = torch.load(weights, map_location='cpu')  # load checkpoint to CPU to avoid CUDA memory leak
+        ckpt = torch.load(weights, map_location='cpu')  # load checkpoint to CPU to avoid CUDA memory leak
         model = SegmentationModel(cfg or ckpt['model'].yaml, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)
         exclude = ['anchor'] if (cfg or hyp.get('anchors')) and not resume else []  # exclude keys
         csd = ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
@@ -186,7 +167,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
     # DP mode
     if cuda and RANK == -1 and torch.cuda.device_count() > 1:
-        LOGGER.warning('WARNING: DP not recommended, use torch.distributed.run for best DDP Multi-GPU results.\n'
+        LOGGER.warning('WARNING ⚠️ DP not recommended, use torch.distributed.run for best DDP Multi-GPU results.\n'
                        'See Multi-GPU Tutorial at https://github.com/ultralytics/yolov5/issues/475 to get started.')
         model = torch.nn.DataParallel(model)
 
@@ -410,7 +391,6 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     'ema': deepcopy(ema.ema).half(),
                     'updates': ema.updates,
                     'optimizer': optimizer.state_dict(),
-                    # 'wandb_id': loggers.wandb.wandb_run.id if loggers.wandb else None,
                     'opt': vars(opt),
                     'date': datetime.now().isoformat()}
 
@@ -523,6 +503,7 @@ def parse_opt(known=False):
     # Neptune AI arguments
     parser.add_argument('--neptune_token', type=str, default=None, help='neptune.ai api token')
     parser.add_argument('--neptune_project', type=str, default=None, help='https://docs.neptune.ai/api-reference/neptune')
+
 
     # Weights & Biases arguments
     # parser.add_argument('--entity', default=None, help='W&B: Entity')
@@ -665,7 +646,7 @@ def main(opt, callbacks=Callbacks()):
             results = train(hyp.copy(), opt, device, callbacks)
             callbacks = Callbacks()
             # Write mutation results
-            print_mutation(results, hyp.copy(), save_dir, opt.bucket)
+            print_mutation(KEYS, results, hyp.copy(), save_dir, opt.bucket)
 
         # Plot results
         plot_evolve(evolve_csv)

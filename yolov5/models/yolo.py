@@ -10,23 +10,24 @@ import argparse
 import contextlib
 import os
 import platform
+import sys
 from copy import deepcopy
 from pathlib import Path
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
 if platform.system() != 'Windows':
     ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 from yolov5.models.common import *
 from yolov5.models.experimental import *
 from yolov5.utils.autoanchor import check_anchor_order
-from yolov5.utils.general import (LOGGER, check_version, check_yaml,
-                                  make_divisible, print_args)
+from yolov5.utils.general import LOGGER, check_version, check_yaml, make_divisible, print_args
 from yolov5.utils.plots import feature_visualization
-from yolov5.utils.torch_utils import (fuse_conv_and_bn, initialize_weights,
-                                      model_info, profile, scale_img,
-                                      select_device, time_sync)
+from yolov5.utils.torch_utils import (fuse_conv_and_bn, initialize_weights, model_info, profile, scale_img, select_device,
+                               time_sync)
 
 try:
     import thop  # for FLOPs computation
@@ -46,8 +47,8 @@ class Detect(nn.Module):
         self.no = nc + 5  # number of outputs per anchor
         self.nl = len(anchors)  # number of detection layers
         self.na = len(anchors[0]) // 2  # number of anchors
-        self.grid = [torch.empty(1)] * self.nl  # init grid
-        self.anchor_grid = [torch.empty(1)] * self.nl  # init anchor grid
+        self.grid = [torch.empty(0) for _ in range(self.nl)]  # init grid
+        self.anchor_grid = [torch.empty(0) for _ in range(self.nl)]  # init anchor grid
         self.register_buffer('anchors', torch.tensor(anchors).float().view(self.nl, -1, 2))  # shape(nl,na,2)
         self.m = nn.ModuleList(nn.Conv2d(x, self.no * self.na, 1) for x in ch)  # output conv
         self.inplace = inplace  # use inplace ops (e.g. slice assignment)
@@ -63,17 +64,17 @@ class Detect(nn.Module):
                 if self.dynamic or self.grid[i].shape[2:4] != x[i].shape[2:4]:
                     self.grid[i], self.anchor_grid[i] = self._make_grid(nx, ny, i)
 
-                y = x[i].clone()
-                y[..., :5 + self.nc].sigmoid_()
-                if self.inplace:
-                    y[..., 0:2] = (y[..., 0:2] * 2 + self.grid[i]) * self.stride[i]  # xy
-                    y[..., 2:4] = (y[..., 2:4] * 2) ** 2 * self.anchor_grid[i]  # wh
-                else:  # for YOLOv5 on AWS Inferentia https://github.com/ultralytics/yolov5/pull/2953
-                    xy, wh, etc = y.split((2, 2, self.no - 4), 4)  # tensor_split((2, 4, 5), 4) if torch 1.8.0
+                if isinstance(self, Segment):  # (boxes + masks)
+                    xy, wh, conf, mask = x[i].split((2, 2, self.nc + 1, self.no - self.nc - 5), 4)
+                    xy = (xy.sigmoid() * 2 + self.grid[i]) * self.stride[i]  # xy
+                    wh = (wh.sigmoid() * 2) ** 2 * self.anchor_grid[i]  # wh
+                    y = torch.cat((xy, wh, conf.sigmoid(), mask), 4)
+                else:  # Detect (boxes only)
+                    xy, wh, conf = x[i].sigmoid().split((2, 2, self.nc + 1), 4)
                     xy = (xy * 2 + self.grid[i]) * self.stride[i]  # xy
                     wh = (wh * 2) ** 2 * self.anchor_grid[i]  # wh
-                    y = torch.cat((xy, wh, etc), 4)
-                z.append(y.view(bs, -1, self.no))
+                    y = torch.cat((xy, wh, conf), 4)
+                z.append(y.view(bs, self.na * nx * ny, self.no))
 
         return x if self.training else (torch.cat(z, 1),) if self.export else (torch.cat(z, 1), x)
 
@@ -300,7 +301,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
     LOGGER.info(f"\n{'':>3}{'from':>18}{'n':>3}{'params':>10}  {'module':<40}{'arguments':<30}")
     anchors, nc, gd, gw, act = d['anchors'], d['nc'], d['depth_multiple'], d['width_multiple'], d.get('activation')
     if act:
-        Conv.act = eval(act)  # redefine default activation, i.e. Conv.act = nn.SiLU()
+        Conv.default_act = eval(act)  # redefine default activation, i.e. Conv.default_act = nn.SiLU()
         LOGGER.info(f"{colorstr('activation:')} {act}")  # print
     na = (len(anchors[0]) // 2) if isinstance(anchors, list) else anchors  # number of anchors
     no = na * (nc + 5)  # number of outputs = anchors * (classes + 5)
