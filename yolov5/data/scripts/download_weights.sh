@@ -9,7 +9,7 @@
 #     └── ...
 
 python - <<EOF
-from utils.downloads import attempt_download
+from yolov5.utils.downloads import attempt_download
 
 p5 = ['n', 's', 'm', 'l', 'x']  # P5 models
 p6 = [f'{x}6' for x in p5]  # P6 models
