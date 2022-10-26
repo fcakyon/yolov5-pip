@@ -2,7 +2,7 @@ from pathlib import Path
 
 from yolov5.models.common import AutoShape, DetectMultiBackend
 from yolov5.models.experimental import attempt_load
-from yolov5.models.yolo import ClassificationModel
+from yolov5.models.yolo import ClassificationModel, SegmentationModel
 from yolov5.utils.general import LOGGER, logging
 from yolov5.utils.torch_utils import select_device
 
@@ -34,8 +34,11 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
         model = DetectMultiBackend(model_path, device=device, fuse=autoshape)  # detection model
         if autoshape:
             if model.pt and isinstance(model.model, ClassificationModel):
-                LOGGER.warning('WARNING: ⚠️ YOLOv5 v6.2 ClassificationModel is not yet AutoShape compatible. '
-                            'You must pass torch tensors in BCHW to this model, i.e. shape(1,3,224,224).')
+                LOGGER.warning('WARNING ⚠️ YOLOv5 ClassificationModel is not yet AutoShape compatible. '
+                                'You must pass torch tensors in BCHW to this model, i.e. shape(1,3,224,224).')
+            elif model.pt and isinstance(model.model, SegmentationModel):
+                LOGGER.warning('WARNING ⚠️ YOLOv5 SegmentationModel is not yet AutoShape compatible. '
+                                'You will not be able to run inference with this model.')
             else:
                 model = AutoShape(model)  # for file/URI/PIL/cv2/np inputs and NMS
     except Exception:
