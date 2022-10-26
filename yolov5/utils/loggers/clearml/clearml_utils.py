@@ -5,11 +5,13 @@ from pathlib import Path
 
 import numpy as np
 import yaml
+
 from yolov5.utils.plots import Annotator, colors
 
 try:
     import clearml
     from clearml import Dataset, Task
+
     assert hasattr(clearml, '__version__')  # verify package import not local dir
 except (ImportError, AssertionError):
     clearml = None
