@@ -40,8 +40,12 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
                 LOGGER.warning('WARNING ⚠️ YOLOv5 SegmentationModel is not yet AutoShape compatible. '
                                 'You will not be able to run inference with this model.')
             else:
-                model = AutoShape(model)  # for file/URI/PIL/cv2/np inputs and NMS
-    except Exception:
+                try:
+                    model = AutoShape(model)  # for file/URI/PIL/cv2/np inputs and NMS
+                except Exception as e:
+                    LOGGER.warning(f'WARNING ⚠️ autoshape failed: {e}')
+    except Exception as e:
+        LOGGER.warning(f'WARNING ⚠️ DetectMultiBackend failed: {e}')
         model = attempt_load(model_path, device=device, fuse=False)  # arbitrary model
 
     if not verbose:
