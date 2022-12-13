@@ -63,6 +63,10 @@ jobs:
       - name: Test scripts
         run: |
           pip install -e .
+          # train (dl base model from hf hub)
+          python yolov5/train.py --img 128 --batch 16 --weights fcakyon/yolov5n-v7.0 --epochs 1 --device cpu
+          yolov5 train --img 128 --batch 16 --weights fcakyon/yolov5n-v7.0 --epochs 1 --device cpu --freeze 10
+          yolov5 train --img 128 --batch 16 --weights fcakyon/yolov5n-v7.0 --epochs 1 --device cpu --evolve 2
           # train
           python yolov5/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu
           yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu --freeze 10

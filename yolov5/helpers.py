@@ -7,7 +7,7 @@ from yolov5.utils.general import LOGGER, logging
 from yolov5.utils.torch_utils import select_device
 
 
-def load_model(model_path, device=None, autoshape=True, verbose=False):
+def load_model(model_path, device=None, autoshape=True, verbose=False, hf_token: str = None):
     """
     Creates a specified YOLOv5 model
 
@@ -17,6 +17,7 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
         pretrained (bool): load pretrained weights into the model
         autoshape (bool): make model ready for inference
         verbose (bool): if False, yolov5 logs will be silent
+        hf_token (str): huggingface read token for private models
 
     Returns:
         pytorch model
@@ -31,7 +32,7 @@ def load_model(model_path, device=None, autoshape=True, verbose=False):
     device = select_device(device)
 
     try:
-        model = DetectMultiBackend(model_path, device=device, fuse=autoshape)  # detection model
+        model = DetectMultiBackend(model_path, device=device, fuse=autoshape, hf_token=hf_token)  # detection model
         if autoshape:
             if model.pt and isinstance(model.model, ClassificationModel):
                 LOGGER.warning('WARNING ⚠️ YOLOv5 ClassificationModel is not yet AutoShape compatible. '
@@ -80,6 +81,7 @@ class YOLOv5:
         assert self.model is not None, "before predict, you need to call .load_model()"
         results = self.model(ims=image_list, size=size, augment=augment)
         return results
+
 
 if __name__ == "__main__":
     model_path = "yolov5/weights/yolov5s.pt"
