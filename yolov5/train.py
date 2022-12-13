@@ -47,7 +47,7 @@ from yolov5.utils.autoanchor import check_anchors
 from yolov5.utils.autobatch import check_train_batch_size
 from yolov5.utils.callbacks import Callbacks
 from yolov5.utils.dataloaders import create_dataloader
-from yolov5.utils.downloads import attempt_download, is_url
+from yolov5.utils.downloads import attempt_donwload_from_hub, attempt_download, is_url
 from yolov5.utils.general import (LOGGER, TQDM_BAR_FORMAT, check_amp, check_dataset, check_file, check_git_info,
                            check_git_status, check_img_size, check_requirements, check_suffix, check_yaml, colorstr,
                            get_latest_run, increment_path, init_seeds, intersect_dicts, labels_to_class_weights,
@@ -180,7 +180,12 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     # upload dataset to s3
     if opt.upload_dataset and opt.s3_upload_dir:
         upload_to_s3(opt, data, save_dir)
+
     # Model
+    # try to download from hf hub
+    result = attempt_donwload_from_hub(weights, hf_token=None)
+    if result is not None:
+        weights = result
     check_suffix(weights, '.pt')  # check weights
     pretrained = weights.endswith('.pt')
     if pretrained:
