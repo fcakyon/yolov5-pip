@@ -452,7 +452,7 @@ class WandbLogger():
 
     def log_training_progress(self, predn, path, names):
         """
-        Build evaluation Table. Uses reference from yolov5.validation dataset table.
+        Build evaluation Table. Uses reference from validation dataset table.
 
         arguments:
         predn (list): list of predictions in the native space in the format - [xmin, ymin, xmax, ymax, confidence, class]
