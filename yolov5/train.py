@@ -45,14 +45,14 @@ from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import Model
 from yolov5.utils.autoanchor import check_anchors
 from yolov5.utils.autobatch import check_train_batch_size
-from yolov5.utils.aws import upload_file_to_s3, upload_folder_to_s3
 from yolov5.utils.callbacks import Callbacks
 from yolov5.utils.dataloaders import create_dataloader
 from yolov5.utils.downloads import attempt_download, is_url
-from yolov5.utils.general import (LOGGER, check_amp, check_dataset, check_file, check_git_status, check_img_size,
-                           check_requirements, check_suffix, check_yaml, colorstr, get_latest_run, increment_path,
-                           init_seeds, intersect_dicts, labels_to_class_weights, labels_to_image_weights, methods,
-                           one_cycle, print_args, print_mutation, strip_optimizer, yaml_save)
+from yolov5.utils.general import (LOGGER, TQDM_BAR_FORMAT, check_amp, check_dataset, check_file, check_git_info,
+                           check_git_status, check_img_size, check_requirements, check_suffix, check_yaml, colorstr,
+                           get_latest_run, increment_path, init_seeds, intersect_dicts, labels_to_class_weights,
+                           labels_to_image_weights, methods, one_cycle, print_args, print_mutation, strip_optimizer,
+                           yaml_save)
 from yolov5.utils.loggers import Loggers
 from yolov5.utils.loggers.comet.comet_utils import check_comet_resume
 from yolov5.utils.loss import ComputeLoss
@@ -64,17 +64,12 @@ from yolov5.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, sele
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
 WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
+#GIT_INFO = check_git_info()
 
 # fix OMP: Error #15: Initializing libiomp5md.dll, but found libiomp5md.dll already initialized.
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
-def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictionary
-    save_dir, epochs, batch_size, weights, single_cls, evolve, data, cfg, resume, noval, nosave, workers, freeze = \
-        Path(opt.save_dir), opt.epochs, opt.batch_size, opt.weights, opt.single_cls, opt.evolve, opt.data, opt.cfg, \
-        opt.resume, opt.noval, opt.nosave, opt.workers, opt.freeze
-    callbacks.run('on_pretrain_routine_start')
-
-    # coco to yolov5 conversion
+def convert_coco_dataset_to_yolo(opt, save_dir):
     is_coco_data = False
     has_yolo_s3_data_dir = False
     with open(opt.data, errors='ignore') as f:
@@ -114,6 +109,32 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
             copyfile(data_info["train_json_path"], str(w / "train.json"))
         if "val_json_path" in data_info and Path(data_info["val_json_path"]).is_file():
             copyfile(data_info["val_json_path"], str(w / "val.json"))
+
+def upload_to_s3(opt, data, save_dir):
+    from yolov5.utils.aws import upload_file_to_s3, upload_folder_to_s3
+
+    with open(data, errors='ignore') as f:
+        data_info = yaml.safe_load(f)  # load data dict
+    # upload yolo formatted data to s3
+    s3_folder = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / 'data').replace(os.sep, '/')
+    LOGGER.info(f"{colorstr('aws:')} Uploading yolo formatted dataset to {s3_folder}")
+    s3_file = s3_folder + "/data.yaml"
+    result = upload_file_to_s3(local_file=opt.data, s3_file=s3_file)
+    s3_folder_train = s3_folder + "/train/"
+    result = upload_folder_to_s3(local_folder=data_info["train"], s3_folder=s3_folder_train)
+    s3_folder_val = s3_folder + "/val/"
+    result = upload_folder_to_s3(local_folder=data_info["val"], s3_folder=s3_folder_val)
+    if result:
+        LOGGER.info(f"{colorstr('aws:')} Dataset has been successfully uploaded to {s3_folder}")
+
+
+def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictionary
+    save_dir, epochs, batch_size, weights, single_cls, evolve, data, cfg, resume, noval, nosave, workers, freeze = \
+        Path(opt.save_dir), opt.epochs, opt.batch_size, opt.weights, opt.single_cls, opt.evolve, opt.data, opt.cfg, \
+        opt.resume, opt.noval, opt.nosave, opt.workers, opt.freeze
+    callbacks.run('on_pretrain_routine_start')
+
+    convert_coco_dataset_to_yolo(opt, save_dir)
 
     # Directories
     w = save_dir / 'weights'  # weights dir
@@ -158,20 +179,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
     # upload dataset to s3
     if opt.upload_dataset and opt.s3_upload_dir:
-        with open(data, errors='ignore') as f:
-            data_info = yaml.safe_load(f)  # load data dict
-        # upload yolo formatted data to s3
-        s3_folder = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / 'data').replace(os.sep, '/')
-        LOGGER.info(f"{colorstr('aws:')} Uploading yolo formatted dataset to {s3_folder}")
-        s3_file = s3_folder + "/data.yaml"
-        result = upload_file_to_s3(local_file=opt.data, s3_file=s3_file)
-        s3_folder_train = s3_folder + "/train/"
-        result = upload_folder_to_s3(local_folder=data_info["train"], s3_folder=s3_folder_train)
-        s3_folder_val = s3_folder + "/val/"
-        result = upload_folder_to_s3(local_folder=data_info["val"], s3_folder=s3_folder_val)
-        if result:
-            LOGGER.info(f"{colorstr('aws:')} Dataset has been successfully uploaded to {s3_folder}")
-
+        upload_to_s3(opt, data, save_dir)
     # Model
     check_suffix(weights, '.pt')  # check weights
     pretrained = weights.endswith('.pt')
@@ -338,7 +346,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         pbar = enumerate(train_loader)
         LOGGER.info(('\n' + '%11s' * 7) % ('Epoch', 'GPU_mem', 'box_loss', 'obj_loss', 'cls_loss', 'Instances', 'Size'))
         if RANK in {-1, 0}:
-            pbar = tqdm(pbar, total=nb, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')  # progress bar
+            pbar = tqdm(pbar, total=nb, bar_format=TQDM_BAR_FORMAT)  # progress bar
         optimizer.zero_grad()
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
             callbacks.run('on_train_batch_start')
@@ -450,6 +458,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
                 # upload best model to aws s3
                 if opt.s3_upload_dir:
+                    from yolov5.utils.aws import upload_file_to_s3
+
                     s3_file = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / "weights" / "best.pt").replace(os.sep, '/')
                     LOGGER.info(f"{colorstr('aws:')} Uploading best weight to AWS S3...")
                     result = upload_file_to_s3(local_file=str(best), s3_file=s3_file)
@@ -495,6 +505,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
         # upload best model to aws s3
         if opt.s3_upload_dir:
+            from yolov5.utils.aws import upload_file_to_s3
+
             s3_file = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / "weights" / "best.pt").replace(os.sep, '/')
             LOGGER.info(f"{colorstr('aws:')} Uploading best weight to AWS S3...")
             result = upload_file_to_s3(local_file=str(best), s3_file=s3_file)
@@ -514,7 +526,7 @@ def parse_opt(known=False):
     parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
     parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='dataset.yaml path')
     parser.add_argument('--hyp', type=str, default=ROOT / 'data/hyps/hyp.scratch-low.yaml', help='hyperparameters path')
-    parser.add_argument('--epochs', type=int, default=300, help='total training epochs')
+    parser.add_argument('--epochs', type=int, default=100, help='total training epochs')
     parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs, -1 for autobatch')
     parser.add_argument('--imgsz', '--img', '--img-size', type=int, default=640, help='train, val image size (pixels)')
     parser.add_argument('--rect', action='store_true', help='rectangular training')
@@ -525,7 +537,7 @@ def parse_opt(known=False):
     parser.add_argument('--noplots', action='store_true', help='save no plot files')
     parser.add_argument('--evolve', type=int, nargs='?', const=300, help='evolve hyperparameters for x generations')
     parser.add_argument('--bucket', type=str, default='', help='gsutil bucket')
-    parser.add_argument('--cache', type=str, nargs='?', const='ram', help='--cache images in "ram" (default) or "disk"')
+    parser.add_argument('--cache', type=str, nargs='?', const='ram', help='image --cache ram/disk')
     parser.add_argument('--image-weights', action='store_true', help='use weighted image selection for training')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--multi-scale', action='store_true', help='vary img-size +/- 50%%')
@@ -545,7 +557,7 @@ def parse_opt(known=False):
     parser.add_argument('--seed', type=int, default=0, help='Global training seed')
     parser.add_argument('--local_rank', type=int, default=-1, help='Automatic DDP Multi-GPU argument, do not modify')
     parser.add_argument('--mmdet_tags', action='store_true', help='Log train/val keys in MMDetection format')
-    
+
     # Weights & Biases arguments
     parser.add_argument('--entity', default=None, help='Entity')
     parser.add_argument('--bbox_interval', type=int, default=-1, help='Set bounding-box image logging interval')
@@ -567,7 +579,7 @@ def main(opt, callbacks=Callbacks()):
     if RANK in {-1, 0}:
         print_args(vars(opt))
         #check_git_status()
-        check_requirements()
+        #check_requirements()
 
     # Resume (from specified or most recent last.pt)
     if opt.resume and not check_comet_resume(opt) and not opt.evolve:

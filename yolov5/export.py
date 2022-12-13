@@ -25,10 +25,10 @@ Usage:
     $ yolov5 export --weights yolov5s.pt --include torchscript onnx openvino engine coreml tflite ...
 
 Inference:
-    $ yolov5 export --weights yolov5s.pt                 # PyTorch
+    $ yolov5 detect --weights yolov5s.pt                 # PyTorch
                                  yolov5s.torchscript        # TorchScript
                                  yolov5s.onnx               # ONNX Runtime or OpenCV DNN with --dnn
-                                 yolov5s.xml                # OpenVINO
+                                 yolov5s_openvino_model     # OpenVINO
                                  yolov5s.engine             # TensorRT
                                  yolov5s.mlmodel            # CoreML (macOS-only)
                                  yolov5s_saved_model        # TensorFlow SavedModel
@@ -153,7 +153,7 @@ def export_onnx(model, im, file, opset, dynamic, simplify, prefix=colorstr('ONNX
         f,
         verbose=False,
         opset_version=opset,
-        do_constant_folding=True,
+        do_constant_folding=True,  # WARNING: DNN inference with torch>=1.12 may require do_constant_folding=False
         input_names=['images'],
         output_names=output_names,
         dynamic_axes=dynamic or None)
@@ -607,6 +607,7 @@ def run(
     f = [str(x) for x in f if x]  # filter out '' and None
     if any(f):
         cls, det, seg = (isinstance(model, x) for x in (ClassificationModel, DetectionModel, SegmentationModel))  # type
+        det &= not seg  # segmentation models inherit from SegmentationModel(DetectionModel)
         dir = Path('segment' if seg else 'classify' if cls else '')
         h = '--half' if half else ''  # --half FP16 inference arg
         s = "# WARNING ⚠️ ClassificationModel not yet supported for PyTorch Hub AutoShape inference" if cls else \
@@ -614,8 +615,8 @@ def run(
         LOGGER.info(f'\nExport complete ({time.time() - t:.1f}s)'
                     f"\nResults saved to {colorstr('bold', file.parent.resolve())}"
                     f"\nDetect:          yolov5 {'detect' if det else 'predict'} --weights {f[-1]} {h}"
-                    f"\nValidate:        yolov5 val --weights {f[-1]} {h}"
-                    f"\nPython:          model = yolov5.load('{f[-1]}')  {s}"
+                    f"\nValidate:        yolov5 yolov5 val --weights {f[-1]} {h}"
+                    f"\nnPython:         model = yolov5.load('{f[-1]}')  {s}"
                     f"\nVisualize:       https://netron.app")
     return f  # return list of exported files/dirs
 

@@ -10,14 +10,15 @@ from pathlib import Path
 import pkg_resources as pkg
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from yolov5.utils.general import colorstr, cv2
+
+from yolov5.utils.general import LOGGER, colorstr, cv2
 from yolov5.utils.loggers.clearml.clearml_utils import ClearmlLogger
 from yolov5.utils.loggers.neptune.neptune_utils import NeptuneLogger
 from yolov5.utils.loggers.wandb.wandb_utils import WandbLogger
 from yolov5.utils.plots import plot_images, plot_labels, plot_results
 from yolov5.utils.torch_utils import de_parallel
 
-LOGGERS = ('csv', 'tb', 'wandb', 'neptune', 'clearml', 'comet')  # *.csv, TensorBoard, Weights & Biases, ClearML
+LOGGERS = ('csv', 'tb', 'wandb', 'clearml', 'comet')  # *.csv, TensorBoard, Weights & Biases, ClearML
 RANK = int(os.getenv('RANK', -1))
 
 try:
@@ -45,8 +46,6 @@ try:
     assert hasattr(clearml, '__version__')  # verify package import not local dir
 except (ImportError, AssertionError):
     clearml = None
-
-    
 
 try:
     if RANK not in [0, -1]:
@@ -130,10 +129,6 @@ class Loggers():
             run_id = torch.load(self.weights).get('wandb_id') if self.opt.resume and not wandb_artifact_resume else None
             self.opt.hyp = self.hyp  # add hyperparameters
             self.wandb = WandbLogger(self.opt, run_id)
-            # temp warn. because nested artifacts not supported after 0.12.10
-            if pkg.parse_version(wandb.__version__) >= pkg.parse_version('0.12.11'):
-                s = "YOLOv5 temporarily requires wandb version 0.12.10 or below. Some features may not work as expected."
-                self.logger.warning(s)
         else:
             self.wandb = None
 
@@ -145,7 +140,14 @@ class Loggers():
 
         # ClearML
         if clearml and 'clearml' in self.include:
-            self.clearml = ClearmlLogger(self.opt, self.hyp)
+            try:
+                self.clearml = ClearmlLogger(self.opt, self.hyp)
+            except Exception:
+                self.clearml = None
+                prefix = colorstr('ClearML: ')
+                LOGGER.warning(f'{prefix}WARNING ⚠️ ClearML is installed but not configured, skipping ClearML logging.'
+                               f' See https://github.com/ultralytics/yolov5/tree/master/utils/loggers/clearml#readme')
+
         else:
             self.clearml = None
 
@@ -472,7 +474,7 @@ def log_tensorboard_graph(tb, model, imgsz=(640, 640)):
             warnings.simplefilter('ignore')  # suppress jit trace warning
             tb.add_graph(torch.jit.trace(de_parallel(model), im, strict=False), [])
     except Exception as e:
-        print(f'WARNING: TensorBoard graph visualization failure {e}')
+        LOGGER.warning(f'WARNING ⚠️ TensorBoard graph visualization failure {e}')
 
 
 def web_project_name(project):

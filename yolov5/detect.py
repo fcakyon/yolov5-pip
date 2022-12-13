@@ -4,25 +4,28 @@ Run YOLOv5 detection inference on images, videos, directories, globs, YouTube, w
 
 Usage - sources:
     $ yolov5 detect --weights yolov5s.pt --source 0                               # webcam
-                                            img.jpg                             # image
-                                            vid.mp4                             # video
-                                            path/                               # directory
-                                            'path/*.jpg'                        # glob
-                                            'https://youtu.be/Zgi9g1ksQHc'      # YouTube
-                                            'rtsp://example.com/media.mp4'      # RTSP, RTMP, HTTP stream
+                                                     img.jpg                         # image
+                                                     vid.mp4                         # video
+                                                     screen                          # screenshot
+                                                     path/                           # directory
+                                                     list.txt                        # list of images
+                                                     list.streams                    # list of streams
+                                                     'path/*.jpg'                    # glob
+                                                     'https://youtu.be/Zgi9g1ksQHc'  # YouTube
+                                                     'rtsp://example.com/media.mp4'  # RTSP, RTMP, HTTP stream
 
 Usage - formats:
     $ yolov5 detect --weights yolov5s.pt                 # PyTorch
-                                yolov5s.torchscript        # TorchScript
-                                yolov5s.onnx               # ONNX Runtime or OpenCV DNN with --dnn
-                                yolov5s.xml                # OpenVINO
-                                yolov5s.engine             # TensorRT
-                                yolov5s.mlmodel            # CoreML (macOS-only)
-                                yolov5s_saved_model        # TensorFlow SavedModel
-                                yolov5s.pb                 # TensorFlow GraphDef
-                                yolov5s.tflite             # TensorFlow Lite
-                                yolov5s_edgetpu.tflite     # TensorFlow Edge TPU
-                                yolov5s_paddle_model       # PaddlePaddle
+                                 yolov5s.torchscript        # TorchScript
+                                 yolov5s.onnx               # ONNX Runtime or OpenCV DNN with --dnn
+                                 yolov5s_openvino_model     # OpenVINO
+                                 yolov5s.engine             # TensorRT
+                                 yolov5s.mlmodel            # CoreML (macOS-only)
+                                 yolov5s_saved_model        # TensorFlow SavedModel
+                                 yolov5s.pb                 # TensorFlow GraphDef
+                                 yolov5s.tflite             # TensorFlow Lite
+                                 yolov5s_edgetpu.tflite     # TensorFlow Edge TPU
+                                 yolov5s_paddle_model       # PaddlePaddle
 """
 
 import argparse
@@ -82,7 +85,7 @@ def run(
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
     is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
-    webcam = source.isnumeric() or source.endswith('.txt') or (is_url and not is_file)
+    webcam = source.isnumeric() or source.endswith('.streams') or (is_url and not is_file)
     screenshot = source.lower().startswith('screen')
     if is_url and is_file:
         source = check_file(source)  # download

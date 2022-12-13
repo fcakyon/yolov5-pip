@@ -7,12 +7,12 @@ import contextlib
 import glob
 import inspect
 import logging
+import logging.config
 import math
 import os
 import platform
 import random
 import re
-import shutil
 import signal
 import sys
 import time
@@ -23,8 +23,9 @@ from itertools import repeat
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from subprocess import check_output
+from tarfile import is_tarfile
 from typing import Optional
-from zipfile import ZipFile
+from zipfile import ZipFile, is_zipfile
 
 import cv2
 import IPython
@@ -48,6 +49,7 @@ NUM_THREADS = min(8, max(1, os.cpu_count() - 1))  # number of YOLOv5 multiproces
 DATASETS_DIR = Path(os.getenv('YOLOv5_DATASETS_DIR', ROOT.parent / 'datasets'))  # global datasets directory
 AUTOINSTALL = str(os.getenv('YOLOv5_AUTOINSTALL', True)).lower() == 'true'  # global auto-install mode
 VERBOSE = str(os.getenv('YOLOv5_VERBOSE', True)).lower() == 'true'  # global verbose mode
+TQDM_BAR_FORMAT = '{l_bar}{bar:10}{r_bar}'  # tqdm bar format
 FONT = 'Arial.ttf'  # https://ultralytics.com/assets/Arial.ttf
 
 torch.set_printoptions(linewidth=320, precision=5, profile='long')
@@ -71,7 +73,7 @@ def is_chinese(s='人工智能'):
 
 def is_colab():
     # Is environment a Google Colab instance?
-    return 'COLAB_GPU' in os.environ
+    return 'google.colab' in sys.modules
 
 
 def is_notebook():
@@ -110,23 +112,33 @@ def is_writeable(dir, test=False):
         return False
 
 
-def set_logging(name=None, verbose=VERBOSE):
-    # Sets level and returns logger
-    if is_kaggle() or is_colab():
-        for h in logging.root.handlers:
-            logging.root.removeHandler(h)  # remove all handlers associated with the root logger object
+LOGGING_NAME = "yolov5"
+
+
+def set_logging(name=LOGGING_NAME, verbose=True):
+    # sets up logging for the given name
     rank = int(os.getenv('RANK', -1))  # rank in world for Multi-GPU trainings
     level = logging.INFO if verbose and rank in {-1, 0} else logging.ERROR
-    log = logging.getLogger(name)
-    log.setLevel(level)
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter("%(message)s"))
-    handler.setLevel(level)
-    log.addHandler(handler)
+    logging.config.dictConfig({
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            name: {
+                "format": "%(message)s"}},
+        "handlers": {
+            name: {
+                "class": "logging.StreamHandler",
+                "formatter": name,
+                "level": level,}},
+        "loggers": {
+            name: {
+                "level": level,
+                "handlers": [name],
+                "propagate": False,}}})
 
 
-set_logging()  # run before defining LOGGER
-LOGGER = logging.getLogger("yolov5")  # define globally (used in train.py, val.py, detect.py, etc.)
+set_logging(LOGGING_NAME)  # run before defining LOGGER
+LOGGER = logging.getLogger(LOGGING_NAME)  # define globally (used in train.py, val.py, detect.py, etc.)
 if platform.system() == 'Windows':
     for fn in LOGGER.info, LOGGER.warning:
         setattr(LOGGER, fn.__name__, lambda x: fn(emojis(x)))  # emoji safe logging
@@ -282,11 +294,16 @@ def file_size(path):
 def check_online():
     # Check internet connectivity
     import socket
-    try:
-        socket.create_connection(("1.1.1.1", 443), 5)  # check host accessibility
-        return True
-    except OSError:
-        return False
+
+    def run_once():
+        # Check once
+        try:
+            socket.create_connection(("1.1.1.1", 443), 5)  # check host accessibility
+            return True
+        except OSError:
+            return False
+
+    return run_once() or run_once()  # check twice to increase robustness to intermittent connectivity issues
 
 
 def git_describe(path=ROOT):  # path must be a directory
@@ -324,6 +341,24 @@ def check_git_status(repo='ultralytics/yolov5', branch='master'):
     else:
         s += f'up to date with {url} ✅'
     LOGGER.info(s)
+
+
+@WorkingDirectory(ROOT)
+def check_git_info(path='.'):
+    # YOLOv5 git info check, return {remote, branch, commit}
+    check_requirements('gitpython')
+    import git
+    try:
+        repo = git.Repo(path)
+        remote = repo.remotes.origin.url.replace('.git', '')  # i.e. 'https://github.com/ultralytics/yolov5'
+        commit = repo.head.commit.hexsha  # i.e. '3134699c73af83aac2a481435550b968d5792c0d'
+        try:
+            branch = repo.active_branch.name  # i.e. 'main'
+        except TypeError:  # not on any branch
+            branch = None  # i.e. 'detached HEAD' state
+        return {'remote': remote, 'branch': branch, 'commit': commit}
+    except git.exc.InvalidGitRepositoryError:  # path is not a git dir
+        return {'remote': None, 'branch': None, 'commit': None}
 
 
 def check_python(minimum='3.7.0'):
@@ -368,7 +403,7 @@ def check_requirements(requirements=ROOT / 'requirements.txt', exclude=(), insta
     if s and install and AUTOINSTALL:  # check environment variable
         LOGGER.info(f"{prefix} YOLOv5 requirement{'s' * (n > 1)} {s}not found, attempting AutoUpdate...")
         try:
-            assert check_online(), "AutoUpdate skipped (offline)"
+            # assert check_online(), "AutoUpdate skipped (offline)"
             LOGGER.info(check_output(f'pip install {s} {cmds}', shell=True).decode())
             source = file if 'file' in locals() else requirements
             s = f"{prefix} {n} package{'s' * (n > 1)} updated per {source}\n" \
@@ -465,7 +500,7 @@ def check_dataset(data, autodownload=True):
 
     # Download (optional)
     extract_dir = ''
-    if isinstance(data, (str, Path)) and str(data).endswith('.zip'):  # i.e. gs://bucket/dir/coco128.zip
+    if isinstance(data, (str, Path)) and (is_zipfile(data) or is_tarfile(data)):
         download(data, dir=f'{DATASETS_DIR}/{Path(data).stem}', unzip=True, delete=False, curl=False, threads=1)
         data = next((DATASETS_DIR / Path(data).stem).rglob('*.yaml'))
         extract_dir, autodownload = data.parent, False
@@ -476,9 +511,10 @@ def check_dataset(data, autodownload=True):
 
     # Checks
     for k in 'train', 'val', 'names':
-        assert k in data, f"data.yaml '{k}:' field missing ❌"
+        assert k in data, emojis(f"data.yaml '{k}:' field missing ❌")
     if isinstance(data['names'], (list, tuple)):  # old array format
         data['names'] = dict(enumerate(data['names']))  # convert to dict
+    assert all(isinstance(k, int) for k in data['names'].keys()), 'data.yaml names keys must be integers, i.e. 2: car'
     data['nc'] = len(data['names'])
 
     # Resolve paths
@@ -607,11 +643,11 @@ def download(url, dir='.', unzip=True, delete=True, curl=False, threads=1, retry
                 else:
                     LOGGER.warning(f'❌ Failed to download {url}...')
 
-        if unzip and success and f.suffix in ('.zip', '.tar', '.gz'):
+        if unzip and success and (f.suffix == '.gz' or is_zipfile(f) or is_tarfile(f)):
             LOGGER.info(f'Unzipping {f}...')
-            if f.suffix == '.zip':
+            if is_zipfile(f):
                 unzip_file(f, dir)  # unzip
-            elif f.suffix == '.tar':
+            elif is_tarfile(f):
                 os.system(f'tar xf {f} --directory {f.parent}')  # unzip
             elif f.suffix == '.gz':
                 os.system(f'tar xfz {f} --directory {f.parent}')  # unzip
@@ -804,7 +840,7 @@ def scale_boxes(img1_shape, boxes, img0_shape, ratio_pad=None):
     return boxes
 
 
-def scale_segments(img1_shape, segments, img0_shape, ratio_pad=None):
+def scale_segments(img1_shape, segments, img0_shape, ratio_pad=None, normalize=False):
     # Rescale coords (xyxy) from img1_shape to img0_shape
     if ratio_pad is None:  # calculate from img0_shape
         gain = min(img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1])  # gain  = old / new
@@ -817,6 +853,9 @@ def scale_segments(img1_shape, segments, img0_shape, ratio_pad=None):
     segments[:, 1] -= pad[1]  # y padding
     segments /= gain
     clip_segments(segments, img0_shape)
+    if normalize:
+        segments[:, 0] /= img0_shape[1]  # width
+        segments[:, 1] /= img0_shape[0]  # height
     return segments
 
 
@@ -832,14 +871,14 @@ def clip_boxes(boxes, shape):
         boxes[:, [1, 3]] = boxes[:, [1, 3]].clip(0, shape[0])  # y1, y2
 
 
-def clip_segments(boxes, shape):
+def clip_segments(segments, shape):
     # Clip segments (xy1,xy2,...) to image shape (height, width)
-    if isinstance(boxes, torch.Tensor):  # faster individually
-        boxes[:, 0].clamp_(0, shape[1])  # x
-        boxes[:, 1].clamp_(0, shape[0])  # y
+    if isinstance(segments, torch.Tensor):  # faster individually
+        segments[:, 0].clamp_(0, shape[1])  # x
+        segments[:, 1].clamp_(0, shape[0])  # y
     else:  # np.array (faster grouped)
-        boxes[:, 0] = boxes[:, 0].clip(0, shape[1])  # x
-        boxes[:, 1] = boxes[:, 1].clip(0, shape[0])  # y
+        segments[:, 0] = segments[:, 0].clip(0, shape[1])  # x
+        segments[:, 1] = segments[:, 1].clip(0, shape[0])  # y
 
 
 def non_max_suppression(
@@ -997,7 +1036,7 @@ def print_mutation(keys, results, hyp, save_dir, bucket, prefix=colorstr('evolve
 
     # Save yaml
     with open(evolve_yaml, 'w') as f:
-        data = pd.read_csv(evolve_csv)
+        data = pd.read_csv(evolve_csv, skipinitialspace=True)
         data = data.rename(columns=lambda x: x.strip())  # strip keys
         i = np.argmax(fitness(data.values[:, :4]))  #
         generations = len(data)
@@ -1076,7 +1115,7 @@ def increment_path(path, exist_ok=False, sep='', mkdir=False):
     return path
 
 
-# OpenCV Chinese-friendly functions ------------------------------------------------------------------------------------
+# OpenCV Multilanguage-friendly functions ------------------------------------------------------------------------------------
 imshow_ = cv2.imshow  # copy to avoid recursion errors
 
 
@@ -1099,4 +1138,3 @@ def imshow(path, im):
 cv2.imread, cv2.imwrite, cv2.imshow = imread, imwrite, imshow  # redefine
 
 # Variables ------------------------------------------------------------------------------------------------------------
-NCOLS = 0 if is_docker() else shutil.get_terminal_size().columns  # terminal window size for tqdm
