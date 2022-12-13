@@ -40,8 +40,8 @@ from yolov5.classify import val as validate
 from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import ClassificationModel, DetectionModel
 from yolov5.utils.dataloaders import create_classification_dataloader
-from yolov5.utils.general import (DATASETS_DIR, LOGGER, WorkingDirectory, check_git_status, check_requirements, colorstr,
-                           download, increment_path, init_seeds, print_args, yaml_save)
+from yolov5.utils.general import (DATASETS_DIR, LOGGER, TQDM_BAR_FORMAT, WorkingDirectory, check_git_info, check_git_status,
+                           check_requirements, colorstr, download, increment_path, init_seeds, print_args, yaml_save)
 from yolov5.utils.loggers import GenericLogger
 from yolov5.utils.plots import imshow_cls
 from yolov5.utils.torch_utils import (ModelEMA, model_info, reshape_classifier_output, select_device, smart_DDP,
@@ -50,6 +50,7 @@ from yolov5.utils.torch_utils import (ModelEMA, model_info, reshape_classifier_o
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
 WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
+#GIT_INFO = check_git_info()
 
 
 def train(opt, device):
@@ -174,7 +175,7 @@ def train(opt, device):
             trainloader.sampler.set_epoch(epoch)
         pbar = enumerate(trainloader)
         if RANK in {-1, 0}:
-            pbar = tqdm(enumerate(trainloader), total=len(trainloader), bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
+            pbar = tqdm(enumerate(trainloader), total=len(trainloader), bar_format=TQDM_BAR_FORMAT)
         for i, (images, labels) in pbar:  # progress bar
             images, labels = images.to(device, non_blocking=True), labels.to(device)
 
