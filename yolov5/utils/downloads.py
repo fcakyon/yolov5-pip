@@ -59,7 +59,7 @@ def safe_download(file, url, url2=None, min_bytes=1E0, error_msg=''):
         LOGGER.info('')
 
 
-def attempt_download(file, repo='ultralytics/yolov5', release='v7.0'):
+def attempt_download(file, repo='ultralytics/yolov5', release='v7.0', hf_token=None):
     # Attempt file download from GitHub release assets if not found locally. release = 'latest', 'v7.0', etc.
     from yolov5.utils.general import LOGGER
 
@@ -69,6 +69,11 @@ def attempt_download(file, repo='ultralytics/yolov5', release='v7.0'):
             version = f'tags/{version}'  # i.e. tags/v7.0
         response = requests.get(f'https://api.github.com/repos/{repository}/releases/{version}').json()  # github api
         return response['tag_name'], [x['name'] for x in response['assets']]  # tag, assets
+
+    # try to download from hf hub
+    result = attempt_donwload_from_hub(file, hf_token=hf_token)
+    if result is not None:
+        file = result
 
     file = Path(str(file).strip().replace("'", ''))
     if not file.exists():
@@ -105,4 +110,36 @@ def attempt_download(file, repo='ultralytics/yolov5', release='v7.0'):
                 min_bytes=1E5,
                 error_msg=f'{file} missing, try downloading from https://github.com/{repo}/releases/{tag} or {url3}')
 
+
+
     return str(file)
+
+
+def get_model_filename_from_hfhub(repo_id, hf_token=None):
+    from huggingface_hub import list_repo_files
+    from huggingface_hub.utils._errors import RepositoryNotFoundError
+    from huggingface_hub.utils._validators import HFValidationError
+
+    try:
+        repo_files = list_repo_files(repo_id=repo_id, repo_type='model', token=hf_token)
+        model_filename = [f for f in repo_files if f.endswith('.pt')][0]
+        return model_filename
+    except (RepositoryNotFoundError, HFValidationError):
+        return None
+
+
+def attempt_donwload_from_hub(repo_id, hf_token=None):
+    from huggingface_hub import hf_hub_download, list_repo_files
+    from huggingface_hub.utils._errors import RepositoryNotFoundError
+    from huggingface_hub.utils._validators import HFValidationError
+
+    try:
+        repo_files = list_repo_files(repo_id=repo_id, repo_type='model', token=hf_token)
+        model_file = [f for f in repo_files if f.endswith('.pt')][0]
+        file = hf_hub_download(
+            repo_id=repo_id,
+            filename=model_file,
+        )
+        return file
+    except (RepositoryNotFoundError, HFValidationError):
+        return None
