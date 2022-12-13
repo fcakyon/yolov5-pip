@@ -94,5 +94,6 @@ jobs:
           yolov5 classify predict --img 128 --weights yolov5n-cls.pt --device cpu  
           # segment
           yolov5 segment train --img 128 --weights yolov5n-seg.pt --epochs 1 --device cpu
+          yolov5 segment train --img 128 --weights fcakyon/yolov5n-seg-v7.0 --epochs 1 --device cpu
           # yolov5 segment val --img 128 --weights yolov5n-seg.pt --device cpu
           yolov5 segment predict --img 128 --weights yolov5n-seg.pt --device cpu
