@@ -146,6 +146,7 @@ def run(
         model.half() if half else model.float()
     else:  # called directly
         device = select_device(device, batch_size=batch_size)
+        half &= device.type != 'cpu' # half precision only supported on CUDA, dont remove!
 
         # Directories
         save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
@@ -169,7 +170,7 @@ def run(
 
     # Configure
     model.eval()
-    half = cuda = device.type != 'cpu' # dont change this line, half precision only supported on CUDA
+    half = cuda = device.type != 'cpu' # half precision only supported on CUDA, dont remove!
     is_coco = isinstance(data.get('val'), str) and data['val'].endswith(f'coco{os.sep}val2017.txt')  # COCO dataset
     nc = 1 if single_cls else int(data['nc'])  # number of classes
     iouv = torch.linspace(0.5, 0.95, 10, device=device)  # iou vector for mAP@0.5:0.95
