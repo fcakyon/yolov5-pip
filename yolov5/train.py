@@ -84,7 +84,7 @@ def convert_coco_dataset_to_yolo(opt, save_dir):
 
     if is_coco_data:
         from sahi.utils.coco import export_coco_as_yolov5_via_yml
-        data = export_coco_as_yolov5_via_yml(yml_path=data, output_dir=save_dir / 'data')
+        data = export_coco_as_yolov5_via_yml(yml_path=opt.data, output_dir=save_dir / 'data')
         opt.data = data
 
         # add coco fields to data.yaml
@@ -158,7 +158,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     cuda = device.type != 'cpu'
     init_seeds(opt.seed + 1 + RANK, deterministic=True)
     with torch_distributed_zero_first(LOCAL_RANK):
-        data_dict = check_dataset(data)
+        data_dict = check_dataset(opt.data)
     train_path, val_path = data_dict['train'], data_dict['val']
     nc = 1 if single_cls else int(data_dict['nc'])  # number of classes
     names = {0: 'item'} if single_cls and len(data_dict['names']) != 1 else data_dict['names']  # class names
