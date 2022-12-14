@@ -63,11 +63,15 @@ jobs:
       - name: Test scripts
         run: |
           pip install -e .
+          # donwload coco formatted testing data
+          python tests/download_test_coco_dataset.py
           # train (dl base model from hf hub)
+          yolov5 train --data tests/data/coco_data.yaml --img 128 --batch 16 --weights fcakyon/yolov5n-v7.0 --epochs 1 --device cpu --freeze 10
           python yolov5/train.py --img 128 --batch 16 --weights fcakyon/yolov5n-v7.0 --epochs 1 --device cpu
           yolov5 train --img 128 --batch 16 --weights fcakyon/yolov5n-v7.0 --epochs 1 --device cpu --freeze 10
           yolov5 train --img 128 --batch 16 --weights fcakyon/yolov5n-v7.0 --epochs 1 --device cpu --evolve 2
           # train
+          yolov5 train --data tests/data/coco_data.yaml --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu --freeze 10
           python yolov5/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu
           yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu --freeze 10
           yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu --evolve 2

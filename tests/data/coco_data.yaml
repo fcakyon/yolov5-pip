@@ -1,0 +1,4 @@
+train_json_path: "tests/data/dataset.json"
+train_image_dir: "tests/data/images/"
+val_json_path: "tests/data/dataset.json"
+val_image_dir: "tests/data/images/"
