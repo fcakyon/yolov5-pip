@@ -27,6 +27,7 @@ from torch.cuda import amp
 
 from yolov5.utils import TryExcept
 from yolov5.utils.dataloaders import exif_transpose, letterbox
+from yolov5.utils.downloads import attempt_donwload_from_hub
 from yolov5.utils.general import (LOGGER, ROOT, Profile, check_requirements, check_suffix, check_version, colorstr,
                            increment_path, is_notebook, make_divisible, non_max_suppression, scale_boxes, xywh2xyxy,
                            xyxy2xywh, yaml_load)
@@ -315,7 +316,7 @@ class Concat(nn.Module):
 
 class DetectMultiBackend(nn.Module):
     # YOLOv5 MultiBackend class for python inference on various backends
-    def __init__(self, weights='yolov5s.pt', device=torch.device('cpu'), dnn=False, data=None, fp16=False, fuse=True):
+    def __init__(self, weights='yolov5s.pt', device=torch.device('cpu'), dnn=False, data=None, fp16=False, fuse=True, hf_token=None):
         # Usage:
         #   PyTorch:              weights = *.pt
         #   TorchScript:                    *.torchscript
@@ -332,7 +333,14 @@ class DetectMultiBackend(nn.Module):
         from yolov5.models.experimental import attempt_download, attempt_load  # scoped to avoid circular import
 
         super().__init__()
+        
         w = str(weights[0] if isinstance(weights, list) else weights)
+
+        # try to dowload from hf hub
+        result = attempt_donwload_from_hub(w, hf_token=hf_token)
+        if result is not None:
+            w = result
+
         pt, jit, onnx, xml, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs, paddle, triton = self._model_type(w)
         fp16 &= pt or jit or onnx or engine  # FP16
         nhwc = coreml or saved_model or pb or tflite or edgetpu  # BHWC formats (vs torch BCWH)

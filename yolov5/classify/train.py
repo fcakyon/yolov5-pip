@@ -30,6 +30,8 @@ import torchvision
 from torch.cuda import amp
 from tqdm import tqdm
 
+from yolov5.utils.downloads import attempt_donwload_from_hub
+
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
 if str(ROOT) not in sys.path:
@@ -106,6 +108,10 @@ def train(opt, device):
                                                       workers=nw)
 
     # Model
+    # try to download from hf hub
+    result = attempt_donwload_from_hub(opt.model, hf_token=None)
+    if result is not None:
+        opt.model = result
     with torch_distributed_zero_first(LOCAL_RANK), WorkingDirectory(ROOT):
         if Path(opt.model).is_file() or opt.model.endswith('.pt'):
             model = attempt_load(opt.model, device='cpu', fuse=False)

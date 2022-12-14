@@ -54,3 +54,5 @@ fire
 boto3>=1.19.1
 # coco to yolov5 conversion
 sahi>=0.10.5
+# huggingface
+huggingface-hub>=0.11.1
