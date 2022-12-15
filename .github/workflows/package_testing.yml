@@ -91,7 +91,7 @@ jobs:
           # benckmarks
           yolov5 benchmarks --weights yolov5n.pt --img 128 --pt-only --device cpu
           # classify
-          yolov5 classify train --img 128 --data mnist2560 --weights yolov5n-cls.pt --epochs 1 --device cpu
+          yolov5 classify train --img 128 --data mnist2560 --model yolov5n-cls.pt --epochs 1 --device cpu
           yolov5 classify train --img 128 --data mnist2560 --model fcakyon/yolov5n-cls-v7.0 --epochs 1 --device cpu
           yolov5 classify val --img 128 --data datasets/mnist2560 --weights yolov5n-cls.pt --device cpu
           yolov5 classify predict --img 128 --weights yolov5n-cls.pt --device cpu  
