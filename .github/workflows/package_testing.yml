@@ -62,7 +62,15 @@ jobs:
       - name: Test scripts
         run: |
           pip install -e .
+          # donwload coco formatted testing data
+          python tests/download_test_coco_dataset.py
+          # train (dl base model from hf hub)
+          yolov5 train --data tests/data/coco_data.yaml --img 128 --batch 16 --weights fcakyon/yolov5n-v7.0 --epochs 1 --device cpu --freeze 10
+          python yolov5/train.py --img 128 --batch 16 --weights fcakyon/yolov5n-v7.0 --epochs 1 --device cpu
+          yolov5 train --img 128 --batch 16 --weights fcakyon/yolov5n-v7.0 --epochs 1 --device cpu --freeze 10
+          yolov5 train --img 128 --batch 16 --weights fcakyon/yolov5n-v7.0 --epochs 1 --device cpu --evolve 2
           # train
+          yolov5 train --data tests/data/coco_data.yaml --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu --freeze 10
           python yolov5/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu
           yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu --freeze 10
           yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu --evolve 2
@@ -83,10 +91,12 @@ jobs:
           # benckmarks
           yolov5 benchmarks --weights yolov5n.pt --img 128 --pt-only --device cpu
           # classify
-          yolov5 classify train --img 128 --data mnist2560 --weights yolov5n-cls.pt --epochs 1 --device cpu
+          yolov5 classify train --img 128 --data mnist2560 --model yolov5n-cls.pt --epochs 1 --device cpu
+          yolov5 classify train --img 128 --data mnist2560 --model fcakyon/yolov5n-cls-v7.0 --epochs 1 --device cpu
           yolov5 classify val --img 128 --data datasets/mnist2560 --weights yolov5n-cls.pt --device cpu
           yolov5 classify predict --img 128 --weights yolov5n-cls.pt --device cpu  
           # segment
           yolov5 segment train --img 128 --weights yolov5n-seg.pt --epochs 1 --device cpu
+          yolov5 segment train --img 128 --weights fcakyon/yolov5n-seg-v7.0 --epochs 1 --device cpu
           # yolov5 segment val --img 128 --weights yolov5n-seg.pt --device cpu
           yolov5 segment predict --img 128 --weights yolov5n-seg.pt --device cpu
