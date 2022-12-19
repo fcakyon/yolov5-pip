@@ -139,6 +139,8 @@ def attempt_donwload_from_hub(repo_id, hf_token=None):
         file = hf_hub_download(
             repo_id=repo_id,
             filename=model_file,
+            repo_type='model',
+            token=hf_token,
         )
         return file
     except (RepositoryNotFoundError, HFValidationError):
