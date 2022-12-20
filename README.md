@@ -33,7 +33,7 @@ This yolov5 package contains everything from ultralytics/yolov5 <a href="https:/
 <br>
 3. COCO dataset format support (for training)
 <br>
-4. Full [🤗 Hub](https://huggingface.co/models?other=yolov5) integration
+4. Full <a href="https://huggingface.co/models?other=yolov5">🤗 Hub</a> integration
 <br>
 5. <a href="https://aws.amazon.com/s3/">S3</a> support (model and dataset upload)
 <br>
