@@ -24,7 +24,7 @@ import time
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from shutil import copyfile
+
 
 import numpy as np
 import torch
@@ -33,6 +33,7 @@ import torch.nn as nn
 import yaml
 from torch.optim import lr_scheduler
 from tqdm import tqdm
+from yolov5.helpers import convert_coco_dataset_to_yolo, push_to_hfhub, upload_to_s3
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -68,64 +69,6 @@ WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
 
 # fix OMP: Error #15: Initializing libiomp5md.dll, but found libiomp5md.dll already initialized.
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
-
-def convert_coco_dataset_to_yolo(opt, save_dir):
-    is_coco_data = False
-    has_yolo_s3_data_dir = False
-    with open(opt.data, errors='ignore') as f:
-        data_info = yaml.safe_load(f)  # load data dict
-        if data_info.get("train_json_path") is not None:
-            is_coco_data = True
-        if data_info.get("yolo_s3_data_dir") is not None:
-            has_yolo_s3_data_dir = True 
-
-    if has_yolo_s3_data_dir and opt.upload_dataset:
-        raise ValueError("'--upload_dataset' argument cannot be passed when 'yolo_s3_data_dir' field is not empty in 'data.yaml'.")
-
-    if is_coco_data:
-        from sahi.utils.coco import export_coco_as_yolov5_via_yml
-        data = export_coco_as_yolov5_via_yml(yml_path=opt.data, output_dir=save_dir / 'data')
-        opt.data = data
-
-        # add coco fields to data.yaml
-        with open(data, errors='ignore') as f:
-            updated_data_info = yaml.safe_load(f)  # load data dict
-            updated_data_info["train_json_path"] = data_info["train_json_path"]
-            updated_data_info["val_json_path"] = data_info["val_json_path"]
-            updated_data_info["train_image_dir"] = data_info["train_image_dir"]
-            updated_data_info["val_image_dir"] = data_info["val_image_dir"]
-            if data_info.get("yolo_s3_data_dir")is not None:
-                updated_data_info["yolo_s3_data_dir"] = data_info["yolo_s3_data_dir"]
-            if data_info.get("coco_s3_data_dir")is not None:
-                updated_data_info["coco_s3_data_dir"] = data_info["coco_s3_data_dir"]
-        with open(data, 'w') as f:
-            yaml.dump(updated_data_info, f)
-
-        w = save_dir / 'data' / 'coco'  # coco dir
-        w.mkdir(parents=True, exist_ok=True)  # make dir
-
-        # copy train.json/val.json and coco_data.yml into data/coco/ folder
-        if "train_json_path" in data_info and Path(data_info["train_json_path"]).is_file():
-            copyfile(data_info["train_json_path"], str(w / "train.json"))
-        if "val_json_path" in data_info and Path(data_info["val_json_path"]).is_file():
-            copyfile(data_info["val_json_path"], str(w / "val.json"))
-
-def upload_to_s3(opt, data, save_dir):
-    from yolov5.utils.aws import upload_file_to_s3, upload_folder_to_s3
-
-    with open(data, errors='ignore') as f:
-        data_info = yaml.safe_load(f)  # load data dict
-    # upload yolo formatted data to s3
-    s3_folder = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / 'data').replace(os.sep, '/')
-    LOGGER.info(f"{colorstr('aws:')} Uploading yolo formatted dataset to {s3_folder}")
-    s3_file = s3_folder + "/data.yaml"
-    result = upload_file_to_s3(local_file=opt.data, s3_file=s3_file)
-    s3_folder_train = s3_folder + "/train/"
-    result = upload_folder_to_s3(local_folder=data_info["train"], s3_folder=s3_folder_train)
-    s3_folder_val = s3_folder + "/val/"
-    result = upload_folder_to_s3(local_folder=data_info["val"], s3_folder=s3_folder_val)
-    if result:
-        LOGGER.info(f"{colorstr('aws:')} Dataset has been successfully uploaded to {s3_folder}")
 
 
 def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictionary
@@ -519,6 +462,10 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
             if result:
                 LOGGER.info(f"{colorstr('aws:')} Best weight has been successfully uploaded to {s3_file}")
 
+        # push to hf hub
+        if opt.hf_model_id:
+            push_to_hfhub(opt, save_dir, input_size=imgsz, best_ap50=results[2], task='object_detection')
+
         callbacks.run('on_train_end', last, best, epoch, results)
 
     torch.cuda.empty_cache()
@@ -575,6 +522,11 @@ def parse_opt(known=False):
     # AWS arguments
     parser.add_argument('--s3_upload_dir', type=str, default=None, help='aws s3 folder directory to upload best weight and dataset')
     parser.add_argument('--upload_dataset', action='store_true', help='upload dataset to aws s3')
+
+    # HF Hub arguments
+    parser.add_argument('--hf_model_id', type=str, default=None, help='huggingface.co model_id to be uploaded')
+    parser.add_argument('--hf_token', type=str, default=None, help='huggingface.co token to be used for upload')
+    parser.add_argument('--hf_private', action='store_true', help='upload model to private repo')
 
     return parser.parse_known_args()[0] if known else parser.parse_args()
 

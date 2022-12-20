@@ -135,6 +135,18 @@ def attempt_donwload_from_hub(repo_id, hf_token=None):
 
     try:
         repo_files = list_repo_files(repo_id=repo_id, repo_type='model', token=hf_token)
+
+        # download config file for triggering download counter
+        config_file = 'config.json'
+        if config_file in repo_files:
+            _ = hf_hub_download(
+                repo_id=repo_id,
+                filename=config_file,
+                repo_type='model',
+                token=hf_token,
+            )
+
+        # download model file
         model_file = [f for f in repo_files if f.endswith('.pt')][0]
         file = hf_hub_download(
             repo_id=repo_id,
