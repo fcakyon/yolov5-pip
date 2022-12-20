@@ -328,12 +328,3 @@ def upload_to_s3(opt, data, save_dir):
     if result:
         LOGGER.info(f"{colorstr('aws:')} Dataset has been successfully uploaded to {s3_folder}")
 
-
-if __name__ == "__main__":
-    model_path = "C:/Users/FCA/dev/yolov5-pip/runs/train/exp/weights/best.pt"
-    device = "cuda:0"
-    model = load_model(model_path=model_path, device=device)
-
-    from PIL import Image
-    imgs = [Image.open(x) for x in Path("yolov5/data/images").glob("*.jpg")]
-    results = model(imgs)
