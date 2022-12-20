@@ -223,6 +223,12 @@ $ yolov5 train --data data.yaml --weights yolov5s.pt
 $ yolov5 train --data data.yaml --weights yolov5s.pt --neptune_project NAMESPACE/PROJECT_NAME --neptune_token YOUR_NEPTUNE_TOKEN
 ```
 
+- Automatically upload weights to [Huggingface Hub](https://huggingface.co/models?other=yolov5):
+
+```bash
+$ yolov5 train --data data.yaml --weights yolov5s.pt --hf_model_id username/modelname --hf_token YOUR-HF-WRITE-TOKEN
+```
+
 - Automatically upload weights and datasets to AWS S3 (with Neptune.AI artifact tracking integration):
 
 ```bash
