@@ -33,11 +33,13 @@ This yolov5 package contains everything from ultralytics/yolov5 <a href="https:/
 <br>
 3. COCO dataset format support (for training)
 <br>
-4. <a href="https://aws.amazon.com/s3/">S3</a> support (model and dataset upload)
+4. Full [🤗 Hub](https://huggingface.co/models?other=yolov5) integration
 <br>
-5. <a href="https://neptune.ai/">NeptuneAI</a> logger support (metric, model and dataset logging)
+5. <a href="https://aws.amazon.com/s3/">S3</a> support (model and dataset upload)
 <br>
-6. Classwise AP logging during experiments
+6. <a href="https://neptune.ai/">NeptuneAI</a> logger support (metric, model and dataset logging)
+<br>
+7. Classwise AP logging during experiments
 
 
 

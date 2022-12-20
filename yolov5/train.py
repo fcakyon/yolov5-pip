@@ -464,7 +464,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
         # push to hf hub
         if opt.hf_model_id:
-            push_to_hfhub(opt, save_dir, input_size=imgsz, best_ap50=results[2], task='object_detection')
+            push_to_hfhub(opt, save_dir, input_size=imgsz, best_ap50=results[2], task='object-detection')
 
         callbacks.run('on_train_end', last, best, epoch, results)
 
