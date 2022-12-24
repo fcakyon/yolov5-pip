@@ -130,7 +130,7 @@ model-index:
 ---
 
 <div align="center">
-  <img width="640" alt="{repo_id}" src="https://huggingface.co/{repo_id}/resolve/main/sample_visual.jpg">
+  <img width="640" alt="{repo_id}" src="https://huggingface.co/{repo_id}/resolve/main/sample_visuals.jpg">
 </div>
 
 ### How to use
