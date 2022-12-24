@@ -93,7 +93,17 @@ def generate_model_usage_markdown(
     from yolov5 import __version__ as yolov5_version
 
     if dataset_id is not None:
-        dataset_id = 'null'
+        datasets_str_1 = f"""
+datasets:
+- {dataset_id}
+"""
+        datasets_str_2 = f"""
+    dataset:
+      type: {dataset_id}
+      name: {dataset_id}
+"""
+    else:
+        datasets_str_1 = datasets_str_2 = ''
     return f""" 
 ---
 tags:
@@ -105,21 +115,23 @@ tags:
 library_name: yolov5
 library_version: {yolov5_version}
 inference: false
-datasets:
-- {dataset_id}
+{datasets_str_1}
 model-index:
 - name: {repo_id}
   results:
   - task:
       type: {task}
-    dataset:
-      type: {dataset_id}
+{datasets_str_2}
     metrics:
       - type: precision  # since mAP@50 is not available on hf.co/metrics
         value: {ap50}  # min: 0.0 - max: 1.0
-        name: Mean Average Precision @ 0.5 IOU
+        name: Mean Average Precision @ 0.5 IoU
         verified: true   
 ---
+
+<div align="center">
+  <img width="640" alt="{repo_id}" src="https://huggingface.co/{repo_id}/resolve/main/sample_visuals.jpg">
+</div>
 
 ### How to use
 
@@ -191,6 +203,17 @@ def push_model_card_to_hfhub(
         token=hf_token,
         private=private,
         exist_ok=True,
+    )
+
+    # upload sample visual to the repo
+    sample_visual_path = Path(exp_folder) / 'val_batch0_labels.jpg'
+    upload_file(
+        repo_id=repo_id,
+        path_or_fileobj=str(sample_visual_path),
+        path_in_repo='sample_visuals.jpg',
+        commit_message="upload sample visuals",
+        token=hf_token,
+        repo_type='model'
     )
 
     # Create model card
@@ -291,7 +314,16 @@ def push_model_to_hfhub(repo_id, exp_folder, hf_token=None, private=False):
     )
 
 
-def push_to_hfhub(hf_model_id, hf_token, hf_private, save_dir, hf_dataset_id=None, input_size=640, best_ap50=None, task='object-detection'):
+def push_to_hfhub(
+    hf_model_id,
+    hf_token,
+    hf_private,
+    save_dir,
+    hf_dataset_id=None,
+    input_size=640,
+    best_ap50=None,
+    task='object-detection'
+):
     from yolov5.utils.general import colorstr
     from yolov5.helpers import push_config_to_hfhub, push_model_card_to_hfhub, push_model_to_hfhub
 
