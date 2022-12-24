@@ -472,7 +472,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                 save_dir=save_dir,
                 input_size=imgsz,
                 best_ap50=results[2],
-                task='object-detection'
+                task='object-detection',
             )
 
         callbacks.run('on_train_end', last, best, epoch, results)
