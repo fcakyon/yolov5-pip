@@ -132,7 +132,8 @@ def create_dataloader(path,
             stride=int(stride),
             pad=pad,
             image_weights=image_weights,
-            prefix=prefix)
+            prefix=prefix
+            workers=workers)
 
     batch_size = min(batch_size, len(dataset))
     nd = torch.cuda.device_count()  # number of CUDA devices
@@ -448,7 +449,8 @@ class LoadImagesAndLabels(Dataset):
                  stride=32,
                  pad=0.0,
                  min_items=0,
-                 prefix=''):
+                 prefix=''
+                 workers=8):
         self.img_size = img_size
         self.augment = augment
         self.hyp = hyp
@@ -459,6 +461,7 @@ class LoadImagesAndLabels(Dataset):
         self.stride = stride
         self.path = path
         self.albumentations = Albumentations(size=img_size) if augment else None
+        self.workers = workers
 
         try:
             f = []  # image files
@@ -607,12 +610,29 @@ class LoadImagesAndLabels(Dataset):
         x = {}  # dict
         nm, nf, ne, nc, msgs = 0, 0, 0, 0, []  # number missing, found, empty, corrupt, messages
         desc = f"{prefix}Scanning {path.parent / path.stem}..."
-        with Pool(NUM_THREADS) as pool:
-            pbar = tqdm(pool.imap(verify_image_label, zip(self.im_files, self.label_files, repeat(prefix))),
+        if workers != 0:
+            with Pool(NUM_THREADS) as pool:
+                pbar = tqdm(pool.imap(verify_image_label, zip(self.im_files, self.label_files, repeat(prefix))),
+                            desc=desc,
+                            total=len(self.im_files),
+                            bar_format=TQDM_BAR_FORMAT)
+                for im_file, lb, shape, segments, nm_f, nf_f, ne_f, nc_f, msg in pbar:
+                    nm += nm_f
+                    nf += nf_f
+                    ne += ne_f
+                    nc += nc_f
+                    if im_file:
+                        x[im_file] = [lb, shape, segments]
+                    if msg:
+                        msgs.append(msg)
+                    pbar.desc = f"{desc} {nf} images, {nm + ne} backgrounds, {nc} corrupt"
+        else:
+            pbar = tqdm(zip(self.im_files, self.label_files, repeat(prefix)),
                         desc=desc,
                         total=len(self.im_files),
                         bar_format=TQDM_BAR_FORMAT)
-            for im_file, lb, shape, segments, nm_f, nf_f, ne_f, nc_f, msg in pbar:
+            for args in pbar:
+                im_file, lb, shape, segments, nm_f, nf_f, ne_f, nc_f, msg = verify_image_label(args)
                 nm += nm_f
                 nf += nf_f
                 ne += ne_f
