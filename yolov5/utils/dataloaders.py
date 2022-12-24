@@ -132,7 +132,7 @@ def create_dataloader(path,
             stride=int(stride),
             pad=pad,
             image_weights=image_weights,
-            prefix=prefix
+            prefix=prefix,
             workers=workers)
 
     batch_size = min(batch_size, len(dataset))
