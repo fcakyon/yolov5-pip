@@ -100,7 +100,7 @@ datasets:
         datasets_str_2 = f"""
     dataset:
       type: {dataset_id}
-      name: {dataset_id.replace('-', ' ').title()}
+      name: {dataset_id}
 """
     else:
         datasets_str_1 = datasets_str_2 = ''
@@ -125,7 +125,7 @@ model-index:
     metrics:
       - type: precision  # since mAP@50 is not available on hf.co/metrics
         value: {ap50}  # min: 0.0 - max: 1.0
-        name: Mean Average Precision @ 0.5 IOU
+        name: Mean Average Precision @ 0.5 IoU
         verified: true   
 ---
 
