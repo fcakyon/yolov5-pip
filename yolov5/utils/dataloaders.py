@@ -449,7 +449,7 @@ class LoadImagesAndLabels(Dataset):
                  stride=32,
                  pad=0.0,
                  min_items=0,
-                 prefix=''
+                 prefix='',
                  workers=8):
         self.img_size = img_size
         self.augment = augment
