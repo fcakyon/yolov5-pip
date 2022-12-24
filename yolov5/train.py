@@ -464,7 +464,16 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
         # push to hf hub
         if opt.hf_model_id:
-            push_to_hfhub(opt, save_dir, input_size=imgsz, best_ap50=results[2], task='object-detection')
+            push_to_hfhub(
+                hf_model_id=opt.hf_model_id,
+                hf_token=opt.hf_token,
+                hf_private=opt.hf_private,
+                hf_dataset_id=opt.hf_dataset_id,
+                save_dir=save_dir,
+                input_size=imgsz,
+                best_ap50=results[2],
+                task='object-detection'
+            )
 
         callbacks.run('on_train_end', last, best, epoch, results)
 
@@ -527,6 +536,7 @@ def parse_opt(known=False):
     parser.add_argument('--hf_model_id', type=str, default=None, help='huggingface.co model_id to be uploaded')
     parser.add_argument('--hf_token', type=str, default=None, help='huggingface.co token to be used for upload')
     parser.add_argument('--hf_private', action='store_true', help='upload model to private repo')
+    parser.add_argument('--hf_dataset_id', type=str, default=None, help='huggingface dataset id to link the model')
 
     return parser.parse_known_args()[0] if known else parser.parse_args()
 

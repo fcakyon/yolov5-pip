@@ -83,9 +83,18 @@ class YOLOv5:
         return results
 
 
-def generate_model_usage_markdown(repo_id, task='object-detection', input_size=640):
+def generate_model_usage_markdown(
+    repo_id,
+    ap50,
+    task='object-detection',
+    input_size=640,
+    dataset_id=None
+    ):
     from yolov5 import __version__ as yolov5_version
-    return f"""
+
+    if dataset_id is not None:
+        dataset_id = 'null'
+    return f""" 
 ---
 tags:
 - yolov5
@@ -96,6 +105,20 @@ tags:
 library_name: yolov5
 library_version: {yolov5_version}
 inference: false
+datasets:
+- {dataset_id}
+model-index:
+- name: {repo_id}
+  results:
+  - task:
+      type: {task}
+    dataset:
+      type: {dataset_id}
+    metrics:
+      - type: precision  # since mAP@50 is not available on hf.co/metrics
+        value: {ap50}  # min: 0.0 - max: 1.0
+        name: Mean Average Precision @ 0.5 IOU
+        verified: true   
 ---
 
 ### How to use
@@ -151,7 +174,16 @@ yolov5 train --data data.yaml --img {input_size} --batch 16 --weights {repo_id} 
     """
 
 
-def push_model_card_to_hfhub(repo_id, exp_folder, hf_token=None, input_size=640, task='object-detection', private=False):
+def push_model_card_to_hfhub(
+    repo_id,
+    exp_folder,
+    ap50,
+    hf_token=None,
+    input_size=640,
+    task='object-detection',
+    private=False,
+    dataset_id=None
+):
     from huggingface_hub import upload_file, create_repo
 
     create_repo(
@@ -162,7 +194,13 @@ def push_model_card_to_hfhub(repo_id, exp_folder, hf_token=None, input_size=640,
     )
 
     # Create model card
-    modelcard_markdown = generate_model_usage_markdown(repo_id, task=task, input_size=input_size)
+    modelcard_markdown = generate_model_usage_markdown(
+        repo_id,
+        task=task,
+        input_size=input_size,
+        dataset_id=dataset_id,
+        ap50=ap50,
+    )
     modelcard_path = Path(exp_folder) / "README.md"
     with open(modelcard_path, "w") as file_object:
         file_object.write(modelcard_markdown)
@@ -253,15 +291,37 @@ def push_model_to_hfhub(repo_id, exp_folder, hf_token=None, private=False):
     )
 
 
-def push_to_hfhub(opt, save_dir, input_size=640, best_ap50=None, task='object-detection'):
+def push_to_hfhub(hf_model_id, hf_token, hf_private, save_dir, hf_dataset_id=None, input_size=640, best_ap50=None, task='object-detection'):
     from yolov5.utils.general import colorstr
     from yolov5.helpers import push_config_to_hfhub, push_model_card_to_hfhub, push_model_to_hfhub
 
-    LOGGER.info(f"{colorstr('hub:')} Pushing to hf.co/{opt.hf_model_id}")
+    LOGGER.info(f"{colorstr('hub:')} Pushing to hf.co/{hf_model_id}")
     
-    push_config_to_hfhub(repo_id=opt.hf_model_id, exp_folder=save_dir, best_ap50=best_ap50, input_size=input_size, task=task, hf_token=opt.hf_token, private=opt.hf_private)
-    push_model_card_to_hfhub(repo_id=opt.hf_model_id, exp_folder=save_dir, input_size=input_size, task=task, hf_token=opt.hf_token, private=opt.hf_private)
-    push_model_to_hfhub(repo_id=opt.hf_model_id, exp_folder=save_dir, hf_token=opt.hf_token, private=opt.hf_private)
+    push_config_to_hfhub(
+        repo_id=hf_model_id,
+        exp_folder=save_dir,
+        best_ap50=best_ap50,
+        input_size=input_size,
+        task=task,
+        hf_token=hf_token,
+        private=hf_private
+    )
+    push_model_card_to_hfhub(
+        repo_id=hf_model_id,
+        exp_folder=save_dir,
+        input_size=input_size,
+        task=task,
+        hf_token=hf_token,
+        private=hf_private,
+        dataset_id=hf_dataset_id,
+        ap50=best_ap50
+    )
+    push_model_to_hfhub(
+        repo_id=hf_model_id,
+        exp_folder=save_dir,
+        hf_token=hf_token,
+        private=hf_private
+    )
 
 
 def convert_coco_dataset_to_yolo(opt, save_dir):
