@@ -101,6 +101,7 @@ datasets:
     dataset:
       type: {dataset_id}
       name: {dataset_id}
+      split: validation
 """
     else:
         datasets_str_1 = datasets_str_2 = ''
@@ -123,10 +124,9 @@ model-index:
       type: {task}
 {datasets_str_2}
     metrics:
-      - type: precision  # since mAP@50 is not available on hf.co/metrics
+      - type: precision  # since mAP@0.5 is not available on hf.co/metrics
         value: {ap50}  # min: 0.0 - max: 1.0
-        name: Mean Average Precision @ 0.5 IoU
-        verified: true   
+        name: mAP@0.5
 ---
 
 <div align="center">
