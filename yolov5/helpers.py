@@ -123,9 +123,9 @@ model-index:
       type: {task}
 {datasets_str_2}
     metrics:
-      - type: precision  # since mAP@50 is not available on hf.co/metrics
+      - type: precision  # since mAP@0.5 is not available on hf.co/metrics
         value: {ap50}  # min: 0.0 - max: 1.0
-        name: Mean Average Precision @ 0.5 IoU
+        name: mAP@0.5
         verified: true   
 ---
 
