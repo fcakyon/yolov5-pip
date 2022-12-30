@@ -7,7 +7,9 @@ from yolov5.utils.general import LOGGER, logging
 from yolov5.utils.torch_utils import select_device
 
 
-def load_model(model_path, device=None, autoshape=True, verbose=False, hf_token: str = None):
+def load_model(
+    model_path, device=None, autoshape=True, verbose=False, hf_token: str = None
+):
     """
     Creates a specified YOLOv5 model
 
@@ -32,21 +34,27 @@ def load_model(model_path, device=None, autoshape=True, verbose=False, hf_token:
     device = select_device(device)
 
     try:
-        model = DetectMultiBackend(model_path, device=device, fuse=autoshape, hf_token=hf_token)  # detection model
+        model = DetectMultiBackend(
+            model_path, device=device, fuse=autoshape, hf_token=hf_token
+        )  # detection model
         if autoshape:
             if model.pt and isinstance(model.model, ClassificationModel):
-                LOGGER.warning('WARNING ⚠️ YOLOv5 ClassificationModel is not yet AutoShape compatible. '
-                                'You must pass torch tensors in BCHW to this model, i.e. shape(1,3,224,224).')
+                LOGGER.warning(
+                    "WARNING ⚠️ YOLOv5 ClassificationModel is not yet AutoShape compatible. "
+                    "You must pass torch tensors in BCHW to this model, i.e. shape(1,3,224,224)."
+                )
             elif model.pt and isinstance(model.model, SegmentationModel):
-                LOGGER.warning('WARNING ⚠️ YOLOv5 SegmentationModel is not yet AutoShape compatible. '
-                                'You will not be able to run inference with this model.')
+                LOGGER.warning(
+                    "WARNING ⚠️ YOLOv5 SegmentationModel is not yet AutoShape compatible. "
+                    "You will not be able to run inference with this model."
+                )
             else:
                 try:
                     model = AutoShape(model)  # for file/URI/PIL/cv2/np inputs and NMS
                 except Exception as e:
-                    LOGGER.warning(f'WARNING ⚠️ autoshape failed: {e}')
+                    LOGGER.warning(f"WARNING ⚠️ autoshape failed: {e}")
     except Exception as e:
-        LOGGER.warning(f'WARNING ⚠️ DetectMultiBackend failed: {e}')
+        LOGGER.warning(f"WARNING ⚠️ DetectMultiBackend failed: {e}")
         model = attempt_load(model_path, device=device, fuse=False)  # arbitrary model
 
     if not verbose:
@@ -61,7 +69,9 @@ class YOLOv5:
         self.device = device
         if load_on_init:
             Path(model_path).parents[0].mkdir(parents=True, exist_ok=True)
-            self.model = load_model(model_path=model_path, device=device, autoshape=True)
+            self.model = load_model(
+                model_path=model_path, device=device, autoshape=True
+            )
         else:
             self.model = None
 
@@ -70,7 +80,9 @@ class YOLOv5:
         Load yolov5 weight.
         """
         Path(self.model_path).parents[0].mkdir(parents=True, exist_ok=True)
-        self.model = load_model(model_path=self.model_path, device=self.device, autoshape=True)
+        self.model = load_model(
+            model_path=self.model_path, device=self.device, autoshape=True
+        )
 
     def predict(self, image_list, size=640, augment=False):
         """
@@ -84,12 +96,8 @@ class YOLOv5:
 
 
 def generate_model_usage_markdown(
-    repo_id,
-    ap50,
-    task='object-detection',
-    input_size=640,
-    dataset_id=None
-    ):
+    repo_id, ap50, task="object-detection", input_size=640, dataset_id=None
+):
     from yolov5 import __version__ as yolov5_version
 
     if dataset_id is not None:
@@ -104,7 +112,7 @@ datasets:
       split: validation
 """
     else:
-        datasets_str_1 = datasets_str_2 = ''
+        datasets_str_1 = datasets_str_2 = ""
     return f""" 
 ---
 tags:
@@ -183,7 +191,9 @@ results.save(save_dir='results/')
 ```bash
 yolov5 train --data data.yaml --img {input_size} --batch 16 --weights {repo_id} --epochs 10
 ```
-    """
+
+**More models available at: [awesome-yolov5-models](https://github.com/keremberke/awesome-yolov5-models)**
+"""
 
 
 def push_model_card_to_hfhub(
@@ -192,9 +202,9 @@ def push_model_card_to_hfhub(
     ap50,
     hf_token=None,
     input_size=640,
-    task='object-detection',
+    task="object-detection",
     private=False,
-    dataset_id=None
+    dataset_id=None,
 ):
     from huggingface_hub import upload_file, create_repo
 
@@ -206,14 +216,14 @@ def push_model_card_to_hfhub(
     )
 
     # upload sample visual to the repo
-    sample_visual_path = Path(exp_folder) / 'val_batch0_labels.jpg'
+    sample_visual_path = Path(exp_folder) / "val_batch0_labels.jpg"
     upload_file(
         repo_id=repo_id,
         path_or_fileobj=str(sample_visual_path),
-        path_in_repo='sample_visuals.jpg',
+        path_in_repo="sample_visuals.jpg",
         commit_message="upload sample visuals",
         token=hf_token,
-        repo_type='model'
+        repo_type="model",
     )
 
     # Create model card
@@ -233,11 +243,19 @@ def push_model_card_to_hfhub(
         path_in_repo=Path(modelcard_path).name,
         commit_message="Add yolov5 model card",
         token=hf_token,
-        repo_type='model'
+        repo_type="model",
     )
 
 
-def push_config_to_hfhub(repo_id, exp_folder, best_ap50=None, input_size=640, task='object-detection', hf_token=None, private=False):
+def push_config_to_hfhub(
+    repo_id,
+    exp_folder,
+    best_ap50=None,
+    input_size=640,
+    task="object-detection",
+    hf_token=None,
+    private=False,
+):
     """
     Pushes a yolov5 config to huggingface hub
 
@@ -253,7 +271,7 @@ def push_config_to_hfhub(repo_id, exp_folder, best_ap50=None, input_size=640, ta
     from huggingface_hub import upload_file, create_repo
     import json
 
-    config = {'input_size': input_size, 'task': task, 'best_ap50': best_ap50}
+    config = {"input_size": input_size, "task": task, "best_ap50": best_ap50}
     config_path = Path(exp_folder) / "config.json"
     with open(config_path, "w") as file_object:
         json.dump(config, file_object)
@@ -270,7 +288,7 @@ def push_config_to_hfhub(repo_id, exp_folder, best_ap50=None, input_size=640, ta
         path_in_repo=Path(config_path).name,
         commit_message="Add yolov5 config",
         token=hf_token,
-        repo_type='model'
+        repo_type="model",
     )
 
 
@@ -288,7 +306,7 @@ def push_model_to_hfhub(repo_id, exp_folder, hf_token=None, private=False):
     from glob import glob
 
     best_model_path = Path(exp_folder) / "weights/best.pt"
-    tensorboard_log_path = glob(f'{exp_folder}/events.out.tfevents*')[-1]
+    tensorboard_log_path = glob(f"{exp_folder}/events.out.tfevents*")[-1]
 
     create_repo(
         repo_id=repo_id,
@@ -300,17 +318,17 @@ def push_model_to_hfhub(repo_id, exp_folder, hf_token=None, private=False):
         repo_id=repo_id,
         path_or_fileobj=str(best_model_path),
         path_in_repo=Path(best_model_path).name,
-        commit_message='Upload yolov5 best model',
+        commit_message="Upload yolov5 best model",
         token=hf_token,
-        repo_type='model'
+        repo_type="model",
     )
     upload_file(
         repo_id=repo_id,
         path_or_fileobj=str(tensorboard_log_path),
         path_in_repo=Path(tensorboard_log_path).name,
-        commit_message='Upload yolov5 tensorboard logs',
+        commit_message="Upload yolov5 tensorboard logs",
         token=hf_token,
-        repo_type='model'
+        repo_type="model",
     )
 
 
@@ -322,13 +340,17 @@ def push_to_hfhub(
     hf_dataset_id=None,
     input_size=640,
     best_ap50=None,
-    task='object-detection'
+    task="object-detection",
 ):
     from yolov5.utils.general import colorstr
-    from yolov5.helpers import push_config_to_hfhub, push_model_card_to_hfhub, push_model_to_hfhub
+    from yolov5.helpers import (
+        push_config_to_hfhub,
+        push_model_card_to_hfhub,
+        push_model_to_hfhub,
+    )
 
     LOGGER.info(f"{colorstr('hub:')} Pushing to hf.co/{hf_model_id}")
-    
+
     push_config_to_hfhub(
         repo_id=hf_model_id,
         exp_folder=save_dir,
@@ -336,7 +358,7 @@ def push_to_hfhub(
         input_size=input_size,
         task=task,
         hf_token=hf_token,
-        private=hf_private
+        private=hf_private,
     )
     push_model_card_to_hfhub(
         repo_id=hf_model_id,
@@ -346,13 +368,10 @@ def push_to_hfhub(
         hf_token=hf_token,
         private=hf_private,
         dataset_id=hf_dataset_id,
-        ap50=best_ap50
+        ap50=best_ap50,
     )
     push_model_to_hfhub(
-        repo_id=hf_model_id,
-        exp_folder=save_dir,
-        hf_token=hf_token,
-        private=hf_private
+        repo_id=hf_model_id, exp_folder=save_dir, hf_token=hf_token, private=hf_private
     )
 
 
@@ -362,40 +381,48 @@ def convert_coco_dataset_to_yolo(opt, save_dir):
 
     is_coco_data = False
     has_yolo_s3_data_dir = False
-    with open(opt.data, errors='ignore') as f:
+    with open(opt.data, errors="ignore") as f:
         data_info = yaml.safe_load(f)  # load data dict
         if data_info.get("train_json_path") is not None:
             is_coco_data = True
         if data_info.get("yolo_s3_data_dir") is not None:
-            has_yolo_s3_data_dir = True 
+            has_yolo_s3_data_dir = True
 
     if has_yolo_s3_data_dir and opt.upload_dataset:
-        raise ValueError("'--upload_dataset' argument cannot be passed when 'yolo_s3_data_dir' field is not empty in 'data.yaml'.")
+        raise ValueError(
+            "'--upload_dataset' argument cannot be passed when 'yolo_s3_data_dir' field is not empty in 'data.yaml'."
+        )
 
     if is_coco_data:
         from sahi.utils.coco import export_coco_as_yolov5_via_yml
-        data = export_coco_as_yolov5_via_yml(yml_path=opt.data, output_dir=save_dir / 'data')
+
+        data = export_coco_as_yolov5_via_yml(
+            yml_path=opt.data, output_dir=save_dir / "data"
+        )
         opt.data = data
 
         # add coco fields to data.yaml
-        with open(data, errors='ignore') as f:
+        with open(data, errors="ignore") as f:
             updated_data_info = yaml.safe_load(f)  # load data dict
             updated_data_info["train_json_path"] = data_info["train_json_path"]
             updated_data_info["val_json_path"] = data_info["val_json_path"]
             updated_data_info["train_image_dir"] = data_info["train_image_dir"]
             updated_data_info["val_image_dir"] = data_info["val_image_dir"]
-            if data_info.get("yolo_s3_data_dir")is not None:
+            if data_info.get("yolo_s3_data_dir") is not None:
                 updated_data_info["yolo_s3_data_dir"] = data_info["yolo_s3_data_dir"]
-            if data_info.get("coco_s3_data_dir")is not None:
+            if data_info.get("coco_s3_data_dir") is not None:
                 updated_data_info["coco_s3_data_dir"] = data_info["coco_s3_data_dir"]
-        with open(data, 'w') as f:
+        with open(data, "w") as f:
             yaml.dump(updated_data_info, f)
 
-        w = save_dir / 'data' / 'coco'  # coco dir
+        w = save_dir / "data" / "coco"  # coco dir
         w.mkdir(parents=True, exist_ok=True)  # make dir
 
         # copy train.json/val.json and coco_data.yml into data/coco/ folder
-        if "train_json_path" in data_info and Path(data_info["train_json_path"]).is_file():
+        if (
+            "train_json_path" in data_info
+            and Path(data_info["train_json_path"]).is_file()
+        ):
             copyfile(data_info["train_json_path"], str(w / "train.json"))
         if "val_json_path" in data_info and Path(data_info["val_json_path"]).is_file():
             copyfile(data_info["val_json_path"], str(w / "val.json"))
@@ -406,17 +433,22 @@ def upload_to_s3(opt, data, save_dir):
     from yolov5.utils.general import colorstr
     from yolov5.utils.aws import upload_file_to_s3, upload_folder_to_s3
 
-    with open(data, errors='ignore') as f:
+    with open(data, errors="ignore") as f:
         data_info = yaml.safe_load(f)  # load data dict
     # upload yolo formatted data to s3
-    s3_folder = "s3://" + str(Path(opt.s3_upload_dir.replace("s3://","")) / save_dir.name / 'data').replace(os.sep, '/')
+    s3_folder = "s3://" + str(
+        Path(opt.s3_upload_dir.replace("s3://", "")) / save_dir.name / "data"
+    ).replace(os.sep, "/")
     LOGGER.info(f"{colorstr('aws:')} Uploading yolo formatted dataset to {s3_folder}")
     s3_file = s3_folder + "/data.yaml"
     result = upload_file_to_s3(local_file=opt.data, s3_file=s3_file)
     s3_folder_train = s3_folder + "/train/"
-    result = upload_folder_to_s3(local_folder=data_info["train"], s3_folder=s3_folder_train)
+    result = upload_folder_to_s3(
+        local_folder=data_info["train"], s3_folder=s3_folder_train
+    )
     s3_folder_val = s3_folder + "/val/"
     result = upload_folder_to_s3(local_folder=data_info["val"], s3_folder=s3_folder_val)
     if result:
-        LOGGER.info(f"{colorstr('aws:')} Dataset has been successfully uploaded to {s3_folder}")
-
+        LOGGER.info(
+            f"{colorstr('aws:')} Dataset has been successfully uploaded to {s3_folder}"
+        )
