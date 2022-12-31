@@ -27,7 +27,7 @@ You can finally install <a href="https://github.com/ultralytics/yolov5">YOLOv5 o
 <br>
 This yolov5 package contains everything from ultralytics/yolov5 <a href="https://github.com/ultralytics/yolov5/tree/357cde9ee7da13ba3095995488c5a23631467f1a">at this commit</a> plus:
 <br>
-1. Easy installation via pip: `pip install yolov5`
+1. Easy installation via pip: <b>pip install yolov5</b>
 <br>
 2. Full CLI integration with <a href="https://github.com/google/python-fire">fire</a> package
 <br>
@@ -45,30 +45,24 @@ This yolov5 package contains everything from ultralytics/yolov5 <a href="https:/
 
 ## <div align="center">Install</div>
 
-<details open>
-<summary>Install yolov5 using pip (for Python >=3.7)</summary>
+Install yolov5 using pip (for Python >=3.7)
 
 ```console
 pip install yolov5
 ```
 
-</details>
+## <div align="center">Model Zoo</div>
 
-<details closed>
-<summary>Install yolov5 using pip `(for Python 3.6)`</summary>
 
-```console
-pip install "numpy>=1.18.5,<1.20" "matplotlib>=3.2.2,<4"
-pip install yolov5
-```
 
-</details>
+<div align="center">
+
+Effortlessly explore and use finetuned YOLOv5 models with one line of code: <a href="https://github.com/keremberke/awesome-yolov5-models">awesome-yolov5-models</a>
+
+<a href="https://github.com/keremberke/awesome-yolov5-models"><img src="https://user-images.githubusercontent.com/34196005/210134158-108b24f4-2b8e-43ea-95c8-44731625cde2.gif" width="640"></a>
+</div>
 
 ## <div align="center">Use from Python</div>
-
-
-<details open>
-<summary>Basic</summary>
 
 ```python
 import yolov5
@@ -111,52 +105,6 @@ results.show()
 results.save(save_dir='results/')
 
 ```
-
-</details>
-
-<details closed>
-<summary>Alternative</summary>
-
-```python
-from yolov5 import YOLOv5
-
-# set model params
-model_path = "yolov5/weights/yolov5s.pt"
-device = "cuda:0" # or "cpu"
-
-# init yolov5 model
-yolov5 = YOLOv5(model_path, device)
-
-# load images
-image1 = 'https://github.com/ultralytics/yolov5/raw/master/data/images/zidane.jpg'
-image2 = 'https://github.com/ultralytics/yolov5/blob/master/data/images/bus.jpg'
-
-# perform inference
-results = yolov5.predict(image1)
-
-# perform inference with larger input size
-results = yolov5.predict(image1, size=1280)
-
-# perform inference with test time augmentation
-results = yolov5.predict(image1, augment=True)
-
-# perform inference on multiple images
-results = yolov5.predict([image1, image2], size=1280, augment=True)
-
-# parse results
-predictions = results.pred[0]
-boxes = predictions[:, :4] # x1, y1, x2, y2
-scores = predictions[:, 4]
-categories = predictions[:, 5]
-
-# show detection bounding boxes on image
-results.show()
-
-# save results into "results/" folder
-results.save(save_dir='results/')
-```
-
-</details>
 
 <details closed>
 <summary>Train/Detect/Test/Export</summary>
