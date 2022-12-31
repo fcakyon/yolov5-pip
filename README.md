@@ -27,7 +27,7 @@ You can finally install <a href="https://github.com/ultralytics/yolov5">YOLOv5 o
 <br>
 This yolov5 package contains everything from ultralytics/yolov5 <a href="https://github.com/ultralytics/yolov5/tree/357cde9ee7da13ba3095995488c5a23631467f1a">at this commit</a> plus:
 <br>
-1. Easy installation via pip: `pip install yolov5`
+1. Easy installation via pip: <b>pip install yolov5</b>
 <br>
 2. Full CLI integration with <a href="https://github.com/google/python-fire">fire</a> package
 <br>
@@ -45,8 +45,7 @@ This yolov5 package contains everything from ultralytics/yolov5 <a href="https:/
 
 ## <div align="center">Install</div>
 
-<details open>
-<summary>Install yolov5 using pip (for Python >=3.7)</summary>
+Install yolov5 using pip (for Python >=3.7)
 
 ```console
 pip install yolov5
@@ -64,10 +63,6 @@ Effortlessly explore and use finetuned YOLOv5 models with one line of code: <a h
 </div>
 
 ## <div align="center">Use from Python</div>
-
-
-<details open>
-<summary>Basic</summary>
 
 ```python
 import yolov5
@@ -110,8 +105,6 @@ results.show()
 results.save(save_dir='results/')
 
 ```
-
-</details>
 
 <details closed>
 <summary>Train/Detect/Test/Export</summary>
