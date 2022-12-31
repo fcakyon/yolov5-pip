@@ -1,4 +1,5 @@
 from pathlib import Path
+import warnings
 
 from yolov5.models.common import AutoShape, DetectMultiBackend
 from yolov5.models.experimental import attempt_load
@@ -65,7 +66,8 @@ def load_model(
 
 class YOLOv5:
     def __init__(self, model_path, device=None, load_on_init=True):
-        raise DeprecationWarning('YOLOv5 class is deprecated and will be removed in future release. Use "model = yolov5.load()" instead.')
+        warnings.warn("YOLOv5 class is deprecated and will be removed in future release. Use 'model = yolov5.load()' instead.", DeprecationWarning)
+        
         self.model_path = model_path
         self.device = device
         if load_on_init:
