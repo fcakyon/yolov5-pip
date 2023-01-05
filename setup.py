@@ -33,7 +33,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/fcakyon/yolov5-pip",
     packages=setuptools.find_packages(exclude=["tests"]),
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     install_requires=get_requirements(),
     extras_require={"tests": ["pytest"]},
     include_package_data=True,
