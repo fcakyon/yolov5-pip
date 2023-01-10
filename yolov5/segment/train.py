@@ -673,4 +673,4 @@ def run_cli(**kwargs):
 
 
 if __name__ == "__main__":
-    main()
+    main(parse_opt())
