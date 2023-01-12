@@ -479,4 +479,4 @@ def main(opt):
 
 
 if __name__ == "__main__":
-    main()
+    main(parse_opt())

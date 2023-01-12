@@ -26,3 +26,6 @@ def app() -> None:
             'segment': {'train': segment_train, 'val': segment_val, 'predict': segment_predict},
         }
     )
+
+if __name__ == "__main__":
+    app()
