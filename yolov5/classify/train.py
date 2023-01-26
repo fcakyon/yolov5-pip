@@ -31,6 +31,7 @@ from torch.cuda import amp
 from tqdm import tqdm
 
 from yolov5.utils.downloads import attempt_donwload_from_hub
+from yolov5.utils.roboflow import check_dataset_roboflow
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
@@ -302,6 +303,9 @@ def parse_opt(known=False):
     parser.add_argument('--neptune_token', type=str, default=None, help='neptune.ai api token')
     parser.add_argument('--neptune_project', type=str, default=None, help='https://docs.neptune.ai/api-reference/neptune')
 
+    # Roboflow arguments
+    parser.add_argument('--roboflow_token', type=str, default=None, help='roboflow api token')
+
     return parser.parse_known_args()[0] if known else parser.parse_args()
 
 
@@ -311,6 +315,14 @@ def main(opt):
         print_args(vars(opt))
         check_git_status()
         check_requirements()
+
+    if "roboflow.com" in opt.data:
+        opt.data = check_dataset_roboflow(
+            data=opt.data,
+            roboflow_token=opt.roboflow_token,
+            task="classify",
+            location=ROOT.absolute().as_posix()
+        )
 
     # DDP mode
     device = select_device(opt.device, batch_size=opt.batch_size)

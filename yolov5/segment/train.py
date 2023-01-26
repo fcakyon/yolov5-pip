@@ -33,6 +33,8 @@ import yaml
 from torch.optim import lr_scheduler
 from tqdm import tqdm
 
+from yolov5.utils.roboflow import check_dataset_roboflow
+
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
 if str(ROOT) not in sys.path:
@@ -509,6 +511,9 @@ def parse_opt(known=False):
     parser.add_argument('--neptune_token', type=str, default=None, help='neptune.ai api token')
     parser.add_argument('--neptune_project', type=str, default=None, help='https://docs.neptune.ai/api-reference/neptune')
 
+    # Roboflow arguments
+    parser.add_argument('--roboflow_token', type=str, default=None, help='roboflow api token')
+
     return parser.parse_known_args()[0] if known else parser.parse_args()
 
 
@@ -518,6 +523,14 @@ def main(opt, callbacks=Callbacks()):
         print_args(vars(opt))
         check_git_status()
         check_requirements()
+
+    if "roboflow.com" in opt.data:
+        opt.data = check_dataset_roboflow(
+            data=opt.data,
+            roboflow_token=opt.roboflow_token,
+            task="segment",
+            location=ROOT.absolute().as_posix()
+        )
 
     # Resume
     if opt.resume and not opt.evolve:  # resume from specified or most recent last.pt
