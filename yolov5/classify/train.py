@@ -31,6 +31,7 @@ from torch.cuda import amp
 from tqdm import tqdm
 
 from yolov5.utils.downloads import attempt_donwload_from_hub
+from yolov5.utils.roboflow import check_dataset_roboflow
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
@@ -42,12 +43,18 @@ from yolov5.classify import val as validate
 from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import ClassificationModel, DetectionModel
 from yolov5.utils.dataloaders import create_classification_dataloader
-from yolov5.utils.general import (DATASETS_DIR, LOGGER, TQDM_BAR_FORMAT, WorkingDirectory, check_git_info, check_git_status,
-                           check_requirements, colorstr, download, increment_path, init_seeds, print_args, yaml_save)
+from yolov5.utils.general import (DATASETS_DIR, LOGGER, TQDM_BAR_FORMAT,
+                                  WorkingDirectory, check_git_info,
+                                  check_git_status, check_requirements,
+                                  colorstr, download, increment_path,
+                                  init_seeds, print_args, yaml_save)
 from yolov5.utils.loggers import GenericLogger
 from yolov5.utils.plots import imshow_cls
-from yolov5.utils.torch_utils import (ModelEMA, model_info, reshape_classifier_output, select_device, smart_DDP,
-                               smart_optimizer, smartCrossEntropyLoss, torch_distributed_zero_first)
+from yolov5.utils.torch_utils import (ModelEMA, model_info,
+                                      reshape_classifier_output, select_device,
+                                      smart_DDP, smart_optimizer,
+                                      smartCrossEntropyLoss,
+                                      torch_distributed_zero_first)
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -302,6 +309,9 @@ def parse_opt(known=False):
     parser.add_argument('--neptune_token', type=str, default=None, help='neptune.ai api token')
     parser.add_argument('--neptune_project', type=str, default=None, help='https://docs.neptune.ai/api-reference/neptune')
 
+    # Roboflow arguments
+    parser.add_argument('--roboflow_token', type=str, default=None, help='roboflow api token')
+
     return parser.parse_known_args()[0] if known else parser.parse_args()
 
 
@@ -311,6 +321,14 @@ def main(opt):
         print_args(vars(opt))
         check_git_status()
         check_requirements()
+
+    if "roboflow.com" in str(opt.data):
+        opt.data = check_dataset_roboflow(
+            data=opt.data,
+            roboflow_token=opt.roboflow_token,
+            task="classify",
+            location=ROOT.absolute().as_posix()
+        )
 
     # DDP mode
     device = select_device(opt.device, batch_size=opt.batch_size)

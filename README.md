@@ -165,6 +165,14 @@ val_image_dir: "val_image_dir/"
 $ yolov5 train --data data.yaml --weights yolov5s.pt
 ```
 
+- Train your model using [Roboflow Universe](https://universe.roboflow.com/) datasets (roboflow>=0.2.27 required):
+
+```bash
+$ yolov5 train --data DATASET_UNIVERSE_URL --weights yolov5s.pt --roboflow_token YOUR_ROBOFLOW_TOKEN
+```
+
+Where `DATASET_UNIVERSE_URL` must be in `https://universe.roboflow.com/workspace_name/project_name/project_version` format.
+
 - Visualize your experiments via [Neptune.AI](https://neptune.ai/) (neptune-client>=0.10.10 required):
 
 ```bash
