@@ -47,19 +47,29 @@ from yolov5.models.yolo import SegmentationModel
 from yolov5.utils.autoanchor import check_anchors
 from yolov5.utils.autobatch import check_train_batch_size
 from yolov5.utils.callbacks import Callbacks
-from yolov5.utils.downloads import attempt_donwload_from_hub, attempt_download, is_url
-from yolov5.utils.general import (LOGGER, TQDM_BAR_FORMAT, check_amp, check_dataset, check_file, check_git_info,
-                           check_git_status, check_img_size, check_requirements, check_suffix, check_yaml, colorstr,
-                           get_latest_run, increment_path, init_seeds, intersect_dicts, labels_to_class_weights,
-                           labels_to_image_weights, one_cycle, print_args, print_mutation, strip_optimizer, yaml_save)
+from yolov5.utils.downloads import (attempt_donwload_from_hub,
+                                    attempt_download, is_url)
+from yolov5.utils.general import (LOGGER, TQDM_BAR_FORMAT, check_amp,
+                                  check_dataset, check_file, check_git_info,
+                                  check_git_status, check_img_size,
+                                  check_requirements, check_suffix, check_yaml,
+                                  colorstr, get_latest_run, increment_path,
+                                  init_seeds, intersect_dicts,
+                                  labels_to_class_weights,
+                                  labels_to_image_weights, one_cycle,
+                                  print_args, print_mutation, strip_optimizer,
+                                  yaml_save)
 from yolov5.utils.loggers import GenericLogger
 from yolov5.utils.plots import plot_evolve, plot_labels
 from yolov5.utils.segment.dataloaders import create_dataloader
 from yolov5.utils.segment.loss import ComputeLoss
 from yolov5.utils.segment.metrics import KEYS, fitness
-from yolov5.utils.segment.plots import plot_images_and_masks, plot_results_with_masks
-from yolov5.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_device, smart_DDP, smart_optimizer,
-                               smart_resume, torch_distributed_zero_first)
+from yolov5.utils.segment.plots import (plot_images_and_masks,
+                                        plot_results_with_masks)
+from yolov5.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel,
+                                      select_device, smart_DDP,
+                                      smart_optimizer, smart_resume,
+                                      torch_distributed_zero_first)
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -524,7 +534,7 @@ def main(opt, callbacks=Callbacks()):
         check_git_status()
         check_requirements()
 
-    if "roboflow.com" in opt.data:
+    if "roboflow.com" in str(opt.data):
         opt.data = check_dataset_roboflow(
             data=opt.data,
             roboflow_token=opt.roboflow_token,

@@ -43,12 +43,18 @@ from yolov5.classify import val as validate
 from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import ClassificationModel, DetectionModel
 from yolov5.utils.dataloaders import create_classification_dataloader
-from yolov5.utils.general import (DATASETS_DIR, LOGGER, TQDM_BAR_FORMAT, WorkingDirectory, check_git_info, check_git_status,
-                           check_requirements, colorstr, download, increment_path, init_seeds, print_args, yaml_save)
+from yolov5.utils.general import (DATASETS_DIR, LOGGER, TQDM_BAR_FORMAT,
+                                  WorkingDirectory, check_git_info,
+                                  check_git_status, check_requirements,
+                                  colorstr, download, increment_path,
+                                  init_seeds, print_args, yaml_save)
 from yolov5.utils.loggers import GenericLogger
 from yolov5.utils.plots import imshow_cls
-from yolov5.utils.torch_utils import (ModelEMA, model_info, reshape_classifier_output, select_device, smart_DDP,
-                               smart_optimizer, smartCrossEntropyLoss, torch_distributed_zero_first)
+from yolov5.utils.torch_utils import (ModelEMA, model_info,
+                                      reshape_classifier_output, select_device,
+                                      smart_DDP, smart_optimizer,
+                                      smartCrossEntropyLoss,
+                                      torch_distributed_zero_first)
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -316,7 +322,7 @@ def main(opt):
         check_git_status()
         check_requirements()
 
-    if "roboflow.com" in opt.data:
+    if "roboflow.com" in str(opt.data):
         opt.data = check_dataset_roboflow(
             data=opt.data,
             roboflow_token=opt.roboflow_token,
