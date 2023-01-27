@@ -19,7 +19,7 @@ def extract_roboflow_metadata(url: str) -> tuple:
 
 def resolve_roboflow_model_format(task: str) -> str:
     task_format_mapping = {
-        "detect": "yolov8",
+        "detect": "yolov5",
         "segment": "yolov5",
         "classify": "folder"
     }
@@ -34,6 +34,7 @@ def check_dataset_roboflow(data: str, roboflow_token: str, task: str, location: 
     from roboflow import Roboflow
 
     workspace_name, project_name, project_version = extract_roboflow_metadata(url=data)
+    print(workspace_name, project_name, project_version)
     os.environ["DATASET_DIRECTORY"] = location
     rf = Roboflow(api_key=roboflow_token)
     project = rf.workspace(workspace_name).project(project_name)
