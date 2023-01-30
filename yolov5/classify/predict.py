@@ -55,8 +55,8 @@ from yolov5.utils.torch_utils import select_device, smart_inference_mode
 @smart_inference_mode()
 def run(
         weights='yolov5s-cls.pt',  # model.pt path(s)
-        source='data/images',  # file/dir/URL/glob/screen/0(webcam)
-        data='data/coco128.yaml',  # dataset.yaml path
+        source=ROOT / 'data/images',  # file/dir/URL/glob/screen/0(webcam)
+        data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
         imgsz=None,  # inference size (height, width)
         img=None,  # inference size (pixels)
         device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
