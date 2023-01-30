@@ -88,7 +88,7 @@ jobs:
           python yolov5/export.py --weights yolov5/weights/yolov5n.pt --device cpu --include torchscript,onnx,tflite
           yolov5 export --weights yolov5/weights/yolov5n.pt --device cpu --simplify --include torchscript,onnx,saved_model,pb,tfjs
 
-      - name: Test yolov5 becnhmarks
+      - name: Test yolov5 benchmarks
         shell: bash  # for Windows compatibility
         run: |
           yolov5 benchmarks --weights yolov5n.pt --img 128 --pt-only --device cpu
@@ -115,6 +115,6 @@ jobs:
           ROBOFLOW_TOKEN: ${{ secrets.ROBOFLOW_API_KEY }}
         run: |
           yolov5 train --data https://universe.roboflow.com/gdit/aerial-airport/dataset/1 --weights yolov5/weights/yolov5n.pt --img 128 --epochs 1 --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
-          yolov5 classify train --data https://universe.roboflow.com/bagas-etcfr/flowerdata1/dataset/1 --img 128 --model yolov5n-cls.pt --epochs 1 --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
+          yolov5 classify train --data https://universe.roboflow.com/carlos-gabriel-da-silva-machado-siwvs/turtles-i1tlr/dataset/1 --img 128 --model yolov5n-cls.pt --epochs 1 --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
           yolov5 segment train --data https://universe.roboflow.com/aymane-outani-auooc/cable-fzjik/dataset/2 --img 128 --weights yolov5n-seg.pt --epochs 1 --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
 
