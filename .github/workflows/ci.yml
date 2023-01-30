@@ -94,6 +94,6 @@ jobs:
           yolov5 segment predict --img 128 --weights yolov5n-seg.pt --device cpu
           # roboflow
           yolov5 train --data https://universe.roboflow.com/jacob-solawetz/aerial-maritime/dataset/10 --weights yolov5/weights/yolov5n.pt --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
-          yolov5 classify train --data https://universe.roboflow.com/bagas-etcfr/flowerdata1/dataset/1 --img 128 --model yolov5n-cls.pt --epochs 1 --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
+          yolov5 classify train --data https://universe.roboflow.com/carlos-gabriel-da-silva-machado-siwvs/turtles-i1tlr/dataset/1 --img 128 --model yolov5n-cls.pt --epochs 1 --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
           yolov5 segment train --data https://universe.roboflow.com/scaffolding/scaffolding-distance/dataset/2 --img 128 --weights yolov5n-seg.pt --epochs 1 --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
 
