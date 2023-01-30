@@ -55,8 +55,8 @@ from yolov5.utils.torch_utils import select_device, smart_inference_mode
 @smart_inference_mode()
 def run(
         weights='yolov5s-cls.pt',  # model.pt path(s)
-        source=ROOT / 'data/images',  # file/dir/URL/glob/screen/0(webcam)
-        data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
+        source='data/images',  # file/dir/URL/glob/screen/0(webcam)
+        data='data/coco128.yaml',  # dataset.yaml path
         imgsz=None,  # inference size (height, width)
         img=None,  # inference size (pixels)
         device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
@@ -203,8 +203,8 @@ def run(
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='yolov5s-cls.pt', help='model path(s)')
-    parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob/screen/0(webcam)')
-    parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='(optional) dataset.yaml path')
+    parser.add_argument('--source', type=str, default='data/images', help='file/dir/URL/glob/screen/0(webcam)')
+    parser.add_argument('--data', type=str, default='data/coco128.yaml', help='(optional) dataset.yaml path')
     parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[224], help='inference size h,w')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--view-img', action='store_true', help='show results')
@@ -213,7 +213,7 @@ def parse_opt():
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     parser.add_argument('--visualize', action='store_true', help='visualize features')
     parser.add_argument('--update', action='store_true', help='update all models')
-    parser.add_argument('--project', default=ROOT / 'runs/predict-cls', help='save results to project/name')
+    parser.add_argument('--project', default='runs/predict-cls', help='save results to project/name')
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--half', action='store_true', help='use FP16 half-precision inference')
@@ -227,7 +227,7 @@ def parse_opt():
 
 def main():
     opt = parse_opt()
-    #check_requirements(exclude=('tensorboard', 'thop'))
+    check_requirements(exclude=('tensorboard', 'thop'))
     run(**vars(opt))
 
 

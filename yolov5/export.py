@@ -132,7 +132,7 @@ def export_torchscript(model, im, file, optimize, prefix=colorstr('TorchScript:'
 @try_export
 def export_onnx(model, im, file, opset, dynamic, simplify, prefix=colorstr('ONNX:')):
     # YOLOv5 ONNX export
-    check_requirements('onnx')
+    check_requirements('onnx>=1.12.0')
     import onnx
 
     LOGGER.info(f'\n{prefix} starting export with onnx {onnx.__version__}...')
@@ -615,13 +615,13 @@ def run(
         LOGGER.info(f'\nExport complete ({time.time() - t:.1f}s)'
                     f"\nResults saved to {colorstr('bold', file.parent.resolve())}"
                     f"\nDetect:          yolov5 {'detect' if det else 'predict'} --weights {f[-1]} {h}"
-                    f"\nValidate:        yolov5 yolov5 val --weights {f[-1]} {h}"
-                    f"\nnPython:         model = yolov5.load('{f[-1]}')  {s}"
+                    f"\nValidate:        yolov5 val --weights {f[-1]} {h}"
+                    f"\nPython:          model = yolov5.load('{f[-1]}')  {s}"
                     f"\nVisualize:       https://netron.app")
     return f  # return list of exported files/dirs
 
 
-def parse_opt():
+def parse_opt(known=False):
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='dataset.yaml path')
     parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model.pt path(s)')
@@ -635,7 +635,7 @@ def parse_opt():
     parser.add_argument('--int8', action='store_true', help='CoreML/TF INT8 quantization')
     parser.add_argument('--dynamic', action='store_true', help='ONNX/TF/TensorRT: dynamic axes')
     parser.add_argument('--simplify', action='store_true', help='ONNX: simplify model')
-    parser.add_argument('--opset', type=int, default=12, help='ONNX: opset version')
+    parser.add_argument('--opset', type=int, default=17, help='ONNX: opset version')
     parser.add_argument('--verbose', action='store_true', help='TensorRT: verbose log')
     parser.add_argument('--workspace', type=int, default=4, help='TensorRT: workspace size (GB)')
     parser.add_argument('--nms', action='store_true', help='TF: add NMS to model')
@@ -649,7 +649,7 @@ def parse_opt():
         nargs='+',
         default=['torchscript'],
         help='torchscript, onnx, openvino, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs, paddle')
-    opt = parser.parse_args()
+    opt = parser.parse_known_args()[0] if known else parser.parse_args()
     print_args(vars(opt))
     return opt
 

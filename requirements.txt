@@ -1,4 +1,4 @@
-# YOLOv5 🚀 requirements
+# YOLOv5 requirements
 # Usage: pip install -r requirements.txt
 
 # Base ------------------------------------------------------------------------
@@ -29,7 +29,7 @@ seaborn>=0.11.0
 
 # Export ----------------------------------------------------------------------
 # coremltools>=6.0  # CoreML export
-# onnx>=1.9.0  # ONNX export
+# onnx>=1.12.0  # ONNX export
 # onnx-simplifier>=0.4.1  # ONNX simplifier
 # nvidia-pyindex  # TensorRT export
 # nvidia-tensorrt  # TensorRT export
@@ -44,7 +44,7 @@ seaborn>=0.11.0
 # Extras ----------------------------------------------------------------------
 # mss  # screenshots
 # albumentations>=1.0.3
-# pycocotools>=2.0  # COCO mAP
+# pycocotools>=2.0.6  # COCO mAP
 # roboflow>=0.2.27
 # ultralytics  # HUB https://hub.ultralytics.com
 
@@ -55,4 +55,4 @@ boto3>=1.19.1
 # coco to yolov5 conversion
 sahi>=0.11.10
 # huggingface
-huggingface-hub>=0.11.1
+huggingface-hub>=0.12.0
