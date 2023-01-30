@@ -43,7 +43,7 @@ from yolov5.utils.torch_utils import select_device, smart_inference_mode
 
 @smart_inference_mode()
 def run(
-    data=ROOT / '../datasets/mnist',  # dataset dir
+    data='../datasets/mnist',  # dataset dir
     weights='yolov5s-cls.pt',  # model.pt path(s)
     batch_size=None,  # batch size
     batch=None,  # batch size
