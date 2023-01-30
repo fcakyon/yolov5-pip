@@ -80,7 +80,7 @@ jobs:
           pip install onnx onnx-simplifier tensorflowjs
           python yolov5/export.py --weights yolov5/weights/yolov5n.pt --device cpu --include torchscript,onnx,tflite
           yolov5 export --weights yolov5/weights/yolov5n.pt --device cpu --simplify --include torchscript,onnx,saved_model,pb,tfjs
-          # benckmarks
+          # benchmarks
           yolov5 benchmarks --weights yolov5n.pt --img 128 --pt-only --device cpu
           # classify
           yolov5 classify train --img 128 --data mnist2560 --model yolov5n-cls.pt --epochs 1 --device cpu
