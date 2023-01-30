@@ -17,7 +17,7 @@ if str(ROOT) not in sys.path:
 
 from yolov5 import __version__
 from yolov5.utils.dataloaders import LoadImagesAndLabels, img2label_paths
-from yolov5.utils.general import LOGGER, check_dataset, check_file
+from utils.general import LOGGER, check_dataset, check_file
 
 try:
     import wandb

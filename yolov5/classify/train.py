@@ -6,7 +6,7 @@ Usage - Single-GPU training:
     $ python classify/train.py --model yolov5s-cls.pt --data imagenette160 --epochs 5 --img 224
 
 Usage - Multi-GPU DDP training:
-    $ python -m torch.distributed.run --nproc_per_node 4 --master_port 1 classify/train.py --model yolov5s-cls.pt --data imagenet --epochs 5 --img 224 --device 0,1,2,3
+    $ python -m torch.distributed.run --nproc_per_node 4 --master_port 2022 classify/train.py --model yolov5s-cls.pt --data imagenet --epochs 5 --img 224 --device 0,1,2,3
 
 Datasets:           --data mnist, fashion-mnist, cifar10, cifar100, imagenette, imagewoof, imagenet, or 'path/to/data'
 YOLOv5-cls models:  --model yolov5n-cls.pt, yolov5s-cls.pt, yolov5m-cls.pt, yolov5l-cls.pt, yolov5x-cls.pt
@@ -30,7 +30,7 @@ import torchvision
 from torch.cuda import amp
 from tqdm import tqdm
 
-from yolov5.utils.downloads import attempt_donwload_from_hub
+from yolov5.utils.downloads import attempt_download_from_hub
 from yolov5.utils.roboflow import check_dataset_roboflow
 
 FILE = Path(__file__).resolve()
@@ -43,18 +43,12 @@ from yolov5.classify import val as validate
 from yolov5.models.experimental import attempt_load
 from yolov5.models.yolo import ClassificationModel, DetectionModel
 from yolov5.utils.dataloaders import create_classification_dataloader
-from yolov5.utils.general import (DATASETS_DIR, LOGGER, TQDM_BAR_FORMAT,
-                                  WorkingDirectory, check_git_info,
-                                  check_git_status, check_requirements,
-                                  colorstr, download, increment_path,
-                                  init_seeds, print_args, yaml_save)
+from yolov5.utils.general import (DATASETS_DIR, LOGGER, TQDM_BAR_FORMAT, WorkingDirectory, check_git_info, check_git_status,
+                           check_requirements, colorstr, download, increment_path, init_seeds, print_args, yaml_save)
 from yolov5.utils.loggers import GenericLogger
 from yolov5.utils.plots import imshow_cls
-from yolov5.utils.torch_utils import (ModelEMA, model_info,
-                                      reshape_classifier_output, select_device,
-                                      smart_DDP, smart_optimizer,
-                                      smartCrossEntropyLoss,
-                                      torch_distributed_zero_first)
+from yolov5.utils.torch_utils import (ModelEMA, model_info, reshape_classifier_output, select_device, smart_DDP,
+                               smart_optimizer, smartCrossEntropyLoss, torch_distributed_zero_first)
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -116,7 +110,7 @@ def train(opt, device):
 
     # Model
     # try to download from hf hub
-    result = attempt_donwload_from_hub(opt.model, hf_token=None)
+    result = attempt_download_from_hub(opt.model, hf_token=None)
     if result is not None:
         opt.model = result
     with torch_distributed_zero_first(LOCAL_RANK), WorkingDirectory(ROOT):
@@ -266,7 +260,7 @@ def train(opt, device):
                     f"\nPredict:         yolov5 classify predict --weights {best} --source im.jpg"
                     f"\nValidate:        yolov5 classify val --weights {best} --data {data_dir}"
                     f"\nExport:          yolov5 export --weights {best} --include onnx"
-                    f"\nPyPi:            model = yolov5.load('custom.pt')"
+                    f"\nPython:          model = yolov5.load('{best}')"
                     f"\nVisualize:       https://netron.app\n")
 
         # Plot examples

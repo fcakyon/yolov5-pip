@@ -71,7 +71,7 @@ def attempt_download(file, repo='ultralytics/yolov5', release='v7.0', hf_token=N
         return response['tag_name'], [x['name'] for x in response['assets']]  # tag, assets
 
     # try to download from hf hub
-    result = attempt_donwload_from_hub(file, hf_token=hf_token)
+    result = attempt_download_from_hub(file, hf_token=hf_token)
     if result is not None:
         file = result
 
@@ -110,8 +110,6 @@ def attempt_download(file, repo='ultralytics/yolov5', release='v7.0', hf_token=N
                 min_bytes=1E5,
                 error_msg=f'{file} missing, try downloading from https://github.com/{repo}/releases/{tag} or {url3}')
 
-
-
     return str(file)
 
 
@@ -128,7 +126,7 @@ def get_model_filename_from_hfhub(repo_id, hf_token=None):
         return None
 
 
-def attempt_donwload_from_hub(repo_id, hf_token=None):
+def attempt_download_from_hub(repo_id, hf_token=None):
     from huggingface_hub import hf_hub_download, list_repo_files
     from huggingface_hub.utils._errors import RepositoryNotFoundError
     from huggingface_hub.utils._validators import HFValidationError

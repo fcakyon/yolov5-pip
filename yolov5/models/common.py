@@ -27,7 +27,7 @@ from torch.cuda import amp
 
 from yolov5.utils import TryExcept
 from yolov5.utils.dataloaders import exif_transpose, letterbox
-from yolov5.utils.downloads import attempt_donwload_from_hub
+from yolov5.utils.downloads import attempt_download_from_hub
 from yolov5.utils.general import (LOGGER, ROOT, Profile, check_requirements, check_suffix, check_version, colorstr,
                            increment_path, is_notebook, make_divisible, non_max_suppression, scale_boxes, xywh2xyxy,
                            xyxy2xywh, yaml_load)
@@ -333,11 +333,10 @@ class DetectMultiBackend(nn.Module):
         from yolov5.models.experimental import attempt_download, attempt_load  # scoped to avoid circular import
 
         super().__init__()
-        
         w = str(weights[0] if isinstance(weights, list) else weights)
 
         # try to dowload from hf hub
-        result = attempt_donwload_from_hub(w, hf_token=hf_token)
+        result = attempt_download_from_hub(w, hf_token=hf_token)
         if result is not None:
             w = result
 
