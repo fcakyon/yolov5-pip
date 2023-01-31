@@ -336,7 +336,7 @@ def run(
             json.dump(jdict, f)
 
         try:  # https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocoEvalDemo.ipynb
-            check_requirements('pycocotools')
+            check_requirements('pycocotools>=2.0.6')
             from pycocotools.coco import COCO
             from pycocotools.cocoeval import COCOeval
 
@@ -400,7 +400,7 @@ def parse_opt():
 
 def main():
     opt = parse_opt()
-    #check_requirements(exclude=('tensorboard', 'thop'))
+    check_requirements(exclude=('tensorboard', 'thop'))
 
     if opt.task in ('train', 'val', 'test'):  # run normally
         if opt.conf_thres > 0.001:  # https://github.com/ultralytics/yolov5/issues/1466

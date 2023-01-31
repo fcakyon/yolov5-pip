@@ -36,6 +36,7 @@ from tqdm import tqdm
 from yolov5.helpers import (convert_coco_dataset_to_yolo, push_to_hfhub,
                             upload_to_s3)
 from yolov5.utils.roboflow import check_dataset_roboflow
+from yolov5 import __version__
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -50,25 +51,19 @@ from yolov5.utils.autoanchor import check_anchors
 from yolov5.utils.autobatch import check_train_batch_size
 from yolov5.utils.callbacks import Callbacks
 from yolov5.utils.dataloaders import create_dataloader
-from yolov5.utils.downloads import (attempt_donwload_from_hub,
-                                    attempt_download, is_url)
-from yolov5.utils.general import (LOGGER, TQDM_BAR_FORMAT, check_amp,
-                                  check_dataset, check_file, check_img_size,
-                                  check_suffix, check_yaml, colorstr,
-                                  get_latest_run, increment_path, init_seeds,
-                                  intersect_dicts, labels_to_class_weights,
-                                  labels_to_image_weights, methods, one_cycle,
-                                  print_args, print_mutation, strip_optimizer,
-                                  yaml_save)
+from yolov5.utils.downloads import attempt_download, is_url, attempt_download_from_hub
+from yolov5.utils.general import (LOGGER, TQDM_BAR_FORMAT, check_amp, check_dataset, check_file, check_git_info,
+                           check_git_status, check_img_size, check_requirements, check_suffix, check_yaml, colorstr,
+                           get_latest_run, increment_path, init_seeds, intersect_dicts, labels_to_class_weights,
+                           labels_to_image_weights, methods, one_cycle, print_args, print_mutation, strip_optimizer,
+                           yaml_save)
 from yolov5.utils.loggers import Loggers
 from yolov5.utils.loggers.comet.comet_utils import check_comet_resume
 from yolov5.utils.loss import ComputeLoss
 from yolov5.utils.metrics import fitness
 from yolov5.utils.plots import plot_evolve
-from yolov5.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel,
-                                      select_device, smart_DDP,
-                                      smart_optimizer, smart_resume,
-                                      torch_distributed_zero_first)
+from yolov5.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_device, smart_DDP, smart_optimizer,
+                               smart_resume, torch_distributed_zero_first)
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -134,7 +129,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
     # Model
     # try to download from hf hub
-    result = attempt_donwload_from_hub(weights, hf_token=None)
+    result = attempt_download_from_hub(weights, hf_token=None)
     if result is not None:
         weights = result
     check_suffix(weights, '.pt')  # check weights
@@ -222,7 +217,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                                               image_weights=opt.image_weights,
                                               quad=opt.quad,
                                               prefix=colorstr('train: '),
-                                              shuffle=True)
+                                              shuffle=True,
+                                              seed=opt.seed)
     labels = np.concatenate(dataset.labels, 0)
     mlc = int(labels[:, 0].max())  # max label class
     assert mlc < nc, f'Label class {mlc} exceeds nc={nc} in {data}. Possible class labels are 0-{nc - 1}'
@@ -271,7 +267,6 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     # nw = min(nw, (epochs - start_epoch) / 2 * nb)  # limit warmup to < 1/2 of training
     last_opt_step = -1
     maps = np.zeros(nc)  # mAP per class
-    map50s = np.zeros(nc)  # mAP50 per class
     results = (0, 0, 0, 0, 0, 0, 0)  # P, R, mAP@.5, mAP@.5-.95, val_loss(box, obj, cls)
     scheduler.last_epoch = start_epoch - 1  # do not move
     scaler = torch.cuda.amp.GradScaler(enabled=amp)
@@ -402,7 +397,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     'updates': ema.updates,
                     'optimizer': optimizer.state_dict(),
                     'opt': vars(opt),
-                    'date': datetime.now().isoformat()}
+                    'date': datetime.now().isoformat(),
+                    'yolov5pip_version': __version__}
 
                 # Save last, best and delete
                 torch.save(ckpt, last)
@@ -442,7 +438,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                 strip_optimizer(f)  # strip optimizers
                 if f is best:
                     LOGGER.info(f'\nValidating {f}...')
-                    results, _, _, _ = validate.run(
+                    results, _, _, _  = validate.run(
                         data_dict,
                         batch_size=batch_size // WORLD_SIZE * 2,
                         imgsz=imgsz,
@@ -557,7 +553,7 @@ def main(opt, callbacks=Callbacks()):
     if RANK in {-1, 0}:
         print_args(vars(opt))
         #check_git_status()
-        #check_requirements()
+        check_requirements()
 
     if "roboflow.com" in str(opt.data):
         opt.data = check_dataset_roboflow(
@@ -711,6 +707,7 @@ def run(**kwargs):
     main(opt)
     return opt
 
+
 def run_cli(**kwargs):
     '''
     To be called from yolov5.cli
@@ -719,6 +716,7 @@ def run_cli(**kwargs):
     for k, v in kwargs.items():
         setattr(opt, k, v)
     main(opt)
+
 
 if __name__ == "__main__":
     opt = parse_opt()
