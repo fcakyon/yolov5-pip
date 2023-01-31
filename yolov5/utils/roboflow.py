@@ -19,7 +19,7 @@ def extract_roboflow_metadata(url: str) -> tuple:
 
 def resolve_roboflow_model_format(task: str) -> str:
     task_format_mapping = {
-        "detect": "yolov8",
+        "detect": "yolov5",
         "segment": "yolov5",
         "classify": "folder"
     }
