@@ -46,9 +46,9 @@ jobs:
         run: |
           python -m unittest
 
-      - name: Test scripts
+      - name: Test yolov5 train
+        shell: bash  # for Windows compatibility
         run: |
-          pip install -e .
           # donwload coco formatted testing data
           python tests/download_test_coco_dataset.py
           # train (dl base model from hf hub)
@@ -61,29 +61,49 @@ jobs:
           python yolov5/train.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu
           yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu --freeze 10
           yolov5 train --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --epochs 1 --device cpu --evolve 2
-          # detect
+      - name: Test yolov5 detect
+        shell: bash  # for Windows compatibility
+        run: |
           python yolov5/detect.py --weights yolov5/weights/yolov5n.pt --device cpu
           yolov5 detect --weights yolov5/weights/yolov5n.pt --device cpu
           python yolov5/detect.py --weights runs/train/exp/weights/last.pt --device cpu
           yolov5 detect --weights runs/train/exp/weights/last.pt --device cpu
-          # val
+      - name: Test yolov5 val
+        shell: bash  # for Windows compatibility
+        run: |
           python yolov5/val.py --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --device cpu
           yolov5 val --data yolov5/data/coco128.yaml --img 128 --batch 16 --weights yolov5/weights/yolov5n.pt --device cpu
           python yolov5/val.py --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device cpu
           yolov5 val --data yolov5/data/coco128.yaml --img 128 --batch 16 --weights runs/train/exp/weights/last.pt --device cpu
-          # export
+      - name: Test yolov5 export
+        shell: bash  # for Windows compatibility
+        run: |
           pip install onnx onnx-simplifier tensorflowjs
           python yolov5/export.py --weights yolov5/weights/yolov5n.pt --device cpu --include torchscript,onnx,tflite
           yolov5 export --weights yolov5/weights/yolov5n.pt --device cpu --simplify --include torchscript,onnx,saved_model,pb,tfjs
-          # benckmarks
+      - name: Test yolov5 benchmarks
+        shell: bash  # for Windows compatibility
+        run: |
           yolov5 benchmarks --weights yolov5n.pt --img 128 --pt-only --device cpu
-          # classify
+      - name: Test yolov5 classify
+        shell: bash  # for Windows compatibility
+        run: |
           yolov5 classify train --img 128 --data mnist2560 --model yolov5n-cls.pt --epochs 1 --device cpu
           yolov5 classify train --img 128 --data mnist2560 --model fcakyon/yolov5n-cls-v7.0 --epochs 1 --device cpu
           yolov5 classify val --img 128 --data datasets/mnist2560 --weights yolov5n-cls.pt --device cpu
           yolov5 classify predict --img 128 --weights yolov5n-cls.pt --device cpu  
-          # segment
+      - name: Test yolov5 segment
+        shell: bash  # for Windows compatibility
+        run: |
           yolov5 segment train --img 128 --weights yolov5n-seg.pt --epochs 1 --device cpu
           yolov5 segment train --img 128 --weights fcakyon/yolov5n-seg-v7.0 --epochs 1 --device cpu
           # yolov5 segment val --img 128 --weights yolov5n-seg.pt --device cpu
           yolov5 segment predict --img 128 --weights yolov5n-seg.pt --device cpu
+      - name: Test roboflow train
+        shell: bash  # for Windows compatibility
+        env:
+          ROBOFLOW_TOKEN: ${{ secrets.ROBOFLOW_API_KEY }}
+        run: |
+          yolov5 train --data https://universe.roboflow.com/gdit/aerial-airport/dataset/1 --weights yolov5/weights/yolov5n.pt --img 128 --epochs 1 --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
+          # yolov5 classify train --data https://universe.roboflow.com/carlos-gabriel-da-silva-machado-siwvs/turtles-i1tlr/dataset/1 --img 128 --model yolov5n-cls.pt --epochs 1 --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
+          yolov5 segment train --data https://universe.roboflow.com/aymane-outani-auooc/cable-fzjik/dataset/2 --img 128 --weights yolov5n-seg.pt --epochs 1 --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
