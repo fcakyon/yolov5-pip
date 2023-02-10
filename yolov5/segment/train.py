@@ -33,7 +33,7 @@ import yaml
 from torch.optim import lr_scheduler
 from tqdm import tqdm
 
-from yolov5.utils.roboflow import check_dataset_roboflow
+from yolov5.utils.roboflow import RoboflowConnector
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
@@ -535,8 +535,8 @@ def main(opt, callbacks=Callbacks()):
         check_requirements()
 
     if "roboflow.com" in str(opt.data):
-        opt.data = check_dataset_roboflow(
-            data=opt.data,
+        opt.data = RoboflowConnector.download_dataset(
+            url=opt.data,
             roboflow_token=opt.roboflow_token,
             task="segment",
             location=ROOT.absolute().as_posix()

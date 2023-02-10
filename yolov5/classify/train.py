@@ -31,7 +31,7 @@ from torch.cuda import amp
 from tqdm import tqdm
 
 from yolov5.utils.downloads import attempt_download_from_hub
-from yolov5.utils.roboflow import check_dataset_roboflow
+from yolov5.utils.roboflow import RoboflowConnector
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
@@ -317,8 +317,8 @@ def main(opt):
         check_requirements()
 
     if "roboflow.com" in str(opt.data):
-        opt.data = check_dataset_roboflow(
-            data=opt.data,
+        opt.data = RoboflowConnector.download_dataset(
+            url=opt.data,
             roboflow_token=opt.roboflow_token,
             task="classify",
             location=ROOT.absolute().as_posix()
