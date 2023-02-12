@@ -398,10 +398,16 @@ def convert_coco_dataset_to_yolo(opt, save_dir):
 
     if is_coco_data:
         from sahi.utils.coco import export_coco_as_yolov5_via_yml
-
-        data = export_coco_as_yolov5_via_yml(
-            yml_path=opt.data, output_dir=save_dir / "data"
-        )
+        from sahi.utils.file import is_colab
+        
+        if is_colab():
+            data = export_coco_as_yolov5_via_yml(
+            yml_path=opt.data, output_dir=save_dir / "data", disable_symlink=True
+        )   
+        else:     
+            data = export_coco_as_yolov5_via_yml(
+                yml_path=opt.data, output_dir=save_dir / "data"
+            )
         opt.data = data
 
         # add coco fields to data.yaml
@@ -433,6 +439,7 @@ def convert_coco_dataset_to_yolo(opt, save_dir):
 
 def upload_to_s3(opt, data, save_dir):
     import yaml
+    import os
     from yolov5.utils.general import colorstr
     from yolov5.utils.aws import upload_file_to_s3, upload_folder_to_s3
 
