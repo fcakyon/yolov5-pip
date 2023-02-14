@@ -398,16 +398,15 @@ def convert_coco_dataset_to_yolo(opt, save_dir):
 
     if is_coco_data:
         from sahi.utils.coco import export_coco_as_yolov5_via_yml
-        from sahi.utils.file import is_colab
+        from yolov5.utils.general import is_colab
         
+        disable_symlink = False
         if is_colab():
-            data = export_coco_as_yolov5_via_yml(
-            yml_path=opt.data, output_dir=save_dir / "data", disable_symlink=True
-        )   
-        else:     
-            data = export_coco_as_yolov5_via_yml(
-                yml_path=opt.data, output_dir=save_dir / "data"
-            )
+             disable_symlink = True
+
+        data = export_coco_as_yolov5_via_yml(
+            yml_path=opt.data, output_dir=save_dir / "data", disable_symlink=disable_symlink
+        )
         opt.data = data
 
         # add coco fields to data.yaml
