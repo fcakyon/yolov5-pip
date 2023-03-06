@@ -5,6 +5,8 @@ from roboflow import Roboflow
 from roboflow.core.version import Version
 from typing import Dict, Optional
 
+from yolov5.utils.plots import plot_results
+from yolov5.utils.general import LOGGER
 
 TASK2FORMAT: Dict[str, str] = {
     "detect": "yolov5",
@@ -42,11 +44,12 @@ class RoboflowConnector:
         RoboflowConnector.project_version = project_version
 
     @staticmethod
-    def download_dataset(url: str, roboflow_token: Optional[str], task: str, location: str) -> str:
+    def download_dataset(url: str, roboflow_token: Optional[str], task: str, location: Optional[str] = None) -> str:
         if roboflow_token is None:
             raise ValueError("roboflow_token not found ❌")
 
-        os.environ["DATASET_DIRECTORY"] = location
+        if location:
+            os.environ["DATASET_DIRECTORY"] = location
         RoboflowConnector.init(url=url, roboflow_token=roboflow_token)
 
         dataset = RoboflowConnector.project_version.download(
@@ -62,4 +65,6 @@ class RoboflowConnector:
         if RoboflowConnector.project_version is None:
             raise ValueError("RoboflowConnector must be initiated before you upload_model ❌")
 
+        plot_results(file=os.path.join(model_path, "results.csv"))
+        LOGGER.info(f"Uploading model from local: {model_path} to Roboflow: {RoboflowConnector.project_version.id}")
         RoboflowConnector.project_version.deploy(model_type="yolov5", model_path=model_path)
