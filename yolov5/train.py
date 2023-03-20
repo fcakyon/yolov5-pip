@@ -35,8 +35,8 @@ from tqdm import tqdm
 
 from yolov5.helpers import (convert_coco_dataset_to_yolo, push_to_hfhub,
                             upload_to_s3)
-from yolov5.utils.roboflow import check_dataset_roboflow
 from yolov5 import __version__
+from yolov5.utils.roboflow import RoboflowConnector
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -479,6 +479,9 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                 task='object-detection',
             )
 
+        if opt.roboflow_upload:
+            RoboflowConnector.upload_model(save_dir.as_posix() + "/")
+
         callbacks.run('on_train_end', last, best, epoch, results)
 
     torch.cuda.empty_cache()
@@ -544,6 +547,7 @@ def parse_opt(known=False):
 
     # Roboflow arguments
     parser.add_argument('--roboflow_token', type=str, default=None, help='roboflow api token')
+    parser.add_argument('--roboflow_upload', action='store_true', help='upload model to roboflow')
 
     return parser.parse_known_args()[0] if known else parser.parse_args()
 
@@ -556,8 +560,8 @@ def main(opt, callbacks=Callbacks()):
         check_requirements()
 
     if "roboflow.com" in str(opt.data):
-        opt.data = check_dataset_roboflow(
-            data=opt.data,
+        opt.data = RoboflowConnector.download_dataset(
+            url=opt.data,
             roboflow_token=opt.roboflow_token,
             task="detect",
             location=ROOT.absolute().as_posix()

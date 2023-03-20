@@ -45,7 +45,6 @@ seaborn>=0.11.0
 # mss  # screenshots
 # albumentations>=1.0.3
 # pycocotools>=2.0.6  # COCO mAP
-# roboflow>=0.2.27
 # ultralytics  # HUB https://hub.ultralytics.com
 
 # CLI
@@ -56,3 +55,5 @@ boto3>=1.19.1
 sahi>=0.11.10
 # huggingface
 huggingface-hub>=0.12.0
+# roboflow
+roboflow>=0.2.29

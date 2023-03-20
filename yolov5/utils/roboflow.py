@@ -1,7 +1,18 @@
 import os
 import re
 
-from yolov5.utils.general import check_requirements
+from roboflow import Roboflow
+from roboflow.core.version import Version
+from typing import Dict, Optional
+
+from yolov5.utils.plots import plot_results
+from yolov5.utils.general import LOGGER
+
+TASK2FORMAT: Dict[str, str] = {
+    "detect": "yolov5",
+    "segment": "yolov5",
+    "classify": "folder"
+}
 
 
 def extract_roboflow_metadata(url: str) -> tuple:
@@ -17,31 +28,43 @@ def extract_roboflow_metadata(url: str) -> tuple:
                          f"Given: {url}")
 
 
-def resolve_roboflow_model_format(task: str) -> str:
-    task_format_mapping = {
-        "detect": "yolov5",
-        "segment": "yolov5",
-        "classify": "folder"
-    }
-    return task_format_mapping.get(task)
+class RoboflowConnector:
 
+    project_version: Optional[Version] = None
 
-def check_dataset_roboflow(data: str, roboflow_token: str, task: str, location: str) -> str:
-    if roboflow_token is None:
-        raise ValueError("roboflow_token not found ❌")
+    @staticmethod
+    def init(url: str, roboflow_token: Optional[str]) -> None:
+        if roboflow_token is None:
+            raise ValueError("roboflow_token not found ❌")
 
-    check_requirements("roboflow>=0.2.27")
-    from roboflow import Roboflow
+        workspace_name, project_name, project_version = extract_roboflow_metadata(url=url)
 
-    workspace_name, project_name, project_version = extract_roboflow_metadata(url=data)
-    os.environ["DATASET_DIRECTORY"] = location
-    rf = Roboflow(api_key=roboflow_token)
-    project = rf.workspace(workspace_name).project(project_name)
-    model_format = resolve_roboflow_model_format(task=task)
-    dataset = project.version(int(project_version)).download(
-        model_format=model_format,
-        overwrite=False
-    )
-    if task == "classify":
-        return dataset.location
-    return f"{dataset.location}/data.yaml"
+        rf = Roboflow(api_key=roboflow_token)
+        project_version = rf.workspace(workspace_name).project(project_name).version(int(project_version))
+        RoboflowConnector.project_version = project_version
+
+    @staticmethod
+    def download_dataset(url: str, roboflow_token: Optional[str], task: str, location: Optional[str] = None) -> str:
+        if roboflow_token is None:
+            raise ValueError("roboflow_token not found ❌")
+
+        if location:
+            os.environ["DATASET_DIRECTORY"] = location
+        RoboflowConnector.init(url=url, roboflow_token=roboflow_token)
+
+        dataset = RoboflowConnector.project_version.download(
+            model_format=TASK2FORMAT[task],
+            overwrite=False
+        )
+        if task == "classify":
+            return dataset.location
+        return f"{dataset.location}/data.yaml"
+
+    @staticmethod
+    def upload_model(model_path: str):
+        if RoboflowConnector.project_version is None:
+            raise ValueError("RoboflowConnector must be initiated before you upload_model ❌")
+
+        plot_results(file=os.path.join(model_path, "results.csv"))
+        LOGGER.info(f"Uploading model from local: {model_path} to Roboflow: {RoboflowConnector.project_version.id}")
+        RoboflowConnector.project_version.deploy(model_type="yolov5", model_path=model_path)

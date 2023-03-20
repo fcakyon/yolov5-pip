@@ -165,7 +165,7 @@ val_image_dir: "val_image_dir/"
 $ yolov5 train --data data.yaml --weights yolov5s.pt
 ```
 
-- Train your model using [Roboflow Universe](https://universe.roboflow.com/) datasets (roboflow>=0.2.27 required):
+- Train your model using [Roboflow Universe](https://universe.roboflow.com/) datasets (roboflow>=0.2.29 required):
 
 ```bash
 $ yolov5 train --data DATASET_UNIVERSE_URL --weights yolov5s.pt --roboflow_token YOUR_ROBOFLOW_TOKEN
