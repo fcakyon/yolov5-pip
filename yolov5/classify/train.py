@@ -1,4 +1,4 @@
-# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+# YOLOv5 🚀 by Ultralytics, AGPL-3.0 license
 """
 Train a YOLOv5 classifier model on a classification dataset
 
@@ -47,7 +47,7 @@ from yolov5.utils.general import (DATASETS_DIR, LOGGER, TQDM_BAR_FORMAT, Working
                            check_requirements, colorstr, download, increment_path, init_seeds, print_args, yaml_save)
 from yolov5.utils.loggers import GenericLogger
 from yolov5.utils.plots import imshow_cls
-from yolov5.utils.torch_utils import (ModelEMA, model_info, reshape_classifier_output, select_device, smart_DDP,
+from yolov5.utils.torch_utils import (ModelEMA, de_parallel, model_info, reshape_classifier_output, select_device, smart_DDP,
                                smart_optimizer, smartCrossEntropyLoss, torch_distributed_zero_first)
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
@@ -81,7 +81,7 @@ def train(opt, device):
             LOGGER.info(f'\nDataset not found ⚠️, missing path {data_dir}, attempting download...')
             t = time.time()
             if str(data) == 'imagenet':
-                subprocess.run(f"bash {ROOT / 'data/scripts/get_imagenet.sh'}", shell=True, check=True)
+                subprocess.run(['bash', str(ROOT / 'data/scripts/get_imagenet.sh')], shell=True, check=True)
             else:
                 url = f'https://github.com/ultralytics/yolov5/releases/download/v1.0/{data}.zip'
                 download(url, dir=data_dir.parent)
@@ -227,11 +227,11 @@ def train(opt, device):
 
             # Log
             metrics = {
-                "train/loss": tloss,
-                f"{val}/loss": vloss,
-                "metrics/accuracy_top1": top1,
-                "metrics/accuracy_top5": top5,
-                "lr/0": optimizer.param_groups[0]['lr']}  # learning rate
+                'train/loss': tloss,
+                f'{val}/loss': vloss,
+                'metrics/accuracy_top1': top1,
+                'metrics/accuracy_top5': top5,
+                'lr/0': optimizer.param_groups[0]['lr']}  # learning rate
             logger.log_metrics(metrics, epoch)
 
             # Save model
@@ -266,10 +266,10 @@ def train(opt, device):
         # Plot examples
         images, labels = (x[:25] for x in next(iter(testloader)))  # first 25 images and labels
         pred = torch.max(ema.ema(images.to(device)), 1)[1]
-        file = imshow_cls(images, labels, pred, model.names, verbose=False, f=save_dir / 'test_images.jpg')
+        file = imshow_cls(images, labels, pred, de_parallel(model).names, verbose=False, f=save_dir / 'test_images.jpg')
 
         # Log results
-        meta = {"epochs": epochs, "top1_acc": best_fitness, "date": datetime.now().isoformat()}
+        meta = {'epochs': epochs, 'top1_acc': best_fitness, 'date': datetime.now().isoformat()}
         logger.log_images(file, name='Test Examples (true-predicted)', epoch=epoch)
         logger.log_model(best, epochs, metadata=meta)
 
@@ -298,10 +298,6 @@ def parse_opt(known=False):
     parser.add_argument('--verbose', action='store_true', help='Verbose mode')
     parser.add_argument('--seed', type=int, default=0, help='Global training seed')
     parser.add_argument('--local_rank', type=int, default=-1, help='Automatic DDP Multi-GPU argument, do not modify')
-
-    # Neptune AI arguments
-    parser.add_argument('--neptune_token', type=str, default=None, help='neptune.ai api token')
-    parser.add_argument('--neptune_project', type=str, default=None, help='https://docs.neptune.ai/api-reference/neptune')
 
     # Roboflow arguments
     parser.add_argument('--roboflow_token', type=str, default=None, help='roboflow api token')
@@ -332,7 +328,7 @@ def main(opt):
         assert torch.cuda.device_count() > LOCAL_RANK, 'insufficient CUDA devices for DDP command'
         torch.cuda.set_device(LOCAL_RANK)
         device = torch.device('cuda', LOCAL_RANK)
-        dist.init_process_group(backend="nccl" if dist.is_nccl_available() else "gloo")
+        dist.init_process_group(backend='nccl' if dist.is_nccl_available() else 'gloo')
 
     # Parameters
     opt.save_dir = increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok)  # increment run
@@ -349,7 +345,6 @@ def run(**kwargs):
     main(opt)
     return opt
 
-
 def run_cli(**kwargs):
     '''
     To be called from yolov5.cli
@@ -360,6 +355,6 @@ def run_cli(**kwargs):
     main(opt)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     opt = parse_opt()
     main(opt)

@@ -1,4 +1,4 @@
-# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+# YOLOv5 🚀 by Ultralytics, AGPL-3.0 license
 """
 Common modules
 """
@@ -21,7 +21,6 @@ import pandas as pd
 import requests
 import torch
 import torch.nn as nn
-from IPython.display import display
 from PIL import Image
 from torch.cuda import amp
 
@@ -29,7 +28,7 @@ from yolov5.utils import TryExcept
 from yolov5.utils.dataloaders import exif_transpose, letterbox
 from yolov5.utils.downloads import attempt_download_from_hub
 from yolov5.utils.general import (LOGGER, ROOT, Profile, check_requirements, check_suffix, check_version, colorstr,
-                           increment_path, is_notebook, make_divisible, non_max_suppression, scale_boxes, xywh2xyxy,
+                           increment_path, is_jupyter, make_divisible, non_max_suppression, scale_boxes, xywh2xyxy,
                            xyxy2xywh, yaml_load)
 from yolov5.utils.plots import Annotator, colors, save_one_box
 from yolov5.utils.torch_utils import copy_attr, smart_inference_mode
@@ -361,8 +360,9 @@ class DetectMultiBackend(nn.Module):
             model.half() if fp16 else model.float()
             if extra_files['config.txt']:  # load metadata dict
                 d = json.loads(extra_files['config.txt'],
-                               object_hook=lambda d: {int(k) if k.isdigit() else k: v
-                                                      for k, v in d.items()})
+                               object_hook=lambda d: {
+                                   int(k) if k.isdigit() else k: v
+                                   for k, v in d.items()})
                 stride, names = int(d['stride']), d['names']
         elif dnn:  # ONNX OpenCV DNN
             LOGGER.info(f'Loading {w} for ONNX OpenCV DNN inference...')
@@ -387,11 +387,11 @@ class DetectMultiBackend(nn.Module):
                 w = next(Path(w).glob('*.xml'))  # get *.xml file from *_openvino_model dir
             network = ie.read_model(model=w, weights=Path(w).with_suffix('.bin'))
             if network.get_parameters()[0].get_layout().empty:
-                network.get_parameters()[0].set_layout(Layout("NCHW"))
+                network.get_parameters()[0].set_layout(Layout('NCHW'))
             batch_dim = get_batch(network)
             if batch_dim.is_static:
                 batch_size = batch_dim.get_length()
-            executable_network = ie.compile_model(network, device_name="CPU")  # device_name="MYRIAD" for Intel NCS2
+            executable_network = ie.compile_model(network, device_name='CPU')  # device_name="MYRIAD" for Intel NCS2
             stride, names = self._load_metadata(Path(w).with_suffix('.yaml'))  # load metadata
         elif engine:  # TensorRT
             LOGGER.info(f'Loading {w} for TensorRT inference...')
@@ -438,7 +438,7 @@ class DetectMultiBackend(nn.Module):
             import tensorflow as tf
 
             def wrap_frozen_graph(gd, inputs, outputs):
-                x = tf.compat.v1.wrap_function(lambda: tf.compat.v1.import_graph_def(gd, name=""), [])  # wrapped
+                x = tf.compat.v1.wrap_function(lambda: tf.compat.v1.import_graph_def(gd, name=''), [])  # wrapped
                 ge = x.graph.as_graph_element
                 return x.prune(tf.nest.map_structure(ge, inputs), tf.nest.map_structure(ge, outputs))
 
@@ -452,7 +452,7 @@ class DetectMultiBackend(nn.Module):
             gd = tf.Graph().as_graph_def()  # TF GraphDef
             with open(w, 'rb') as f:
                 gd.ParseFromString(f.read())
-            frozen_func = wrap_frozen_graph(gd, inputs="x:0", outputs=gd_outputs(gd))
+            frozen_func = wrap_frozen_graph(gd, inputs='x:0', outputs=gd_outputs(gd))
         elif tflite or edgetpu:  # https://www.tensorflow.org/lite/guide/python#install_tensorflow_lite_for_python
             try:  # https://coral.ai/docs/edgetpu/tflite-python/#update-existing-tf-lite-code-for-the-edge-tpu
                 from tflite_runtime.interpreter import Interpreter, load_delegate
@@ -474,9 +474,9 @@ class DetectMultiBackend(nn.Module):
             output_details = interpreter.get_output_details()  # outputs
             # load metadata
             with contextlib.suppress(zipfile.BadZipFile):
-                with zipfile.ZipFile(w, "r") as model:
+                with zipfile.ZipFile(w, 'r') as model:
                     meta_file = model.namelist()[0]
-                    meta = ast.literal_eval(model.read(meta_file).decode("utf-8"))
+                    meta = ast.literal_eval(model.read(meta_file).decode('utf-8'))
                     stride, names = int(meta['stride']), meta['names']
         elif tfjs:  # TF.js
             raise NotImplementedError('ERROR: YOLOv5 TF.js inference is not supported')
@@ -498,7 +498,7 @@ class DetectMultiBackend(nn.Module):
             check_requirements('tritonclient[all]')
             from yolov5.utils.triton import TritonRemoteModel
             model = TritonRemoteModel(url=w)
-            nhwc = model.runtime.startswith("tensorflow")
+            nhwc = model.runtime.startswith('tensorflow')
         else:
             raise NotImplementedError(f'ERROR: {w} is not a supported format')
 
@@ -615,7 +615,7 @@ class DetectMultiBackend(nn.Module):
         url = urlparse(p)  # if url may be Triton inference server
         types = [s in Path(p).name for s in sf]
         types[8] &= not types[9]  # tflite &= not edgetpu
-        triton = not any(types) and all([any(s in url.scheme for s in ["http", "grpc"]), url.netloc])
+        triton = not any(types) and all([any(s in url.scheme for s in ['http', 'grpc']), url.netloc])
         return types + [triton]
 
     @staticmethod
@@ -774,7 +774,11 @@ class Detections:
 
             im = Image.fromarray(im.astype(np.uint8)) if isinstance(im, np.ndarray) else im  # from np
             if show:
-                display(im) if is_notebook() else im.show(self.files[i])
+                if is_jupyter():
+                    from IPython.display import display
+                    display(im)
+                else:
+                    im.show(self.files[i])
             if save:
                 f = self.files[i]
                 im.save(save_dir / f)  # save
@@ -853,12 +857,19 @@ class Proto(nn.Module):
 
 class Classify(nn.Module):
     # YOLOv5 classification head, i.e. x(b,c1,20,20) to x(b,c2)
-    def __init__(self, c1, c2, k=1, s=1, p=None, g=1):  # ch_in, ch_out, kernel, stride, padding, groups
+    def __init__(self,
+                 c1,
+                 c2,
+                 k=1,
+                 s=1,
+                 p=None,
+                 g=1,
+                 dropout_p=0.0):  # ch_in, ch_out, kernel, stride, padding, groups, dropout probability
         super().__init__()
         c_ = 1280  # efficientnet_b0 size
         self.conv = Conv(c1, c_, k, s, autopad(k, p), g)
         self.pool = nn.AdaptiveAvgPool2d(1)  # to x(b,c_,1,1)
-        self.drop = nn.Dropout(p=0.0, inplace=True)
+        self.drop = nn.Dropout(p=dropout_p, inplace=True)
         self.linear = nn.Linear(c_, c2)  # to x(b,c2)
 
     def forward(self, x):

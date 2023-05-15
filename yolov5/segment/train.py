@@ -1,10 +1,10 @@
-# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+# YOLOv5 🚀 by Ultralytics, AGPL-3.0 license
 """
 Train a YOLOv5 segment model on a segment dataset
 Models and datasets download automatically from the latest YOLOv5 release.
 
 Usage - Single-GPU training:
-    $ yolov5 segment train --data coco128-seg.yaml --weights yolov5s-seg.pt --img 640  # from pretrained (recommended)
+    $ yolov5 segment train--data coco128-seg.yaml --weights yolov5s-seg.pt --img 640  # from pretrained (recommended)
     $ yolov5 segment train --data coco128-seg.yaml --weights '' --cfg yolov5s-seg.yaml --img 640  # from scratch
 
 Usage - Multi-GPU DDP training:
@@ -12,13 +12,14 @@ Usage - Multi-GPU DDP training:
 
 Models:     https://github.com/ultralytics/yolov5/tree/master/models
 Datasets:   https://github.com/ultralytics/yolov5/tree/master/data
-Tutorial:   https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data
+Tutorial:   https://docs.ultralytics.com/yolov5/tutorials/train_custom_data
 """
 
 import argparse
 import math
 import os
 import random
+import subprocess
 import sys
 import time
 from copy import deepcopy
@@ -47,29 +48,19 @@ from yolov5.models.yolo import SegmentationModel
 from yolov5.utils.autoanchor import check_anchors
 from yolov5.utils.autobatch import check_train_batch_size
 from yolov5.utils.callbacks import Callbacks
-from yolov5.utils.downloads import (attempt_download_from_hub,
-                                    attempt_download, is_url)
-from yolov5.utils.general import (LOGGER, TQDM_BAR_FORMAT, check_amp,
-                                  check_dataset, check_file, check_git_info,
-                                  check_git_status, check_img_size,
-                                  check_requirements, check_suffix, check_yaml,
-                                  colorstr, get_latest_run, increment_path,
-                                  init_seeds, intersect_dicts,
-                                  labels_to_class_weights,
-                                  labels_to_image_weights, one_cycle,
-                                  print_args, print_mutation, strip_optimizer,
-                                  yaml_save)
+from yolov5.utils.downloads import attempt_download, is_url, attempt_download_from_hub
+from yolov5.utils.general import (LOGGER, TQDM_BAR_FORMAT, check_amp, check_dataset, check_file, check_git_info,
+                           check_git_status, check_img_size, check_requirements, check_suffix, check_yaml, colorstr,
+                           get_latest_run, increment_path, init_seeds, intersect_dicts, labels_to_class_weights,
+                           labels_to_image_weights, one_cycle, print_args, print_mutation, strip_optimizer, yaml_save)
 from yolov5.utils.loggers import GenericLogger
 from yolov5.utils.plots import plot_evolve, plot_labels
 from yolov5.utils.segment.dataloaders import create_dataloader
 from yolov5.utils.segment.loss import ComputeLoss
 from yolov5.utils.segment.metrics import KEYS, fitness
-from yolov5.utils.segment.plots import (plot_images_and_masks,
-                                        plot_results_with_masks)
-from yolov5.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel,
-                                      select_device, smart_DDP,
-                                      smart_optimizer, smart_resume,
-                                      torch_distributed_zero_first)
+from yolov5.utils.segment.plots import plot_images_and_masks, plot_results_with_masks
+from yolov5.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_device, smart_DDP, smart_optimizer,
+                               smart_resume, torch_distributed_zero_first)
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -156,7 +147,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     # Batch size
     if RANK == -1 and batch_size == -1:  # single-GPU only, estimate best batch size
         batch_size = check_train_batch_size(model, imgsz, amp)
-        logger.update_params({"batch_size": batch_size})
+        logger.update_params({'batch_size': batch_size})
         # loggers.on_params_update({"batch_size": batch_size})
 
     # Optimizer
@@ -184,8 +175,10 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
     # DP mode
     if cuda and RANK == -1 and torch.cuda.device_count() > 1:
-        LOGGER.warning('WARNING ⚠️ DP not recommended, use torch.distributed.run for best DDP Multi-GPU results.\n'
-                       'See Multi-GPU Tutorial at https://github.com/ultralytics/yolov5/issues/475 to get started.')
+        LOGGER.warning(
+            'WARNING ⚠️ DP not recommended, use torch.distributed.run for best DDP Multi-GPU results.\n'
+            'See Multi-GPU Tutorial at https://docs.ultralytics.com/yolov5/tutorials/multi_gpu_training to get started.'
+        )
         model = torch.nn.DataParallel(model)
 
     # SyncBatchNorm
@@ -316,7 +309,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
             # Multi-scale
             if opt.multi_scale:
-                sz = random.randrange(imgsz * 0.5, imgsz * 1.5 + gs) // gs * gs  # size
+                sz = random.randrange(int(imgsz * 0.5), int(imgsz * 1.5) + gs) // gs * gs  # size
                 sf = sz / max(imgs.shape[2:])  # scale factor
                 if sf != 1:
                     ns = [math.ceil(x * sf / gs) * gs for x in imgs.shape[2:]]  # new shape (stretched to gs-multiple)
@@ -358,10 +351,10 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                 # Mosaic plots
                 if plots:
                     if ni < 3:
-                        plot_images_and_masks(imgs, targets, masks, paths, save_dir / f"train_batch{ni}.jpg")
+                        plot_images_and_masks(imgs, targets, masks, paths, save_dir / f'train_batch{ni}.jpg')
                     if ni == 10:
                         files = sorted(save_dir.glob('train*.jpg'))
-                        logger.log_images(files, "Mosaics", epoch)
+                        logger.log_images(files, 'Mosaics', epoch)
             # end batch ------------------------------------------------------------------------------------------------
 
         # Scheduler
@@ -470,8 +463,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
             files = ['results.png', 'confusion_matrix.png', *(f'{x}_curve.png' for x in ('F1', 'PR', 'P', 'R'))]
             files = [(save_dir / f) for f in files if (save_dir / f).exists()]  # filter
             LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}")
-            logger.log_images(files, "Results", epoch + 1)
-            logger.log_images(sorted(save_dir.glob('val*.jpg')), "Validation", epoch + 1)
+            logger.log_images(files, 'Results', epoch + 1)
+            logger.log_images(sorted(save_dir.glob('val*.jpg')), 'Validation', epoch + 1)
     torch.cuda.empty_cache()
     return results
 
@@ -561,8 +554,8 @@ def main(opt, callbacks=Callbacks()):
             check_file(opt.data), check_yaml(opt.cfg), check_yaml(opt.hyp), str(opt.weights), str(opt.project)  # checks
         assert len(opt.cfg) or len(opt.weights), 'either --cfg or --weights must be specified'
         if opt.evolve:
-            if opt.project == str(ROOT / 'runs/train'):  # if default project name, rename to runs/evolve
-                opt.project = str(ROOT / 'runs/evolve')
+            if opt.project == str(ROOT / 'runs/train-seg'):  # if default project name, rename to runs/evolve-seg
+                opt.project = str(ROOT / 'runs/evolve-seg')
             opt.exist_ok, opt.resume = opt.resume, False  # pass resume to exist_ok and disable resume
         if opt.name == 'cfg':
             opt.name = Path(opt.cfg).stem  # use model.yaml as name
@@ -579,7 +572,7 @@ def main(opt, callbacks=Callbacks()):
         assert torch.cuda.device_count() > LOCAL_RANK, 'insufficient CUDA devices for DDP command'
         torch.cuda.set_device(LOCAL_RANK)
         device = torch.device('cuda', LOCAL_RANK)
-        dist.init_process_group(backend="nccl" if dist.is_nccl_available() else "gloo")
+        dist.init_process_group(backend='nccl' if dist.is_nccl_available() else 'gloo')
 
     # Train
     if not opt.evolve:
@@ -629,7 +622,12 @@ def main(opt, callbacks=Callbacks()):
         # ei = [isinstance(x, (int, float)) for x in hyp.values()]  # evolvable indices
         evolve_yaml, evolve_csv = save_dir / 'hyp_evolve.yaml', save_dir / 'evolve.csv'
         if opt.bucket:
-            os.system(f'gsutil cp gs://{opt.bucket}/evolve.csv {evolve_csv}')  # download evolve.csv if exists
+            # download evolve.csv if exists
+            subprocess.run([
+                'gsutil',
+                'cp',
+                f'gs://{opt.bucket}/evolve.csv',
+                str(evolve_csv),])
 
         for _ in range(opt.evolve):  # generations to evolve
             if evolve_csv.exists():  # if evolve.csv exists: select best hyps and mutate
@@ -655,7 +653,7 @@ def main(opt, callbacks=Callbacks()):
                 while all(v == 1):  # mutate until a change occurs (prevent duplicates)
                     v = (g * (npr.random(ng) < mp) * npr.randn(ng) * npr.random() * s + 1).clip(0.3, 3.0)
                 for i, k in enumerate(hyp.keys()):  # plt.hist(v.ravel(), 300)
-                    hyp[k] = float(x[i + 7] * v[i])  # mutate
+                    hyp[k] = float(x[i + 12] * v[i])  # mutate
 
             # Constrain to limits
             for k, v in meta.items():
@@ -667,7 +665,7 @@ def main(opt, callbacks=Callbacks()):
             results = train(hyp.copy(), opt, device, callbacks)
             callbacks = Callbacks()
             # Write mutation results
-            print_mutation(KEYS, results, hyp.copy(), save_dir, opt.bucket)
+            print_mutation(KEYS[4:16], results, hyp.copy(), save_dir, opt.bucket)
 
         # Plot results
         plot_evolve(evolve_csv)
@@ -684,7 +682,6 @@ def run(**kwargs):
     main(opt)
     return opt
 
-
 def run_cli(**kwargs):
     '''
     To be called from yolov5.cli
@@ -692,8 +689,7 @@ def run_cli(**kwargs):
     opt = parse_opt(True)
     for k, v in kwargs.items():
         setattr(opt, k, v)
-    main(opt)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main(parse_opt())

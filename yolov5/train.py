@@ -1,4 +1,4 @@
-# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+# YOLOv5 🚀 by Ultralytics, AGPL-3.0 license
 """
 Train a YOLOv5 model on a custom dataset.
 Models and datasets download automatically from the latest YOLOv5 release.
@@ -12,13 +12,14 @@ Usage - Multi-GPU DDP training:
 
 Models:     https://github.com/ultralytics/yolov5/tree/master/models
 Datasets:   https://github.com/ultralytics/yolov5/tree/master/data
-Tutorial:   https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data
+Tutorial:   https://docs.ultralytics.com/yolov5/tutorials/train_custom_data
 """
 
 import argparse
 import math
 import os
 import random
+import subprocess
 import sys
 import time
 from copy import deepcopy
@@ -73,7 +74,6 @@ WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
 # fix OMP: Error #15: Initializing libiomp5md.dll, but found libiomp5md.dll already initialized.
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
-
 def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictionary
     save_dir, epochs, batch_size, weights, single_cls, evolve, data, cfg, resume, noval, nosave, workers, freeze = \
         Path(opt.save_dir), opt.epochs, opt.batch_size, opt.weights, opt.single_cls, opt.evolve, opt.data, opt.cfg, \
@@ -112,7 +112,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
     # Loggers
     if RANK in {-1, 0}:
-        loggers = Loggers(save_dir, weights, opt, hyp, LOGGER, mmdet_keys=opt.mmdet_tags, class_names=list(names.values()))  # loggers instance
+        loggers = Loggers(save_dir, weights, opt, hyp, LOGGER, class_names=list(names.values()))  # loggers instance
 
         # Register actions
         for k in methods(loggers):
@@ -166,7 +166,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     # Batch size
     if RANK == -1 and batch_size == -1:  # single-GPU only, estimate best batch size
         batch_size = check_train_batch_size(model, imgsz, amp)
-        loggers.on_params_update({"batch_size": batch_size})
+        loggers.on_params_update({'batch_size': batch_size})
 
     # Optimizer
     nbs = 64  # nominal batch size
@@ -193,8 +193,10 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
     # DP mode
     if cuda and RANK == -1 and torch.cuda.device_count() > 1:
-        LOGGER.warning('WARNING ⚠️ DP not recommended, use torch.distributed.run for best DDP Multi-GPU results.\n'
-                       'See Multi-GPU Tutorial at https://github.com/ultralytics/yolov5/issues/475 to get started.')
+        LOGGER.warning(
+            'WARNING ⚠️ DP not recommended, use torch.distributed.run for best DDP Multi-GPU results.\n'
+            'See Multi-GPU Tutorial at https://docs.ultralytics.com/yolov5/tutorials/multi_gpu_training to get started.'
+        )
         model = torch.nn.DataParallel(model)
 
     # SyncBatchNorm
@@ -317,7 +319,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
             # Multi-scale
             if opt.multi_scale:
-                sz = random.randrange(imgsz * 0.5, imgsz * 1.5 + gs) // gs * gs  # size
+                sz = random.randrange(int(imgsz * 0.5), int(imgsz * 1.5) + gs) // gs * gs  # size
                 sf = sz / max(imgs.shape[2:])  # scale factor
                 if sf != 1:
                     ns = [math.ceil(x * sf / gs) * gs for x in imgs.shape[2:]]  # new shape (stretched to gs-multiple)
@@ -438,7 +440,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                 strip_optimizer(f)  # strip optimizers
                 if f is best:
                     LOGGER.info(f'\nValidating {f}...')
-                    results, _, _, _  = validate.run(
+                    results, _, _, _ = validate.run(
                         data_dict,
                         batch_size=batch_size // WORLD_SIZE * 2,
                         imgsz=imgsz,
@@ -524,9 +526,8 @@ def parse_opt(known=False):
     parser.add_argument('--save-period', type=int, default=-1, help='Save checkpoint every x epochs (disabled if < 1)')
     parser.add_argument('--seed', type=int, default=0, help='Global training seed')
     parser.add_argument('--local_rank', type=int, default=-1, help='Automatic DDP Multi-GPU argument, do not modify')
-    parser.add_argument('--mmdet_tags', action='store_true', help='Log train/val keys in MMDetection format')
 
-    # Weights & Biases arguments
+    # Logger arguments
     parser.add_argument('--entity', default=None, help='Entity')
     parser.add_argument('--bbox_interval', type=int, default=-1, help='Set bounding-box image logging interval')
     parser.add_argument('--artifact_alias', type=str, default='latest', help='Version of dataset artifact to use')
@@ -604,7 +605,7 @@ def main(opt, callbacks=Callbacks()):
         assert torch.cuda.device_count() > LOCAL_RANK, 'insufficient CUDA devices for DDP command'
         torch.cuda.set_device(LOCAL_RANK)
         device = torch.device('cuda', LOCAL_RANK)
-        dist.init_process_group(backend="nccl" if dist.is_nccl_available() else "gloo")
+        dist.init_process_group(backend='nccl' if dist.is_nccl_available() else 'gloo')
 
     # Train
     if not opt.evolve:
@@ -654,7 +655,12 @@ def main(opt, callbacks=Callbacks()):
         # ei = [isinstance(x, (int, float)) for x in hyp.values()]  # evolvable indices
         evolve_yaml, evolve_csv = save_dir / 'hyp_evolve.yaml', save_dir / 'evolve.csv'
         if opt.bucket:
-            os.system(f'gsutil cp gs://{opt.bucket}/evolve.csv {evolve_csv}')  # download evolve.csv if exists
+            # download evolve.csv if exists
+            subprocess.run([
+                'gsutil',
+                'cp',
+                f'gs://{opt.bucket}/evolve.csv',
+                str(evolve_csv),])
 
         for _ in range(opt.evolve):  # generations to evolve
             if evolve_csv.exists():  # if evolve.csv exists: select best hyps and mutate
@@ -711,7 +717,6 @@ def run(**kwargs):
     main(opt)
     return opt
 
-
 def run_cli(**kwargs):
     '''
     To be called from yolov5.cli
@@ -722,6 +727,6 @@ def run_cli(**kwargs):
     main(opt)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     opt = parse_opt()
     main(opt)
