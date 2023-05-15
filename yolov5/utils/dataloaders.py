@@ -1,4 +1,4 @@
-# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+# YOLOv5 🚀 by Ultralytics, AGPL-3.0 license
 """
 Dataloaders and dataset utils
 """
@@ -36,7 +36,7 @@ from yolov5.utils.general import (DATASETS_DIR, LOGGER, NUM_THREADS, TQDM_BAR_FO
 from yolov5.utils.torch_utils import torch_distributed_zero_first
 
 # Parameters
-HELP_URL = 'See https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'
+HELP_URL = 'See https://docs.ultralytics.com/yolov5/tutorials/train_custom_data'
 IMG_FORMATS = 'bmp', 'dng', 'jpeg', 'jpg', 'mpo', 'png', 'tif', 'tiff', 'webp', 'pfm'  # include image suffixes
 VID_FORMATS = 'asf', 'avi', 'gif', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'ts', 'wmv'  # include video suffixes
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
@@ -52,7 +52,7 @@ for orientation in ExifTags.TAGS.keys():
 def get_hash(paths):
     # Returns a single hash value of a list of paths (files or dirs)
     size = sum(os.path.getsize(p) for p in paths if os.path.exists(p))  # sizes
-    h = hashlib.md5(str(size).encode())  # hash sizes
+    h = hashlib.sha256(str(size).encode())  # hash sizes
     h.update(''.join(paths).encode())  # hash paths
     return h.hexdigest()  # return hash
 
@@ -89,7 +89,7 @@ def exif_transpose(image):
         if method is not None:
             image = image.transpose(method)
             del exif[0x0112]
-            image.info["exif"] = exif.tobytes()
+            image.info['exif'] = exif.tobytes()
     return image
 
 
@@ -213,11 +213,11 @@ class LoadScreenshots:
 
         # Parse monitor shape
         monitor = self.sct.monitors[self.screen]
-        self.top = monitor["top"] if top is None else (monitor["top"] + top)
-        self.left = monitor["left"] if left is None else (monitor["left"] + left)
-        self.width = width or monitor["width"]
-        self.height = height or monitor["height"]
-        self.monitor = {"left": self.left, "top": self.top, "width": self.width, "height": self.height}
+        self.top = monitor['top'] if top is None else (monitor['top'] + top)
+        self.left = monitor['left'] if left is None else (monitor['left'] + left)
+        self.width = width or monitor['width']
+        self.height = height or monitor['height']
+        self.monitor = {'left': self.left, 'top': self.top, 'width': self.width, 'height': self.height}
 
     def __iter__(self):
         return self
@@ -225,7 +225,7 @@ class LoadScreenshots:
     def __next__(self):
         # mss screen capture: get raw pixels from the screen as np array
         im0 = np.array(self.sct.grab(self.monitor))[:, :, :3]  # [:, :, :3] BGRA to BGR
-        s = f"screen {self.screen} (LTWH): {self.left},{self.top},{self.width},{self.height}: "
+        s = f'screen {self.screen} (LTWH): {self.left},{self.top},{self.width},{self.height}: '
 
         if self.transforms:
             im = self.transforms(im0)  # transforms
@@ -240,7 +240,7 @@ class LoadScreenshots:
 class LoadImages:
     # YOLOv5 image/video dataloader, i.e. `python detect.py --source image.jpg/vid.mp4`
     def __init__(self, path, img_size=640, stride=32, auto=True, transforms=None, vid_stride=1):
-        if isinstance(path, str) and Path(path).suffix == ".txt":  # *.txt file with img/vid/dir on each line
+        if isinstance(path, str) and Path(path).suffix == '.txt':  # *.txt file with img/vid/dir on each line
             path = Path(path).read_text().rsplit()
         files = []
         for p in sorted(path) if isinstance(path, (list, tuple)) else [path]:
@@ -359,7 +359,7 @@ class LoadStreams:
                 # YouTube format i.e. 'https://www.youtube.com/watch?v=Zgi9g1ksQHc' or 'https://youtu.be/Zgi9g1ksQHc'
                 check_requirements(('pafy', 'youtube_dl==2020.12.2'))
                 import pafy
-                s = pafy.new(s).getbest(preftype="mp4").url  # YouTube URL
+                s = pafy.new(s).getbest(preftype='mp4').url  # YouTube URL
             s = eval(s) if s.isnumeric() else s  # i.e. s = '0' local webcam
             if s == 0:
                 assert not is_colab(), '--source 0 webcam unsupported on Colab. Rerun command in a local environment.'
@@ -374,7 +374,7 @@ class LoadStreams:
 
             _, self.imgs[i] = cap.read()  # guarantee first frame
             self.threads[i] = Thread(target=self.update, args=([i, cap, s]), daemon=True)
-            LOGGER.info(f"{st} Success ({self.frames[i]} frames {w}x{h} at {self.fps[i]:.2f} FPS)")
+            LOGGER.info(f'{st} Success ({self.frames[i]} frames {w}x{h} at {self.fps[i]:.2f} FPS)')
             self.threads[i].start()
         LOGGER.info('')  # newline
 
@@ -498,7 +498,7 @@ class LoadImagesAndLabels(Dataset):
         # Display cache
         nf, nm, ne, nc, n = cache.pop('results')  # found, missing, empty, corrupt, total
         if exists and LOCAL_RANK in {-1, 0}:
-            d = f"Scanning {cache_path}... {nf} images, {nm + ne} backgrounds, {nc} corrupt"
+            d = f'Scanning {cache_path}... {nf} images, {nm + ne} backgrounds, {nc} corrupt'
             tqdm(None, desc=prefix + d, total=n, initial=n, bar_format=TQDM_BAR_FORMAT)  # display cache results
             if cache['msgs']:
                 LOGGER.info('\n'.join(cache['msgs']))  # display warnings
@@ -534,13 +534,14 @@ class LoadImagesAndLabels(Dataset):
 
         # Update labels
         include_class = []  # filter labels to include only these classes (optional)
+        self.segments = list(self.segments)
         include_class_array = np.array(include_class).reshape(1, -1)
         for i, (label, segment) in enumerate(zip(self.labels, self.segments)):
             if include_class:
                 j = (label[:, 0:1] == include_class_array).any(1)
                 self.labels[i] = label[j]
                 if segment:
-                    self.segments[i] = segment[j]
+                    self.segments[i] = [segment[idx] for idx, elem in enumerate(j) if elem]
             if single_cls:  # single-class training, merge all classes into 0
                 self.labels[i][:, 0] = 0
 
@@ -601,8 +602,8 @@ class LoadImagesAndLabels(Dataset):
         mem = psutil.virtual_memory()
         cache = mem_required * (1 + safety_margin) < mem.available  # to cache or not to cache, that is the question
         if not cache:
-            LOGGER.info(f"{prefix}{mem_required / gb:.1f}GB RAM required, "
-                        f"{mem.available / gb:.1f}/{mem.total / gb:.1f}GB available, "
+            LOGGER.info(f'{prefix}{mem_required / gb:.1f}GB RAM required, '
+                        f'{mem.available / gb:.1f}/{mem.total / gb:.1f}GB available, '
                         f"{'caching images ✅' if cache else 'not caching images ⚠️'}")
         return cache
 
@@ -642,7 +643,7 @@ class LoadImagesAndLabels(Dataset):
                     x[im_file] = [lb, shape, segments]
                 if msg:
                     msgs.append(msg)
-                pbar.desc = f"{desc} {nf} images, {nm + ne} backgrounds, {nc} corrupt"
+                pbar.desc = f'{desc} {nf} images, {nm + ne} backgrounds, {nc} corrupt'
 
         pbar.close()
         if msgs:
@@ -1067,7 +1068,7 @@ class HUBDatasetStats():
         autodownload:   Attempt to download dataset if not found locally
 
     Usage
-        from yolov5.utils.dataloaders import HUBDatasetStats
+        from utils.dataloaders import HUBDatasetStats
         stats = HUBDatasetStats('coco128.yaml', autodownload=True)  # usage 1
         stats = HUBDatasetStats('path/to/coco128.zip')  # usage 2
         stats.get_json(save=False)
@@ -1083,7 +1084,7 @@ class HUBDatasetStats():
                 if zipped:
                     data['path'] = data_dir
         except Exception as e:
-            raise Exception("error/HUB/dataset_stats/yaml_load") from e
+            raise Exception('error/HUB/dataset_stats/yaml_load') from e
 
         check_dataset(data, autodownload)  # download dataset if missing
         self.hub_dir = Path(data['path'] + '-hub')
@@ -1208,7 +1209,7 @@ class ClassificationDataset(torchvision.datasets.ImageFolder):
         else:  # read image
             im = cv2.imread(f)  # BGR
         if self.album_transforms:
-            sample = self.album_transforms(image=cv2.cvtColor(im, cv2.COLOR_BGR2RGB))["image"]
+            sample = self.album_transforms(image=cv2.cvtColor(im, cv2.COLOR_BGR2RGB))['image']
         else:
             sample = self.torch_transforms(im)
         return sample, j

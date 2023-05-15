@@ -1,9 +1,9 @@
-# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+# YOLOv5 🚀 by Ultralytics, AGPL-3.0 license
 """
-Validate a trained YOLOv5 detection model on a detection dataset
+    $ yolov5 val --weights yolov5s.pt --data coco128.yaml --img 640
 
 Usage:
-    $ yolov5 val --weights yolov5s.pt --data coco128.yaml --img 640
+    $ python val.py --weights yolov5s.pt --data coco128.yaml --img 640
 
 Usage - formats:
     $ yolov5 val --weights yolov5s.pt                 # PyTorch
@@ -22,6 +22,7 @@ Usage - formats:
 import argparse
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -330,7 +331,7 @@ def run(
     if save_json and len(jdict):
         w = Path(weights[0] if isinstance(weights, list) else weights).stem if weights is not None else ''  # weights
         anno_json = str(Path('../datasets/coco/annotations/instances_val2017.json'))  # annotations
-        pred_json = str(save_dir / f"{w}_predictions.json")  # predictions
+        pred_json = str(save_dir / f'{w}_predictions.json')  # predictions
         LOGGER.info(f'\nEvaluating pycocotools mAP... saving {pred_json}...')
         with open(pred_json, 'w') as f:
             json.dump(jdict, f)
@@ -428,7 +429,7 @@ def main():
                     r, _, t = run(**vars(opt), plots=False)
                     y.append(r + t)  # results and times
                 np.savetxt(f, y, fmt='%10.4g')  # save
-            os.system('zip -r study.zip study_*.txt')
+            subprocess.run(['zip', '-r', 'study.zip', 'study_*.txt'])
             plot_val_study(x=x)  # plot
         else:
             raise NotImplementedError(f'--task {opt.task} not in ("train", "val", "test", "speed", "study")')

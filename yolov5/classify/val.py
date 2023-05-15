@@ -1,4 +1,4 @@
-# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+# YOLOv5 🚀 by Ultralytics, AGPL-3.0 license
 """
 Validate a trained YOLOv5 classification model on a classification dataset
 
@@ -112,7 +112,7 @@ def run(
     pred, targets, loss, dt = [], [], 0, (Profile(), Profile(), Profile())
     n = len(dataloader)  # number of batches
     action = 'validating' if dataloader.dataset.root.stem == 'val' else 'testing'
-    desc = f"{pbar.desc[:-36]}{action:>36}" if pbar else f"{action}"
+    desc = f'{pbar.desc[:-36]}{action:>36}' if pbar else f'{action}'
     bar = tqdm(dataloader, desc, n, not training, bar_format=TQDM_BAR_FORMAT, position=0)
     with torch.cuda.amp.autocast(enabled=device.type != 'cpu'):
         for images, labels in bar:
@@ -135,14 +135,14 @@ def run(
     top1, top5 = acc.mean(0).tolist()
 
     if pbar:
-        pbar.desc = f"{pbar.desc[:-36]}{loss:>12.3g}{top1:>12.3g}{top5:>12.3g}"
+        pbar.desc = f'{pbar.desc[:-36]}{loss:>12.3g}{top1:>12.3g}{top5:>12.3g}'
     if verbose:  # all classes
         LOGGER.info(f"{'Class':>24}{'Images':>12}{'top1_acc':>12}{'top5_acc':>12}")
         LOGGER.info(f"{'all':>24}{targets.shape[0]:>12}{top1:>12.3g}{top5:>12.3g}")
         for i, c in model.names.items():
-            aci = acc[targets == i]
-            top1i, top5i = aci.mean(0).tolist()
-            LOGGER.info(f"{c:>24}{aci.shape[0]:>12}{top1i:>12.3g}{top5i:>12.3g}")
+            acc_i = acc[targets == i]
+            top1i, top5i = acc_i.mean(0).tolist()
+            LOGGER.info(f'{c:>24}{acc_i.shape[0]:>12}{top1i:>12.3g}{top5i:>12.3g}')
 
         # Print results
         t = tuple(x.t / len(dataloader.dataset.samples) * 1E3 for x in dt)  # speeds per image
