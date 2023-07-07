@@ -534,6 +534,7 @@ def parse_opt(known=False):
     # Neptune AI arguments
     parser.add_argument('--neptune_token', type=str, default=None, help='neptune.ai api token')
     parser.add_argument('--neptune_project', type=str, default=None, help='https://docs.neptune.ai/api-reference/neptune')
+    parser.add_argument('--neptune_resume_id', type=str, default=None, help='neptune.ai project task id to resume')
 
     # AWS arguments
     parser.add_argument('--s3_upload_dir', type=str, default=None, help='aws s3 folder directory to upload best weight and dataset')
@@ -577,6 +578,8 @@ def main(opt, callbacks=Callbacks()):
                 d = yaml.safe_load(f)
         else:
             d = torch.load(last, map_location='cpu')['opt']
+        if opt.neptune_resume_id is not None:
+            d["neptune_resume_id"] = opt.neptune_resume_id
         opt = argparse.Namespace(**d)  # replace
         opt.cfg, opt.weights, opt.resume = '', str(last), True  # reinstate
         if is_url(opt_data):
