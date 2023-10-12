@@ -6,7 +6,7 @@ from yolov5 import __version__
 from yolov5.utils.general import colorstr
 
 try:
-    import neptune.new as neptune
+    import neptune as neptune
 except ImportError:
     neptune = None
 
@@ -20,13 +20,26 @@ class NeptuneLogger:
         self.neptune, self.neptune_run = neptune, None
 
         if self.neptune and opt.neptune_token:
-            self.neptune_run = neptune.init(api_token=opt.neptune_token,
-                                            project=opt.neptune_project,
-                                            name=Path(opt.save_dir).stem)
+            if opt.resume:
+                self.neptune_run = neptune.init_run(api_token=opt.neptune_token,
+                                                project=opt.neptune_project,
+                                                with_id=opt.neptune_resume_id)
+            else:
+                self.neptune_run = neptune.init_run(api_token=opt.neptune_token,
+                                                project=opt.neptune_project,
+                                                name=Path(opt.save_dir).stem)
         if self.neptune_run:
             if self.job_type == 'Training':
                 if not opt.resume:
-                    self.neptune_run["opt"] = vars(opt)
+                    opt_dict = vars(opt)
+                    for arg in opt_dict:
+                        try:
+                            iter(opt_dict[arg])
+                            opt_dict[arg] = f"{opt_dict[arg]}"
+                        except:
+                            if opt_dict[arg] is None:
+                                opt_dict[arg] = "None"
+                    self.neptune_run["opt"] = opt_dict
                     self.track_dataset(opt)
                 self.data_dict = self.setup_training(data_dict)
             # log yolov5 package version

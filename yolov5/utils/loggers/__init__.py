@@ -17,7 +17,7 @@ from yolov5.utils.loggers.wandb.wandb_utils import WandbLogger
 from yolov5.utils.plots import plot_images, plot_labels, plot_results
 from yolov5.utils.torch_utils import de_parallel
 
-LOGGERS = ('csv', 'tb', 'wandb', 'clearml', 'comet')  # *.csv, TensorBoard, Weights & Biases, ClearML
+LOGGERS = ('csv', 'tb', 'wandb', 'clearml', 'comet', 'neptune')  # *.csv, TensorBoard, Weights & Biases, ClearML
 RANK = int(os.getenv('RANK', -1))
 
 try:
@@ -40,7 +40,7 @@ except (ImportError, AssertionError):
     wandb = None
 
 try:
-    import neptune.new as neptune
+    import neptune
 except ImportError:
     neptune = None
 
