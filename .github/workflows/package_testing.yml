@@ -99,11 +99,10 @@ jobs:
           yolov5 segment train --img 128 --weights fcakyon/yolov5n-seg-v7.0 --epochs 1 --device cpu
           # yolov5 segment val --img 128 --weights yolov5n-seg.pt --device cpu
           yolov5 segment predict --img 128 --weights yolov5n-seg.pt --device cpu
+
       - name: Test roboflow train
         shell: bash  # for Windows compatibility
-        env:
-          ROBOFLOW_TOKEN: ${{ secrets.ROBOFLOW_API_KEY }}
         run: |
-          yolov5 train --data https://universe.roboflow.com/gdit/aerial-airport/dataset/1 --weights yolov5/weights/yolov5n.pt --img 128 --epochs 1 --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
-          # yolov5 classify train --data https://universe.roboflow.com/carlos-gabriel-da-silva-machado-siwvs/turtles-i1tlr/dataset/1 --img 128 --model yolov5n-cls.pt --epochs 1 --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
-          yolov5 segment train --data https://universe.roboflow.com/aymane-outani-auooc/cable-fzjik/dataset/2 --img 128 --weights yolov5n-seg.pt --epochs 1 --device cpu --roboflow_token ${{ env.ROBOFLOW_TOKEN }}
+          yolov5 train --data https://universe.roboflow.com/gdit/aerial-airport/dataset/1 --weights yolov5/weights/yolov5n.pt --img 128 --epochs 1 --device cpu --roboflow_token ${{ secrets.ROBOFLOW_API_KEY }}
+          # yolov5 classify train --data https://universe.roboflow.com/carlos-gabriel-da-silva-machado-siwvs/turtles-i1tlr/dataset/1 --img 128 --model yolov5n-cls.pt --epochs 1 --device cpu --roboflow_token ${{ secrets.ROBOFLOW_API_KEY }}
+          yolov5 segment train --data https://universe.roboflow.com/aymane-outani-auooc/cable-fzjik/dataset/2 --img 128 --weights yolov5n-seg.pt --epochs 1 --device cpu --roboflow_token ${{ secrets.ROBOFLOW_API_KEY }}
