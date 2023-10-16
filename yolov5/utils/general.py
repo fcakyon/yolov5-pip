@@ -35,9 +35,7 @@ import pkg_resources as pkg
 import torch
 import torchvision
 import yaml
-# this leads to module not found error
-from ultralytics.yolo.utils.checks import check_requirements
-# correct import
+
 from ultralytics.utils.checks import check_requirements
 
 from yolov5.utils import TryExcept, emojis
