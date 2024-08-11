@@ -145,7 +145,7 @@ def get_model_filename_from_hfhub(repo_id, hf_token=None):
         return None
 
 
-def attempt_download_from_hub(repo_id, hf_token=None):
+def attempt_download_from_hub(repo_id, hf_token=None, revision=None):
     from huggingface_hub import hf_hub_download, list_repo_files
     from huggingface_hub.utils._errors import RepositoryNotFoundError
     from huggingface_hub.utils._validators import HFValidationError
@@ -161,6 +161,7 @@ def attempt_download_from_hub(repo_id, hf_token=None):
                 filename=config_file,
                 repo_type='model',
                 token=hf_token,
+                revision=revision,
             )
 
         # download model file
@@ -170,6 +171,7 @@ def attempt_download_from_hub(repo_id, hf_token=None):
             filename=model_file,
             repo_type='model',
             token=hf_token,
+            revision=revision,
         )
         return file
     except (RepositoryNotFoundError, HFValidationError):
