@@ -399,8 +399,9 @@ def parse_opt():
     return opt
 
 
-def main():
-    opt = parse_opt()
+def main(opt=None):
+    if opt is None:
+        opt = parse_opt()
     check_requirements(exclude=('tensorboard', 'thop'))
 
     if opt.task in ('train', 'val', 'test'):  # run normally
