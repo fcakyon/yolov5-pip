@@ -56,6 +56,6 @@ boto3>=1.19.1
 # coco to yolov5 conversion
 sahi>=0.11.10
 # huggingface
-huggingface-hub>=0.12.0
+huggingface-hub>=0.12.0,<0.25.0
 # roboflow
 roboflow>=0.2.29
